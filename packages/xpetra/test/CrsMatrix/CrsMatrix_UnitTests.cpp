@@ -1272,13 +1272,13 @@ namespace {
     A->fillComplete();
 
     // access data after fill complete!
-    local_matrix_type view2 = A->getLocalMatrix();
+    local_matrix_type view2 = A->getLocalMatrixHost();
     TEST_EQUALITY(Teuchos::as<size_t>(view2.numRows()), A->getNodeNumRows());
     TEST_EQUALITY(Teuchos::as<size_t>(view2.numCols()), A->getNodeNumCols());
     TEST_EQUALITY(Teuchos::as<size_t>(view2.nnz()),   A->getNodeNumEntries());
 
     // check that the local_matrix_type taken the second time is the same
-    local_matrix_type view3 = A->getLocalMatrix();
+    local_matrix_type view3 = A->getLocalMatrixHost();
     TEST_EQUALITY(view2.graph.row_map.data(), view3.graph.row_map.data());
 
     for (LO r = 0; r < view2.numRows(); ++r) {

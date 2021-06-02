@@ -1486,14 +1486,27 @@ namespace Xpetra {
 
 #ifdef HAVE_XPETRA_KOKKOS_REFACTOR
     typedef typename CrsMatrix::local_matrix_type local_matrix_type;
-
+#ifdef TPETRA_ENABLE_DEPRECATED_CODE
+    typename local_matrix_type::HostMirror getLocalMatrix () const {
+      return getLocalMatrixHost();
+    }
+#endif
     /// \brief Access the underlying local Kokkos::CrsMatrix object
-    local_matrix_type getLocalMatrix () const {
+    local_matrix_type getLocalMatrixDevice () const {
       if (Rows() == 1 && Cols () == 1) {
-        return getMatrix(0,0)->getLocalMatrix();
+        return getMatrix(0,0)->getLocalMatrixDevice();
       }
       throw Xpetra::Exceptions::RuntimeError("BlockedCrsMatrix::getLocalMatrix(): operation not supported.");
     }
+    /// \brief Access the underlying local Kokkos::CrsMatrix object
+    typename local_matrix_type::HostMirror getLocalMatrixHost () const {
+      if (Rows() == 1 && Cols () == 1) {
+        return getMatrix(0,0)->getLocalMatrixHost();
+      }
+      throw Xpetra::Exceptions::RuntimeError("BlockedCrsMatrix::getLocalMatrix(): operation not supported.");
+    }
+
+
 #endif
 
 #ifdef HAVE_XPETRA_THYRA
