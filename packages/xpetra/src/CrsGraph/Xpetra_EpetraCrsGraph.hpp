@@ -267,12 +267,7 @@ public:
   void getLocalRowView(LocalOrdinal LocalRow, ArrayView<const LocalOrdinal> &indices) const {  }
 
   //! Return a const, nonpersisting view of local indices in the given row.
-  void getLocalRowView(LocalOrdinal LocalRow, typename Kokkos::View<const LocalOrdinal*>::HostMirror::const_type &indices) const {
-    ArrayView<const LocalOrdinal> ind;
-    getLocalRowView(LocalRow, ind);
-    indices = Kokkos::View<const LocalOrdinal*, Kokkos::MemoryUnmanaged>::HostMirror::const_type(&ind[0], ind.size());
-    abort();
-  }
+  void getLocalRowView(LocalOrdinal LocalRow, typename Kokkos::View<const LocalOrdinal*>::HostMirror::const_type &indices) const { }
 
 #ifdef HAVE_XPETRA_KOKKOS_REFACTOR
 #ifdef HAVE_XPETRA_TPETRA
@@ -594,8 +589,8 @@ public:
   void getLocalRowView(LocalOrdinal LocalRow, Kokkos::View<const LocalOrdinal*>::HostMirror::const_type &indices) const {
     ArrayView<const LocalOrdinal> ind;
     getLocalRowView(LocalRow, ind);
-    indices = Kokkos::View<const LocalOrdinal*, Kokkos::MemoryUnmanaged>::HostMirror::const_type(&ind[0], ind.size());
-    //    abort();
+    indices = Kokkos::View<const LocalOrdinal*, Kokkos::MemoryUnmanaged>::HostMirror::const_type(ind.getRawPtr(), ind.size());
+
   }
 
 #ifdef HAVE_XPETRA_KOKKOS_REFACTOR
