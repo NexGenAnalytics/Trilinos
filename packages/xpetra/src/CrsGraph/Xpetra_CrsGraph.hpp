@@ -50,6 +50,7 @@
 
 #include <Teuchos_Describable.hpp>
 #include <Kokkos_DefaultNode.hpp>
+#include <Kokkos_View.hpp>
 #include "Xpetra_ConfigDefs.hpp"
 #include "Xpetra_DistObject.hpp"
 #include "Xpetra_Exceptions.hpp"
@@ -205,6 +206,9 @@ namespace Xpetra {
 
     //! Return a const, nonpersisting view of local indices in the given row.
     virtual void getLocalRowView(LocalOrdinal LocalRow, ArrayView< const LocalOrdinal > &indices) const = 0;
+
+    //! Return a const, nonpersisting view of local indices in the given row.
+    virtual void getLocalRowView(LocalOrdinal LocalRow, typename Kokkos::View< const LocalOrdinal *>::HostMirror::const_type &indices) const = 0;
 
     //! Force the computation of global constants if we don't have them
     virtual void computeGlobalConstants() =0;

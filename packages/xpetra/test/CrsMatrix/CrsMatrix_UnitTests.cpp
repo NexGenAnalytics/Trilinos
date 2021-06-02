@@ -1518,7 +1518,12 @@ namespace {
       // extract row information from input matrix
       Teuchos::ArrayView<const LO> indices;
       Teuchos::ArrayView<const Scalar> vals;
+      typename Kokkos::View<const LO*, Kokkos::MemoryUnmanaged>::HostMirror::const_type ind2;
+      mat->getCrsGraph()->getLocalRowView(row,ind2);
       mat->getLocalRowView(row, indices, vals);
+      TEST_EQUALITY(ind2.size(), indices.size());
+      for (std::size_t i=0;i<indices.size(); ++i)
+	TEST_EQUALITY(ind2(i),indices[i]);
       for(size_t col = 0; col < size_t(indices.size()); col++) {
         using STS = Teuchos::ScalarTraits<Scalar>;
         const Scalar ONE = STS::one();

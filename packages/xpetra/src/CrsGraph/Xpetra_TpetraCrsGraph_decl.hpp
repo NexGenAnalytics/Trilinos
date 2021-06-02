@@ -288,6 +288,9 @@ namespace Xpetra {
     //! Return a const, nonpersisting view of local indices in the given row.
     void getLocalRowView(LocalOrdinal LocalRow, ArrayView< const LocalOrdinal > &indices) const;
 
+    //! Return a const, nonpersisting view of local indices in the given row.
+    void getLocalRowView(LocalOrdinal LocalRow, typename Kokkos::View< const LocalOrdinal* >::HostMirror::const_type &indices) const;
+
 #ifdef HAVE_XPETRA_KOKKOS_REFACTOR
     /// \brief Access the local KokkosSparse::StaticCrsGraph data
     local_graph_type getLocalGraph () const;

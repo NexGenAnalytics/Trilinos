@@ -239,6 +239,12 @@ template<class LocalOrdinal, class GlobalOrdinal, class Node>
 void TpetraCrsGraph<LocalOrdinal,GlobalOrdinal,Node>::getLocalRowView(LocalOrdinal LocalRow, ArrayView< const LocalOrdinal > &indices) const
 { XPETRA_MONITOR("TpetraCrsGraph::getLocalRowView"); graph_->getLocalRowView(LocalRow, indices); }
 
+template<class LocalOrdinal, class GlobalOrdinal, class Node>
+void TpetraCrsGraph<LocalOrdinal,GlobalOrdinal,Node>::getLocalRowView(LocalOrdinal LocalRow, typename Kokkos::View< const LocalOrdinal *>::HostMirror::const_type &indices) const
+{
+  XPETRA_MONITOR("TpetraCrsGraph::getLocalRowView"); graph_->getLocalRowView(LocalRow, indices);
+}
+
 #ifdef HAVE_XPETRA_KOKKOS_REFACTOR
 template<class LocalOrdinal, class GlobalOrdinal, class Node>
 typename Xpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node>::local_graph_type TpetraCrsGraph<LocalOrdinal,GlobalOrdinal,Node>::getLocalGraph () const {

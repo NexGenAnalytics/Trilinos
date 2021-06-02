@@ -266,6 +266,14 @@ public:
   //! Return a const, nonpersisting view of local indices in the given row.
   void getLocalRowView(LocalOrdinal LocalRow, ArrayView<const LocalOrdinal> &indices) const {  }
 
+  //! Return a const, nonpersisting view of local indices in the given row.
+  void getLocalRowView(LocalOrdinal LocalRow, typename Kokkos::View<const LocalOrdinal*>::HostMirror::const_type &indices) const {
+    ArrayView<const LocalOrdinal> ind;
+    getLocalRowView(LocalRow, ind);
+    indices = Kokkos::View<const LocalOrdinal*, Kokkos::MemoryUnmanaged>::HostMirror::const_type(&ind[0], ind.size());
+    abort();
+  }
+
 #ifdef HAVE_XPETRA_KOKKOS_REFACTOR
 #ifdef HAVE_XPETRA_TPETRA
   local_graph_type getLocalGraph () const {
@@ -580,6 +588,14 @@ public:
     if (numEntries == 0) { eIndices = NULL; } // Cf. TEUCHOS_TEST_FOR_EXCEPT( p == 0 && size_in != 0 ) in Teuchos ArrayView constructor.
 
     indices = ArrayView<const int>(eIndices, numEntries);
+
+  }
+  //! Return a const, nonpersisting view of local indices in the given row.
+  void getLocalRowView(LocalOrdinal LocalRow, Kokkos::View<const LocalOrdinal*>::HostMirror::const_type &indices) const {
+    ArrayView<const LocalOrdinal> ind;
+    getLocalRowView(LocalRow, ind);
+    indices = Kokkos::View<const LocalOrdinal*, Kokkos::MemoryUnmanaged>::HostMirror::const_type(&ind[0], ind.size());
+    //    abort();
   }
 
 #ifdef HAVE_XPETRA_KOKKOS_REFACTOR
