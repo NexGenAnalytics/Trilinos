@@ -115,7 +115,7 @@ public:
   //! \brief Constructor where Teuchos communicator is specified
   PartitioningProblem(Adapter *A, ParameterList *p,
                       const RCP<const Teuchos::Comm<int> > &comm):
-      Problem<Adapter>(A,p,comm), 
+      Problem<Adapter>(A,p,comm),
       solution_(),
       inputType_(InvalidAdapterType),
       graphFlags_(), idFlags_(), coordFlags_(),
@@ -130,7 +130,7 @@ public:
   /*! \brief Constructor where MPI communicator can be specified
    */
   PartitioningProblem(Adapter *A, ParameterList *p, MPI_Comm mpicomm):
-  PartitioningProblem(A, p, 
+  PartitioningProblem(A, p,
                       rcp<const Comm<int> >(new Teuchos::MpiComm<int>(
                                             Teuchos::opaqueWrapper(mpicomm))))
   {}
@@ -336,7 +336,7 @@ public:
       Teuchos::rcp( new Teuchos::EnhancedNumberValidator<int>(
         0, Teuchos::EnhancedNumberTraits<int>::max()) ); // no maximum
     pl.set("num_local_parts", 0, "number of parts to compute for this "
-      "process (num_global_parts == sum of all num_local_parts)", 
+      "process (num_global_parts == sum of all num_local_parts)",
       num_local_parts_Validator);
 
     RCP<Teuchos::StringValidator> partitioning_approach_Validator =
@@ -534,82 +534,83 @@ template <typename Adapter>
   void PartitioningProblem<Adapter>::createAlgorithm()
   {
       // Create the algorithm
-        if (algName_ == std::string("multijagged")) {
-          this->algorithm_ = rcp(new Zoltan2_AlgMJ<Adapter>(this->envConst_,
-                                                  this->comm_,
-                                                  this->coordinateModel_));
-        }
-        else if (algName_ == std::string("zoltan")) {
-          this->algorithm_ = rcp(new AlgZoltan<Adapter>(this->envConst_,
-                                               this->comm_,
-                                               this->baseInputAdapter_));
-        }
-        else if (algName_ == std::string("parma")) {
-          this->algorithm_ = rcp(new AlgParMA<Adapter>(this->envConst_,
-                                               this->comm_,
-                                               this->baseInputAdapter_));
-        }
-        else if (algName_ == std::string("scotch")) {
-          this->algorithm_ = rcp(new AlgPTScotch<Adapter>(this->envConst_,
+      if (algName_ == std::string("multijagged")) {
+        this->algorithm_ = rcp(new Zoltan2_AlgMJ<Adapter>(this->envConst_,
                                                 this->comm_,
                                                 this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("zoltan")) {
+        this->algorithm_ = rcp(new AlgZoltan<Adapter>(this->envConst_,
+                                             this->comm_,
+                                             this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("parma")) {
+        this->algorithm_ = rcp(new AlgParMA<Adapter>(this->envConst_,
+                                             this->comm_,
+                                             this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("scotch")) {
+        this->algorithm_ = rcp(new AlgPTScotch<Adapter>(this->envConst_,
+                                              this->comm_,
+                                              this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("parmetis")) {
+        using model_t = GraphModel<base_adapter_t>;
+        this->algorithm_ = rcp(new AlgParMETIS<Adapter, model_t>(this->envConst_,
+                                              this->comm_,
+                                              this->baseInputAdapter_,
+                                              this->graphFlags_));
+      }
+      else if (algName_ == std::string("quotient")) {
+        this->algorithm_ = rcp(new AlgQuotient<Adapter>(this->envConst_,
+                         this->comm_,
+                         this->baseInputAdapter_));
+                   //"parmetis")); // The default alg. to use inside Quotient
+      }                                                    // is ParMETIS for now.
+      else if (algName_ == std::string("pulp")) {
+        this->algorithm_ = rcp(new AlgPuLP<Adapter>(this->envConst_,
+                                              this->comm_,
+                                              this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("block")) {
+        this->algorithm_ = rcp(new AlgBlock<Adapter>(this->envConst_,
+                                           this->comm_, this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("phg") ||
+               algName_ == std::string("patoh")) {
+        // phg and patoh provided through Zoltan
+        Teuchos::ParameterList &pl = this->env_->getParametersNonConst();
+        Teuchos::ParameterList &zparams = pl.sublist("zoltan_parameters",false);
+        if (numberOfWeights_ > 0) {
+          char strval[20];
+          sprintf(strval, "%d", numberOfWeights_);
+          zparams.set("OBJ_WEIGHT_DIM", strval);
         }
-        else if (algName_ == std::string("parmetis")) {
-          using model_t = GraphModel<base_adapter_t>;
-          this->algorithm_ = rcp(new AlgParMETIS<Adapter, model_t>(this->envConst_,
-                                                this->comm_,
-                                                this->graphModel_));
-        }
-        else if (algName_ == std::string("quotient")) {
-          this->algorithm_ = rcp(new AlgQuotient<Adapter>(this->envConst_,
-                           this->comm_,
-                           this->baseInputAdapter_));
-                     //"parmetis")); // The default alg. to use inside Quotient
-        }                                                    // is ParMETIS for now.
-        else if (algName_ == std::string("pulp")) {
-          this->algorithm_ = rcp(new AlgPuLP<Adapter>(this->envConst_,
-                                                this->comm_,
-                                                this->baseInputAdapter_));
-        }
-        else if (algName_ == std::string("block")) {
-          this->algorithm_ = rcp(new AlgBlock<Adapter>(this->envConst_,
-                                             this->comm_, this->identifierModel_));
-        }
-        else if (algName_ == std::string("phg") ||
-                 algName_ == std::string("patoh")) {
-          // phg and patoh provided through Zoltan
-          Teuchos::ParameterList &pl = this->env_->getParametersNonConst();
-          Teuchos::ParameterList &zparams = pl.sublist("zoltan_parameters",false);
-          if (numberOfWeights_ > 0) {
-            char strval[20];
-            sprintf(strval, "%d", numberOfWeights_);
-            zparams.set("OBJ_WEIGHT_DIM", strval);
-          }
-          zparams.set("LB_METHOD", algName_.c_str());
-          zparams.set("LB_APPROACH", "PARTITION");
-          algName_ = std::string("zoltan");
+        zparams.set("LB_METHOD", algName_.c_str());
+        zparams.set("LB_APPROACH", "PARTITION");
+        algName_ = std::string("zoltan");
 
-          this->algorithm_ = rcp(new AlgZoltan<Adapter>(this->envConst_,
-                                               this->comm_,
-                                               this->baseInputAdapter_));
-        }
-        else if (algName_ == std::string("sarma")) {
-            this->algorithm_ = rcp(new AlgSarma<Adapter>(this->envConst_,
-                                                         this->comm_,
-                                                         this->baseInputAdapter_));
-        }
-        else if (algName_ == std::string("forTestingOnly")) {
-          this->algorithm_ = rcp(new AlgForTestingOnly<Adapter>(this->envConst_,
-                                               this->comm_,
-                                               this->baseInputAdapter_));
-        }
-        // else if (algName_ == std::string("rcb")) {
-        //  this->algorithm_ = rcp(new AlgRCB<Adapter>(this->envConst_,this->comm_,
-        //                                             this->coordinateModel_));
-        // }
-        else {
-          throw std::logic_error("partitioning algorithm not supported");
-        }
+        this->algorithm_ = rcp(new AlgZoltan<Adapter>(this->envConst_,
+                                             this->comm_,
+                                             this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("sarma")) {
+          this->algorithm_ = rcp(new AlgSarma<Adapter>(this->envConst_,
+                                                       this->comm_,
+                                                       this->baseInputAdapter_));
+      }
+      else if (algName_ == std::string("forTestingOnly")) {
+        this->algorithm_ = rcp(new AlgForTestingOnly<Adapter>(this->envConst_,
+                                             this->comm_,
+                                             this->baseInputAdapter_));
+      }
+      // else if (algName_ == std::string("rcb")) {
+      //  this->algorithm_ = rcp(new AlgRCB<Adapter>(this->envConst_,this->comm_,
+      //                                             this->coordinateModel_));
+      // }
+      else {
+        throw std::logic_error("partitioning algorithm not supported");
+      }
   }
 
 template <typename Adapter>
@@ -677,7 +678,7 @@ void PartitioningProblem<Adapter>::solve(bool updateInputData)
                   new Zoltan2::CoordinateTaskMapper<Adapter,part_t>(
                           this->comm_.getRawPtr(),
                           machine_.getRawPtr(),
-                          this->coordinateModel_.getRawPtr(),
+                          this->baseInputAdapter_.getRawPtr(),
                           solution_.getRawPtr(),
                           this->envConst_.getRawPtr()
                           //,task_communication_xadj,
@@ -685,7 +686,7 @@ void PartitioningProblem<Adapter>::solve(bool updateInputData)
                           );
 
     // KDD  For now, we would need to re-map the part numbers in the solution.
-    // KDD  I suspect we'll later need to distinguish between part numbers and 
+    // KDD  I suspect we'll later need to distinguish between part numbers and
     // KDD  process numbers to provide separation between partitioning and
     // KDD  mapping.  For example, does this approach here assume #parts == #procs?
     // KDD  If we map k tasks to p processes with k > p, do we effectively reduce
@@ -695,11 +696,11 @@ void PartitioningProblem<Adapter>::solve(bool updateInputData)
     const part_t *oldParts = solution_->getPartListView();
     size_t nLocal = ia->getNumLocalIds();
     for (size_t i = 0; i < nLocal; i++) {
-      // kind of cheating since oldParts is a view; probably want an interface in solution 
+      // kind of cheating since oldParts is a view; probably want an interface in solution
       // for resetting the PartList rather than hacking in like this.
-      oldParts[i] = ctm->getAssignedProcForTask(oldParts[i]);  
+      oldParts[i] = ctm->getAssignedProcForTask(oldParts[i]);
     }
-#endif 
+#endif
 
     //for now just delete the object.
     delete ctm;
@@ -1128,13 +1129,13 @@ void PartitioningProblem<Adapter>::createPartitioningProblem(bool newData)
     if(modelAvail_[GraphModelType]==true)
     {
       this->env_->debug(DETAILED_STATUS, "    building graph model");
-      this->graphModel_ = rcp(new GraphModel<base_adapter_t>(
-            this->baseInputAdapter_, this->envConst_, this->comm_,
-            graphFlags_));
+      // this->graphModel_ = rcp(new GraphModel<base_adapter_t>(
+      //       this->baseInputAdapter_, this->envConst_, this->comm_,
+      //       graphFlags_));
 
-      this->baseModel_ = rcp_implicit_cast<const Model<base_adapter_t> >(
-            this->graphModel_);
-    } 
+      // this->baseModel_ = rcp_implicit_cast<const Model<base_adapter_t> >(
+      //       this->graphModel_);
+    }
     if(modelAvail_[HypergraphModelType]==true)
     {
       //KDD USING ZOLTAN FOR HYPERGRAPH FOR NOW
@@ -1144,12 +1145,12 @@ void PartitioningProblem<Adapter>::createPartitioningProblem(bool newData)
     if(modelAvail_[CoordinateModelType]==true)
     {
       this->env_->debug(DETAILED_STATUS, "    building coordinate model");
-      this->coordinateModel_ = rcp(new CoordinateModel<base_adapter_t>(
-            this->baseInputAdapter_, this->envConst_, this->comm_,
-            coordFlags_));
+      // this->coordinateModel_ = rcp(new CoordinateModel<base_adapter_t>(
+      //       this->baseInputAdapter_, this->envConst_, this->comm_,
+      //       coordFlags_));
 
-      this->baseModel_ = rcp_implicit_cast<const Model<base_adapter_t> >(
-            this->coordinateModel_);
+      // this->baseModel_ = rcp_implicit_cast<const Model<base_adapter_t> >(
+      //       this->coordinateModel_);
     }
 
     if(modelAvail_[IdentifierModelType]==true)
