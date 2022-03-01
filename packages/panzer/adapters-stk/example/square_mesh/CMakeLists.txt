@@ -16,8 +16,10 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   COMM serial mpi
   )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  square_mesh_bc
-  SOURCES ${square_mesh_bc_SOURCES}
-  COMM serial mpi
-  )
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    square_mesh_bc
+    SOURCES ${square_mesh_bc_SOURCES}
+    COMM serial mpi
+    )
+ENDIF(PANZER_HAVE_EPETRA)
