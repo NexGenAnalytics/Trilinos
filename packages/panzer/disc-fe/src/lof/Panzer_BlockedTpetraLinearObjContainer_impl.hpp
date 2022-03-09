@@ -44,7 +44,9 @@
 
 #include "Thyra_VectorStdOps.hpp"
 #include "Thyra_ProductVectorSpaceBase.hpp"
-#include "Thyra_get_Epetra_Operator.hpp"
+#if PANZER_HAVE_EPETRA
+   #include "Thyra_get_Epetra_Operator.hpp"
+#endif
 #include "Thyra_TpetraLinearOp.hpp"
 
 #include "Tpetra_CrsMatrix.hpp"

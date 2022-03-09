@@ -240,10 +240,12 @@ namespace panzer
        */
       std::string globalDataKey_;
 
+#if PANZER_HAVE_EPETRA
       /**
        *  \brief The solution vector.
        */
       Teuchos::RCP<Epetra_Vector> x_;
+#endif
 
       /**
        *  \brief The `GlobalEvaluationData` containing both the owned and
@@ -435,10 +437,12 @@ namespace panzer
        */
       std::string globalDataKey_;
 
+#if PANZER_HAVE_EPETRA
       /**
        *  \brief The solution vector.
        */
       Teuchos::RCP<Epetra_Vector> x_;
+#endif
 
       /**
        *  \brief The `GlobalEvaluationData` containing both the owned and
@@ -648,10 +652,12 @@ namespace panzer
        */
       int gatherSeedIndex_;
 
+#if PANZER_HAVE_EPETRA
       /**
        *  \brief The solution vector.
        */
       Teuchos::RCP<Epetra_Vector> x_;
+#endif
 
       /**
        *  \brief The `GlobalEvaluationData` containing both the owned and

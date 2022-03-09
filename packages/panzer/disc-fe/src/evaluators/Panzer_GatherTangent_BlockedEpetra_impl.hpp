@@ -49,8 +49,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Epetra
-#include "Epetra_Map.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra
+  #include "Epetra_Map.h"
+#endif
 
 // Panzer
 #include "Panzer_BlockedVector_ReadOnly_GlobalEvaluationData.hpp"
@@ -190,6 +192,7 @@ panzer::GatherTangent_BlockedEpetra<EvalT, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::size_t;
   using std::string;
@@ -239,6 +242,9 @@ evaluateFields(
       } // end loop over the basis functions
     } // end loop over localCellIds
   } // end loop over the fields to be gathered
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields()
 
 #endif // __Panzer_GatherTangent_BlockedEpetra_impl_hpp__

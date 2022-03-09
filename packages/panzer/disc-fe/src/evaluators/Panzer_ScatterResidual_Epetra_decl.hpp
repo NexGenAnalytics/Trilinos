@@ -56,7 +56,9 @@
 
 #include "Panzer_Evaluator_WithBaseImpl.hpp"
 
+#if PANZER_HAVE_EPETRA
 class Epetra_Vector;
+#endif
 
 namespace panzer {
 
@@ -195,7 +197,9 @@ private:
   //    fieldMap_["RESIDUAL_Pressure"] --> "Pressure"
   Teuchos::RCP<const std::map<std::string,std::string> > fieldMap_;
 
+#if PANZER_HAVE_EPETRA
   std::vector<Teuchos::RCP<Epetra_Vector> > dfdp_vectors_;
+#endif
 
   bool useDiscreteAdjoint_;
 };

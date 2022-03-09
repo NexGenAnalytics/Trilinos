@@ -49,8 +49,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Epetra
-#include "Epetra_Vector.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra
+  #include "Epetra_Vector.h"
+#endif
 
 // Panzer
 #include "Panzer_EpetraVector_ReadOnly_GlobalEvaluationData.hpp"
@@ -192,6 +194,7 @@ panzer::GatherTangent_Epetra<EvalT, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::size_t;
   using std::string;
@@ -242,6 +245,9 @@ evaluateFields(
     } // end loop over the cells in the workset
     Kokkos::deep_copy(field.get_static_view(), field_h);
   } // end loop over the fields to be gathered
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields()
 
 #endif // __Panzer_GatherTangent_Epetra_impl_hpp__

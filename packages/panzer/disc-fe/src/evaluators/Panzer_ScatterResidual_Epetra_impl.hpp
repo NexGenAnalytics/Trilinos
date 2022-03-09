@@ -48,9 +48,11 @@
 
 #include "Phalanx_DataLayout.hpp"
 
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_CrsMatrix.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_Map.h"
+  #include "Epetra_Vector.h"
+  #include "Epetra_CrsMatrix.h"
+#endif
 
 #include "Panzer_GlobalIndexer.hpp"
 #include "Panzer_PureBasis.hpp"
@@ -145,6 +147,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterResidual_Epetra<panzer::Traits::Residual, TRAITS,LO,GO>::
 evaluateFields(typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
    // for convenience pull out some objects from workset
    std::string blockId = this->wda(workset).block_id;
    const std::vector<std::size_t> & localCellIds = this->wda(workset).cell_local_ids;
@@ -179,6 +182,9 @@ evaluateFields(typename TRAITS::EvalData workset)
          }
       }
    }
+#else
+   TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -242,6 +248,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterResidual_Epetra<panzer::Traits::Tangent, TRAITS,LO,GO>::
 preEvaluate(typename TRAITS::PreEvalData d)
 {
+#if PANZER_HAVE_EPETRA
   using Teuchos::RCP;
   using Teuchos::rcp_dynamic_cast;
 
@@ -254,6 +261,9 @@ preEvaluate(typename TRAITS::PreEvalData d)
     RCP<Epetra_Vector> vec = rcp_dynamic_cast<EpetraLinearObjContainer>(d.gedc->getDataObject(activeParameters[i]),true)->get_f();
     dfdp_vectors_.push_back(vec);
   }
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -261,6 +271,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterResidual_Epetra<panzer::Traits::Tangent, TRAITS,LO,GO>::
 evaluateFields(typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
    // for convenience pull out some objects from workset
    std::string blockId = this->wda(workset).block_id;
    const std::vector<std::size_t> & localCellIds = this->wda(workset).cell_local_ids;
@@ -296,6 +307,9 @@ evaluateFields(typename TRAITS::EvalData workset)
        }
      }
    }
+#else
+   TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -388,6 +402,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterResidual_Epetra<panzer::Traits::Jacobian, TRAITS,LO,GO>::
 evaluateFields(typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
    std::vector<double> jacRow;
 
    bool useColumnIndexer = colGlobalIndexer_!=Teuchos::null;
@@ -472,6 +487,9 @@ evaluateFields(typename TRAITS::EvalData workset)
          } // end rowBasisNum
       } // end fieldIndex
    }
+#else 
+   TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************

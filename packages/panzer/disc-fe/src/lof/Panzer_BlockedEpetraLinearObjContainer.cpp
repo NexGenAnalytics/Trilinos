@@ -45,9 +45,11 @@
 #include "Thyra_VectorBase.hpp"
 #include "Thyra_VectorStdOps.hpp"
 #include "Thyra_ProductVectorSpaceBase.hpp"
-#include "Thyra_get_Epetra_Operator.hpp"
+#if PANZER_HAVE_EPETRA
+   #include "Thyra_get_Epetra_Operator.hpp"
 
-#include "Epetra_CrsMatrix.h"
+   #include "Epetra_CrsMatrix.h"
+#endif
 
 namespace panzer {
 
@@ -110,6 +112,7 @@ initialize()
       RCP<const ProductVectorSpaceBase<double> > range = Amat->productRange();
       RCP<const ProductVectorSpaceBase<double> > domain = Amat->productDomain();
 
+#if PANZER_HAVE_EPETRA
       // loop over block entries
       for(int i=0;i<range->numBlocks();i++) {
          for(int j=0;j<domain->numBlocks();j++) {
@@ -120,6 +123,7 @@ initialize()
             }   
          }
       }
+#endif
    }
 }
 
@@ -138,6 +142,7 @@ initializeMatrix(double value)
       RCP<const ProductVectorSpaceBase<double> > range = Amat->productRange();
       RCP<const ProductVectorSpaceBase<double> > domain = Amat->productDomain();
 
+#if PANZER_HAVE_EPETRA
       // loop over block entries
       for(int i=0;i<range->numBlocks();i++) {
          for(int j=0;j<domain->numBlocks();j++) {
@@ -148,6 +153,7 @@ initializeMatrix(double value)
             }   
          }
       }
+#endif
    }
 }
 

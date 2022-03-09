@@ -47,9 +47,11 @@
 
 #include <map>
 
-// Epetra includes
-#include "Epetra_Vector.h"
-#include "Epetra_CrsMatrix.h"
+#if PANZER_HAVE_EPETRA
+   // Epetra includes
+   #include "Epetra_Vector.h"
+   #include "Epetra_CrsMatrix.h"
+#endif
 
 #include "Panzer_LinearObjFactory.hpp" 
 #include "Panzer_ThyraObjContainer.hpp"
@@ -58,9 +60,11 @@
 
 #include "Thyra_VectorBase.hpp"
 #include "Thyra_LinearOpBase.hpp"
-#include "Thyra_EpetraLinearOp.hpp"
-#include "Thyra_EpetraThyraWrappers.hpp"
-#include "Thyra_get_Epetra_Operator.hpp"
+#if PANZER_HAVE_EPETRA
+   #include "Thyra_EpetraLinearOp.hpp"
+   #include "Thyra_EpetraThyraWrappers.hpp"
+   #include "Thyra_get_Epetra_Operator.hpp"
+#endif
 
 namespace panzer {
 
@@ -72,6 +76,7 @@ class EpetraLinearObjContainer : public LinearObjContainer
 public:
    typedef LinearObjContainer::Members Members;
 
+#if PANZER_HAVE_EPETRA
    typedef Epetra_Vector VectorType;
    typedef Epetra_CrsMatrix CrsMatrixType;
 
@@ -92,24 +97,34 @@ public:
       domainSpace = domainS;
       rangeSpace = rangeS;
    }
+#endif
 
    virtual void initialize() 
    {
+#if PANZER_HAVE_EPETRA
       if(get_x()!=Teuchos::null) get_x()->PutScalar(0.0);
       if(get_dxdt()!=Teuchos::null) get_dxdt()->PutScalar(0.0);
       if(get_f()!=Teuchos::null) get_f()->PutScalar(0.0);
       if(get_A()!=Teuchos::null) get_A()->PutScalar(0.0);
+#else
+      TEUCHOS_ASSERT(false);
+#endif
    }
 
    //! Wipe out stored data.
    void clear()
    {
+#if PANZER_HAVE_EPETRA
       set_x(Teuchos::null);
       set_dxdt(Teuchos::null);
       set_f(Teuchos::null);
       set_A(Teuchos::null);
+#else 
+      TEUCHOS_ASSERT(false);
+#endif
    }
 
+#if PANZER_HAVE_EPETRA
    inline void set_x(const Teuchos::RCP<Epetra_Vector> & in) { x = in; } 
    inline const Teuchos::RCP<Epetra_Vector> get_x() const { return x; }
 
@@ -121,10 +136,18 @@ public:
 
    inline void set_A(const Teuchos::RCP<Epetra_CrsMatrix> & in) { A = in; } 
    inline const Teuchos::RCP<Epetra_CrsMatrix> get_A() const { return A; }
+#endif
 
    void initializeMatrix(double value)
-   { A->PutScalar(value); }
+   {
+#if PANZER_HAVE_EPETRA 
+      A->PutScalar(value); 
+#else
+      TEUCHOS_ASSERT(false);
+#endif
+   }
 
+#if PANZER_HAVE_EPETRA
    virtual void set_x_th(const Teuchos::RCP<Thyra::VectorBase<double> > & in) 
    { x = (in==Teuchos::null) ? Teuchos::null : Thyra::get_Epetra_Vector(*domainMap,in); }
    virtual Teuchos::RCP<Thyra::VectorBase<double> > get_x_th() const 
@@ -144,14 +167,19 @@ public:
    { A = (in==Teuchos::null) ? Teuchos::null : Teuchos::rcp_dynamic_cast<Epetra_CrsMatrix>(Thyra::get_Epetra_Operator(*in),true); }
    virtual Teuchos::RCP<Thyra::LinearOpBase<double> > get_A_th() const
    { return (A==Teuchos::null) ? Teuchos::null : Thyra::nonconstEpetraLinearOp(A); }
+#endif
 
 private:
+#if PANZER_HAVE_EPETRA
    Teuchos::RCP<const Epetra_Map> domainMap;
    Teuchos::RCP<const Epetra_Map> rangeMap;
+#endif
    Teuchos::RCP<const Thyra::VectorSpaceBase<double> > domainSpace;
    Teuchos::RCP<const Thyra::VectorSpaceBase<double> > rangeSpace;
+#if PANZER_HAVE_EPETRA
    Teuchos::RCP<Epetra_Vector> x, dxdt, f;
    Teuchos::RCP<Epetra_CrsMatrix> A;
+#endif
 };
 
 }

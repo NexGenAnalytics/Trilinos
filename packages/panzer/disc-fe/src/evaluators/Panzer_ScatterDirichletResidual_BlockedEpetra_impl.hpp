@@ -48,9 +48,11 @@
 
 #include "Phalanx_DataLayout.hpp"
 
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_CrsMatrix.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_Map.h"
+  #include "Epetra_Vector.h"
+  #include "Epetra_CrsMatrix.h"
+#endif
 
 #include "Panzer_GlobalIndexer.hpp"
 #include "Panzer_GlobalIndexer_Utilities.hpp"
@@ -65,7 +67,9 @@
 #include "Thyra_ProductVectorBase.hpp"
 #include "Thyra_DefaultProductVector.hpp"
 #include "Thyra_BlockedLinearOpBase.hpp"
-#include "Thyra_get_Epetra_Operator.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_get_Epetra_Operator.hpp"
+#endif
 
 #include "Teuchos_FancyOStream.hpp"
 
@@ -633,6 +637,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterDirichletResidual_BlockedEpetra<panzer::Traits::Jacobian, TRAITS,LO,GO>::
 evaluateFields(typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
    using Teuchos::RCP;
    using Teuchos::ArrayRCP;
    using Teuchos::ptrFromRef;
@@ -806,6 +811,9 @@ evaluateFields(typename TRAITS::EvalData workset)
          }
       }
    }
+#else
+   TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************

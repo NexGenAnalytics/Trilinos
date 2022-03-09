@@ -56,7 +56,9 @@
 
 #include "Panzer_Evaluator_WithBaseImpl.hpp"
 
+#if PANZER_HAVE_EPETRA
 class Epetra_Vector;
+#endif
 
 namespace panzer {
 
@@ -135,7 +137,9 @@ private:
 
   ScatterDirichletResidual_Epetra() {}
 
+#if PANZER_HAVE_EPETRA
   Teuchos::RCP<Epetra_Vector> dirichletCounter_;
+#endif
 
   std::string globalDataKey_; // what global data does this fill?
   Teuchos::RCP<const EpetraLinearObjContainer> epetraContainer_;
@@ -198,7 +202,9 @@ private:
   //    fieldMap_["RESIDUAL_Pressure"] --> "Pressure"
   Teuchos::RCP<const std::map<std::string,std::string> > fieldMap_;
 
+#if PANZER_HAVE_EPETRA
   std::vector<Teuchos::RCP<Epetra_Vector> > dfdp_vectors_;
+#endif
 
   std::size_t num_nodes;
 
@@ -207,7 +213,9 @@ private:
 
   ScatterDirichletResidual_Epetra() {}
 
+#if PANZER_HAVE_EPETRA
   Teuchos::RCP<Epetra_Vector> dirichletCounter_;
+#endif
 
   std::string globalDataKey_; // what global data does this fill?
   Teuchos::RCP<const EpetraLinearObjContainer> epetraContainer_;
@@ -277,7 +285,9 @@ private:
   std::size_t side_subcell_dim_;
   std::size_t local_side_id_;
 
+#if PANZER_HAVE_EPETRA
   Teuchos::RCP<Epetra_Vector> dirichletCounter_;
+#endif
 
   std::string globalDataKey_; // what global data does this fill?
   Teuchos::RCP<const EpetraLinearObjContainer> epetraContainer_;

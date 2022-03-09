@@ -45,11 +45,13 @@
 
 #include <map>
 
-// Epetra includes
-#include "Epetra_Map.h"
-#include "Epetra_CrsGraph.h"
-#include "Epetra_Import.h"
-#include "Epetra_Export.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra includes
+  #include "Epetra_Map.h"
+  #include "Epetra_CrsGraph.h"
+  #include "Epetra_Import.h"
+  #include "Epetra_Export.h"
+#endif
 
 #include "PanzerDiscFE_config.hpp"
 #include "Panzer_GlobalIndexer.hpp"
@@ -275,6 +277,7 @@ public:
    //! Get a Thyra operator
    Teuchos::RCP<Thyra::LinearOpBase<double> > getGhostedThyraMatrix() const;
 
+#if PANZER_HAVE_EPETRA
 /*************** Epetra based methods *******************/
 
    //! get the map from the matrix
@@ -400,6 +403,7 @@ public:
 
    Teuchos::RCP<Epetra_CrsMatrix> getEpetraMatrix(int i,int j) const;
    Teuchos::RCP<Epetra_CrsMatrix> getGhostedEpetraMatrix(int i,int j) const;
+#endif
 
    //! how many block rows
    int getBlockRowCount() const;
@@ -555,6 +559,7 @@ protected:
    mutable Teuchos::RCP<const Thyra::VectorSpaceBase<double> > ghostedRangeSpace_;
    mutable Teuchos::RCP<const Thyra::VectorSpaceBase<double> > ghostedDomainSpace_;
 
+#if PANZER_HAVE_EPETRA
 /*************** Epetra based methods/members *******************/
 
    void adjustForDirichletConditions(const Epetra_Vector & local_bcs,
@@ -650,9 +655,12 @@ protected:
 
    // storage for Epetra graphs and maps
    Teuchos::RCP<const Epetra_Comm> eComm_;
+#endif
+
    Teuchos::RCP<const Teuchos::OpaqueWrapper<MPI_Comm> > rawMpiComm_;
    Teuchos::RCP<Teuchos::MpiComm<int> > tComm_;
 
+#if PANZER_HAVE_EPETRA
    /**
     *  \brief The list of owned maps corresponding to the owned indices of the
     *         global indexers.
@@ -716,6 +724,7 @@ protected:
 
    mutable std::unordered_map<std::pair<int,int>,Teuchos::RCP<Epetra_CrsGraph>,panzer::pair_hash> graphs_ ;
    mutable std::unordered_map<std::pair<int,int>,Teuchos::RCP<Epetra_CrsGraph>,panzer::pair_hash> ghostedGraphs_;
+#endif
 
    bool useDiscreteAdjoint_;
 };

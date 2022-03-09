@@ -48,9 +48,11 @@
 
 #include "Phalanx_DataLayout.hpp"
 
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_CrsMatrix.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_Map.h"
+  #include "Epetra_Vector.h"
+  #include "Epetra_CrsMatrix.h"
+#endif
 
 #include "Panzer_GlobalIndexer.hpp"
 #include "Panzer_PureBasis.hpp"
@@ -149,6 +151,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterDirichletResidual_Epetra<panzer::Traits::Residual, TRAITS,LO,GO>::
 preEvaluate(typename TRAITS::PreEvalData d)
 {
+#if PANZER_HAVE_EPETRA
   // extract linear object container
   epetraContainer_ = Teuchos::rcp_dynamic_cast<EpetraLinearObjContainer>(d.gedc->getDataObject(globalDataKey_));
  
@@ -167,6 +170,9 @@ preEvaluate(typename TRAITS::PreEvalData d)
     dirichletCounter_ = epetraContainer->get_f();
     TEUCHOS_ASSERT(!Teuchos::is_null(dirichletCounter_));
   }
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -174,6 +180,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterDirichletResidual_Epetra<panzer::Traits::Residual, TRAITS,LO,GO>::
 evaluateFields(typename TRAITS::EvalData workset)
 { 
+#if PANZER_HAVE_EPETRA
    // for convenience pull out some objects from workset
    std::string blockId = this->wda(workset).block_id;
    const std::vector<std::size_t> & localCellIds = this->wda(workset).cell_local_ids;
@@ -249,6 +256,9 @@ evaluateFields(typename TRAITS::EvalData workset)
        }
      }
    }
+#else
+   TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -337,6 +347,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterDirichletResidual_Epetra<panzer::Traits::Tangent, TRAITS,LO,GO>::
 preEvaluate(typename TRAITS::PreEvalData d)
 {
+#if PANZER_HAVE_EPETRA
   // extract linear object container
   epetraContainer_ = Teuchos::rcp_dynamic_cast<EpetraLinearObjContainer>(d.gedc->getDataObject(globalDataKey_));
  
@@ -370,6 +381,9 @@ preEvaluate(typename TRAITS::PreEvalData d)
     RCP<Epetra_Vector> vec = rcp_dynamic_cast<EpetraLinearObjContainer>(d.gedc->getDataObject(activeParameters[i]),true)->get_f();
     dfdp_vectors_.push_back(vec);
   }
+#else 
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -377,6 +391,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterDirichletResidual_Epetra<panzer::Traits::Tangent, TRAITS,LO,GO>::
 evaluateFields(typename TRAITS::EvalData workset)
 { 
+#if PANZER_HAVE_EPETRA
    // for convenience pull out some objects from workset
    std::string blockId = this->wda(workset).block_id;
    const std::vector<std::size_t> & localCellIds = this->wda(workset).cell_local_ids;
@@ -469,6 +484,9 @@ evaluateFields(typename TRAITS::EvalData workset)
          }
      }
    }
+#else
+   TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -557,6 +575,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterDirichletResidual_Epetra<panzer::Traits::Jacobian, TRAITS,LO,GO>::
 preEvaluate(typename TRAITS::PreEvalData d)
 {
+#if PANZER_HAVE_EPETRA
   // extract linear object container
   epetraContainer_ = Teuchos::rcp_dynamic_cast<EpetraLinearObjContainer>(d.gedc->getDataObject(globalDataKey_));
  
@@ -575,6 +594,9 @@ preEvaluate(typename TRAITS::PreEvalData d)
     dirichletCounter_ = epetraContainer->get_f();
     TEUCHOS_ASSERT(!Teuchos::is_null(dirichletCounter_));
   }
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************
@@ -582,6 +604,7 @@ template<typename TRAITS,typename LO,typename GO>
 void panzer::ScatterDirichletResidual_Epetra<panzer::Traits::Jacobian, TRAITS,LO,GO>::
 evaluateFields(typename TRAITS::EvalData workset)
 { 
+#if PANZER_HAVE_EPETRA
    Kokkos::View<const int*, Kokkos::LayoutRight, PHX::Device> cLIDs, rLIDs;
    int gidCount(0);
    bool useColumnIndexer = colGlobalIndexer_!=Teuchos::null;
@@ -683,6 +706,9 @@ evaluateFields(typename TRAITS::EvalData workset)
          }
       }
    }
+#else
+   TEUCHOS_ASSERT(false);
+#endif
 }
 
 // **********************************************************************

@@ -49,8 +49,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Epetra
-#include "Epetra_Vector.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra
+  #include "Epetra_Vector.h"
+#endif
 
 // Panzer
 #include "Panzer_EpetraLinearObjContainer.hpp"

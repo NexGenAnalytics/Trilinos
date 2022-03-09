@@ -52,7 +52,9 @@
 #include "Thyra_PhysicallyBlockedLinearOpBase.hpp"
 #include "Thyra_ProductVectorBase.hpp"
 
-#include "Epetra_Map.h"
+#if PANZER_HAVE_EPETRA
+   #include "Epetra_Map.h"
+#endif
 
 #include <unordered_map>
 
@@ -75,11 +77,13 @@ public:
    //! Put a particular scalar in the matrix
    void initializeMatrix(double value);
 
+#if PANZER_HAVE_EPETRA
    void setMapsForBlocks(const std::vector<Teuchos::RCP<const Epetra_Map> > & blockMaps)
    { blockMaps_ = blockMaps; }
 
    Teuchos::RCP<const Epetra_Map> getMapForBlock(std::size_t i) const
    { return blockMaps_[i]; }
+#endif
 
    inline void set_x(const Teuchos::RCP<VectorType> & in) { set_x_th(in); }
    inline Teuchos::RCP<VectorType> get_x() const { return get_x_th(); }
@@ -114,7 +118,9 @@ private:
    Teuchos::RCP<VectorType> x, dxdt, f;
    Teuchos::RCP<CrsMatrixType> A;
 
+#if PANZER_HAVE_EPETRA
    std::vector<Teuchos::RCP<const Epetra_Map> > blockMaps_;
+#endif
 };
 
 }

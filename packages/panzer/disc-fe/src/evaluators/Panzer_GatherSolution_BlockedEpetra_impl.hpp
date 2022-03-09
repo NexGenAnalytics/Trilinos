@@ -238,6 +238,7 @@ GatherSolution_BlockedEpetra<panzer::Traits::Residual, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::size_t;
   using std::string;
@@ -302,6 +303,9 @@ evaluateFields(
     } // end loop over localCellIds
     Kokkos::deep_copy(field.get_static_view(), field_h);
   } // end loop over the fields to be gathered
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields() (Residual Specialization)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -469,6 +473,7 @@ panzer::GatherSolution_BlockedEpetra<panzer::Traits::Tangent, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::pair;
   using std::size_t;
@@ -581,6 +586,9 @@ evaluateFields(
       } // end loop over localCellIds
     } // end loop over the fields to be gathered
   } // end if (hasTangentFields_)
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields() (Tangent Specialization)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -740,6 +748,7 @@ GatherSolution_BlockedEpetra<panzer::Traits::Jacobian, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::size_t;
   using std::string;
@@ -829,6 +838,9 @@ evaluateFields(
     } // end loop over localCellIds
     Kokkos::deep_copy(field.get_static_view(), field_h);
   } // end loop over the fields to be gathered
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields() (Jacobian Specialization)
 
 #endif // __Panzer_GatherSolution_BlockedEpetra_impl_hpp__
