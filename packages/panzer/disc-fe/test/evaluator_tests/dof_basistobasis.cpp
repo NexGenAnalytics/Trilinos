@@ -69,9 +69,6 @@ using Teuchos::rcp;
 #include "Phalanx_FieldManager.hpp"
 #include "Phalanx_DataLayout_MDALayout.hpp"
 
-#include "Epetra_MpiComm.h"
-#include "Epetra_Comm.h"
-
 #include "UnitValueEvaluator.hpp"
 
 // for making explicit instantiated tests easier 
