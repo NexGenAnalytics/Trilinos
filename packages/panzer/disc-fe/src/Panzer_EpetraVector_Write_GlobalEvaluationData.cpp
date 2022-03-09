@@ -46,14 +46,18 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Epetra
-#include "Epetra_Export.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra
+  #include "Epetra_Export.h"
+#endif
 
 // Panzer
 #include "Panzer_EpetraVector_Write_GlobalEvaluationData.hpp"
 
 // Thyra
-#include "Thyra_EpetraThyraWrappers.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_EpetraThyraWrappers.hpp"
+#endif
 #include "Thyra_LinearOpBase.hpp"
 #include "Thyra_SpmdVectorBase.hpp"
 #include "Thyra_SpmdVectorSpaceBase.hpp"
@@ -62,6 +66,7 @@
 
 namespace panzer
 {
+#if PANZER_HAVE_EPETRA
   /////////////////////////////////////////////////////////////////////////////
   //
   //  initialize()
@@ -98,7 +103,8 @@ namespace panzer
     ownedView_   = getView<Epetra_Vector>(*ownedVector_);
     ghostedView_ = getView<Epetra_Vector>(*getGhostedVector());
   } // end of initialize()
-  
+#endif
+
   /////////////////////////////////////////////////////////////////////////////
   //
   //  ghostToGlobal()
@@ -109,6 +115,7 @@ namespace panzer
   ghostToGlobal(
     int /* mem */)
   {
+#if PANZER_HAVE_EPETRA
     using std::invalid_argument;
     using std::logic_error;
     using Teuchos::RCP;
@@ -144,6 +151,9 @@ namespace panzer
     RCP<Epetra_Vector> ownedVector_ep = get_Epetra_Vector(*ownedMap_,
       ownedVector_);
     ownedVector_ep->Export(*ghostedVector_, *exporter_, cm);
+#else 
+    TEUCHOS_ASSERT(false);
+#endif
   } // end of ghostToGlobal()
   
   /////////////////////////////////////////////////////////////////////////////
@@ -163,6 +173,7 @@ namespace panzer
     put_scalar(0.0, ownedVector_.ptr());
   } // end of initializeData()
   
+#if PANZER_HAVE_EPETRA
   /////////////////////////////////////////////////////////////////////////////
   //
   //  setOwnedVector_Epetra()
@@ -201,7 +212,8 @@ namespace panzer
       "The ghosted vector is just a null RCP.")
     return ghostedVector_;
   } // end of getGhostedVector_Epetra()
-  
+#endif
+
   /////////////////////////////////////////////////////////////////////////////
   //
   //  setOwnedVector()
@@ -218,7 +230,9 @@ namespace panzer
       "EpetraVector_Write_GlobalEvaluationData::setOwnedVector():  This "     \
       "object hasn't yet been initialized.")
     ownedVector_ = ownedVector;
+#if PANZER_HAVE_EPETRA
     ownedView_   = getView<Epetra_Vector>(*ownedVector_);
+#endif
   } // end of setOwnedVector()
   
   /////////////////////////////////////////////////////////////////////////////
@@ -246,6 +260,7 @@ namespace panzer
   EpetraVector_Write_GlobalEvaluationData::
   getGhostedVector() const
   {
+#if PANZER_HAVE_EPETRA
     using std::logic_error;
     using Thyra::create_Vector;
     TEUCHOS_TEST_FOR_EXCEPTION(not isInitialized_, logic_error,
@@ -255,6 +270,10 @@ namespace panzer
       "EpetraVector_Write_GlobalEvaluationData::getGhostedVector():  The "    \
       "ghosted vector is just a null RCP.")
     return create_Vector(ghostedVector_, ghostedSpace_);
+#else 
+    TEUCHOS_ASSERT(false);
+    return {};
+#endif
   } // end of getGhostedVector()
 
   /////////////////////////////////////////////////////////////////////////////
@@ -272,8 +291,12 @@ namespace panzer
     os << "\n";
     os << tab << "EpetraVector_Write_GlobalEvaluationData\n"
        << tab << "  init    = " << isInitialized_ << "\n"
+#if PANZER_HAVE_EPETRA
        << tab << "  owned   = " << ownedVector_   << "\n"
        << tab << "  ghosted = " << ghostedVector_ << "\n";
+#else 
+       << tab << "  owned   = " << ownedVector_   << "\n";
+#endif
   } // end of print()
 
 } // end of namespace panzer

@@ -49,10 +49,12 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Epetra
-#include "Epetra_Export.h"
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra
+  #include "Epetra_Export.h"
+  #include "Epetra_Map.h"
+  #include "Epetra_Vector.h"
+#endif
 
 // Panzer
 #include "Panzer_WriteVector_GlobalEvaluationData.hpp"
@@ -98,9 +100,12 @@ namespace panzer
         :
         isInitialized_(false)
       {
+#if PANZER_HAVE_EPETRA
         initialize(src.exporter_, src.ghostedMap_, src.ownedMap_);
+#endif
       } // end of Copy Constructor
 
+#if PANZER_HAVE_EPETRA
       /**
        *  \brief Initializing Constructor.
        *
@@ -138,6 +143,7 @@ namespace panzer
         const Teuchos::RCP<const Epetra_Export>& exporter,
         const Teuchos::RCP<const Epetra_Map>&    ghostedMap,
         const Teuchos::RCP<const Epetra_Map>&    ownedMap);
+#endif
 
       /**
        *  \brief Communicate the ghosted data to the owned vector.
@@ -168,6 +174,7 @@ namespace panzer
         return false;
       } // end of requiresDirichletAdjustment()
 
+#if PANZER_HAVE_EPETRA
       /**
        *  \brief Set the owned vector (`Epetra` version).
        *
@@ -185,6 +192,7 @@ namespace panzer
        */
       Teuchos::RCP<Epetra_Vector>
       getGhostedVector_Epetra() const;
+#endif
 
       /**
        *  \brief Set the owned vector (`Thyra` version).
@@ -243,6 +251,7 @@ namespace panzer
        */
       bool isInitialized_;
 
+#if PANZER_HAVE_EPETRA
       /**
        *  \brief The map corresponding to the ghosted vector.
        */
@@ -252,6 +261,7 @@ namespace panzer
        *  \brief The map corresponding to the owned vector.
        */
       Teuchos::RCP<const Epetra_Map> ownedMap_;
+#endif
 
       /**
        *  \brief The vector space corresponding to the ghosted vector.
@@ -263,6 +273,7 @@ namespace panzer
        */
       Teuchos::RCP<const Thyra::VectorSpaceBase<double>> ownedSpace_;
 
+#if PANZER_HAVE_EPETRA
       /**
        *  \brief The exporter used to communicate between the owned and ghosted
        *         vectors.
@@ -273,6 +284,7 @@ namespace panzer
        *  \brief The ghosted vector.
        */
       Teuchos::RCP<Epetra_Vector> ghostedVector_;
+#endif
 
       /**
        *  \brief The owned vector.

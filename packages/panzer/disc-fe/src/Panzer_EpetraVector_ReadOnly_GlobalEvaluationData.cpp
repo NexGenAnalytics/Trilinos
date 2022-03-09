@@ -46,14 +46,18 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Epetra
-#include "Epetra_Import.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra
+  #include "Epetra_Import.h"
+#endif
 
 // Panzer
 #include "Panzer_EpetraVector_ReadOnly_GlobalEvaluationData.hpp"
 
 // Thyra
-#include "Thyra_EpetraThyraWrappers.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_EpetraThyraWrappers.hpp"
+#endif
 #include "Thyra_SpmdVectorBase.hpp"
 #include "Thyra_SpmdVectorSpaceBase.hpp"
 #include "Thyra_VectorBase.hpp"
@@ -84,6 +88,7 @@ namespace panzer
     filteredPairs_.push_back(fp);
   } // end of useConstantValues()
 
+#if PANZER_HAVE_EPETRA
   /////////////////////////////////////////////////////////////////////////////
   //
   //  initialize()
@@ -140,6 +145,7 @@ namespace panzer
     ownedView_   = getView<const Epetra_Vector>(*ownedVector_);
     ghostedView_ = getView<Epetra_Vector>(*getGhostedVector());
   } // end of initialize()
+#endif
 
   /////////////////////////////////////////////////////////////////////////////
   //
@@ -151,6 +157,7 @@ namespace panzer
   globalToGhost(
     int /* mem */)
   {
+#if PANZER_HAVE_EPETRA
     using std::logic_error;
     using Teuchos::RCP;
     using Thyra::get_Epetra_Vector;
@@ -166,6 +173,9 @@ namespace panzer
 
     // Do the global distribution.
     ghostedVector_->Import(*ownedVector_ep, *importer_, Insert);
+#else 
+    TEUCHOS_ASSERT(false);
+#endif
   } // end of globalToGhost()
 
   /////////////////////////////////////////////////////////////////////////////
@@ -177,6 +187,7 @@ namespace panzer
   EpetraVector_ReadOnly_GlobalEvaluationData::
   initializeData()
   {
+#if PANZER_HAVE_EPETRA
     using std::logic_error;
     using std::size_t;
     using std::vector;
@@ -192,6 +203,9 @@ namespace panzer
       for (size_t j(0); j < lids.size(); ++j)
         (*ghostedVector_)[lids[j]] = filteredPairs_[i].second;
     } // end loop over filteredPairs_
+#else 
+    TEUCHOS_ASSERT(false);
+#endif
   } // end of initializeData()
 
   /////////////////////////////////////////////////////////////////////////////
@@ -206,6 +220,7 @@ namespace panzer
   {
   } // end of ghostToGlobal()
 
+#if PANZER_HAVE_EPETRA
   /////////////////////////////////////////////////////////////////////////////
   //
   //  setOwnedVector_Epetra()
@@ -244,6 +259,7 @@ namespace panzer
       "getGhostedVector_Epetra():  The ghosted vector is just a null RCP.")
     return ghostedVector_;
   } // end of getGhostedVector_Epetra()
+#endif
 
   /////////////////////////////////////////////////////////////////////////////
   //
@@ -261,7 +277,9 @@ namespace panzer
       "EpetraVector_ReadOnly_GlobalEvaluationData::setOwnedVector():  This "  \
       "object hasn't yet been initialized.")
     ownedVector_ = ownedVector;
+#if PANZER_HAVE_EPETRA
     ownedView_   = getView<const Epetra_Vector>(*ownedVector_);
+#endif
   } // end of setOwnedVector()
 
   /////////////////////////////////////////////////////////////////////////////
@@ -289,6 +307,7 @@ namespace panzer
   EpetraVector_ReadOnly_GlobalEvaluationData::
   getGhostedVector() const
   {
+#if PANZER_HAVE_EPETRA
     using std::logic_error;
     using Thyra::create_Vector;
     TEUCHOS_TEST_FOR_EXCEPTION(not isInitialized_, logic_error,
@@ -298,6 +317,10 @@ namespace panzer
       "EpetraVector_ReadOnly_GlobalEvaluationData::getGhostedVector():  The " \
       "ghosted vector is just a null RCP.")
     return create_Vector(ghostedVector_, ghostedSpace_);
+#else 
+    TEUCHOS_ASSERT(false);
+    return {};
+#endif
   } // end of getGhostedVector()
 
   /////////////////////////////////////////////////////////////////////////////
@@ -316,8 +339,12 @@ namespace panzer
     os << endl
        << tab << "EpetraVector_ReadOnly_GlobalEvaluationData" << endl
        << tab << "  init    = " << isInitialized_             << endl
+#if PANZER_HAVE_EPETRA
        << tab << "  owned   = " << ownedVector_               << endl
        << tab << "  ghosted = " << ghostedVector_             << endl;
+#else 
+       << tab << "  owned   = " << ownedVector_               << endl;
+#endif
   } // end of print()
 
 } // end of namespace panzer
