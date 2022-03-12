@@ -61,6 +61,7 @@
 
 #include "UnitTest_ConnManager.hpp"
 
+#if PANZER_HAVE_EPETRA
 #ifdef HAVE_MPI
    #include "Epetra_MpiComm.h"
 #else
@@ -68,6 +69,7 @@
 #endif
 
 #include "Epetra_Map.h"
+#endif
 
 #include "Kokkos_DynRankView.hpp"
 #include "Intrepid2_HGRAD_QUAD_C1_FEM.hpp"
@@ -91,6 +93,7 @@ RCP<const panzer::FieldPattern> buildFieldPattern()
    return pattern;
 }
 
+#if PANZER_HAVE_EPETRA
 TEUCHOS_UNIT_TEST(tCloneLOF, epetra)
 {
 
@@ -322,5 +325,6 @@ TEUCHOS_UNIT_TEST(tCloneLOF, blocked_epetra_nonblocked_domain)
    TEST_EQUALITY(gmat->productDomain()->numBlocks(),1);
    TEST_EQUALITY(gmat->productDomain()->dim(),10+15);
 }
+#endif
 
 }

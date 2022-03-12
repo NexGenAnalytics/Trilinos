@@ -48,9 +48,11 @@
 
 #include "Panzer_GlobalEvaluationDataContainer.hpp"
 
+#if PANZER_HAVE_EPETRA
 class Epetra_Vector;
 class Epetra_CrsMatrix;
 class Epetra_Map;
+#endif
 
 namespace panzer {
 

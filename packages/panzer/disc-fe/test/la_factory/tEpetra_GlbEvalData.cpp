@@ -54,6 +54,7 @@
 
 #include "Teuchos_DefaultMpiComm.hpp"
 
+#if PANZER_HAVE_EPETRA
 #ifdef HAVE_MPI
    #include "Epetra_MpiComm.h"
 #else
@@ -63,6 +64,7 @@
 #include "Epetra_Map.h"
 #include "Epetra_MultiVector.h"
 #include "Epetra_MpiComm.h"
+#endif
 
 #include "Thyra_VectorBase.hpp"
 #include "Thyra_VectorSpaceBase.hpp"
@@ -80,6 +82,7 @@ using Teuchos::rcpFromRef;
 
 namespace panzer {
 
+#if PANZER_HAVE_EPETRA
 TEUCHOS_UNIT_TEST(tEpetra_GlbEvalData, basic)
 {
   using Teuchos::RCP;
@@ -468,5 +471,6 @@ TEUCHOS_UNIT_TEST(tEpetra_GlbEvalData, filtered_dofs)
     }
   }
 }
+#endif
 
 } // end namespace panzer

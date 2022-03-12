@@ -61,13 +61,16 @@
 
 #include "UnitTest_GlobalIndexer.hpp"
 
+#if PANZER_HAVE_EPETRA
 #include "Thyra_EpetraThyraWrappers.hpp"
+#include "Thyra_get_Epetra_Operator.hpp"
+#endif
 #include "Thyra_ProductVectorBase.hpp"
 #include "Thyra_BlockedLinearOpBase.hpp"
 #include "Thyra_SpmdVectorBase.hpp"
-#include "Thyra_get_Epetra_Operator.hpp"
 #include "Thyra_VectorStdOps.hpp"
 
+#if PANZER_HAVE_EPETRA
 #include "Epetra_Comm.h"
 #ifdef HAVE_MPI
 #include "Epetra_MpiComm.h"
@@ -76,6 +79,7 @@
 #endif
 #include "Epetra_Operator.h"
 #include "Epetra_CrsMatrix.h"
+#endif
 
 #include "UnitTest_ConnManager.hpp"
 
@@ -86,6 +90,7 @@ using Teuchos::rcpFromRef;
 
 namespace panzer {
 
+#if PANZER_HAVE_EPETRA
 Teuchos::RCP<Epetra_CrsMatrix> getSubBlock(int i,int j,Thyra::LinearOpBase<double> & lo)
 {
    Thyra::BlockedLinearOpBase<double> & blo = Teuchos::dyn_cast<Thyra::BlockedLinearOpBase<double> >(lo);
@@ -101,6 +106,7 @@ Teuchos::RCP<const Epetra_CrsMatrix> getSubBlock(int i,int j,const Thyra::Linear
 
    return rcp_dynamic_cast<const Epetra_CrsMatrix>(e_blo);
 }
+#endif
 
 template <typename Intrepid2Type>
 Teuchos::RCP<const panzer::FieldPattern> buildFieldPattern()
@@ -137,6 +143,7 @@ Teuchos::RCP<const panzer::BlockedDOFManager> buildBlockedIndexer(int myRank,int
   return indexer;
 }
 
+#if PANZER_HAVE_EPETRA
 RCP<Epetra_MultiVector> getEpetraMultiVector(RCP<Thyra::MultiVectorBase<double> > & vec,const Epetra_Map & eMap)
 {
    return Thyra::get_Epetra_MultiVector(eMap,vec);
@@ -564,6 +571,7 @@ TEUCHOS_UNIT_TEST(tEpetraLinearObjFactory, initializeContainer)
    }
 
 }
+#endif
 
 TEUCHOS_UNIT_TEST(tBlockedLinearObjFactory, intializeContainer_epetra)
 {
@@ -710,6 +718,7 @@ TEUCHOS_UNIT_TEST(tBlockedEpetraLinearObjFactory, epetra_factory_tests)
    }
 }
 
+#if PANZER_HAVE_EPETRA
 TEUCHOS_UNIT_TEST(tBlockedEpetraLinearObjFactory, ghostToGlobal)
 {
 
@@ -1230,6 +1239,7 @@ TEUCHOS_UNIT_TEST(tBlockedEpetraLinearObjFactory, node_cell)
    else 
       TEUCHOS_ASSERT(false);
 }
+#endif
 
 TEUCHOS_UNIT_TEST(tBlockedEpetraLinearObjFactory, exclusion)
 {
