@@ -102,7 +102,9 @@
 #include <cstdlib> // for std::getenv
 
 // Piro solver objects
-#include "Thyra_EpetraModelEvaluator.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_EpetraModelEvaluator.hpp"
+#endif
 #include "Piro_ConfigDefs.hpp"
 #include "Piro_NOXSolver.hpp"
 #include "Piro_LOCASolver.hpp"
@@ -1413,6 +1415,7 @@ namespace panzer_stk {
 
     // using the FMB, build the model evaluator
     {
+#if PANZER_HAVE_EPETRA
       // get nominal input values, make sure they match with internal me
       Thyra::ModelEvaluatorBase::InArgs<ScalarT> nomVals = physics_me->getNominalValues();
 
@@ -1454,6 +1457,9 @@ namespace panzer_stk {
       }
 
       return thyra_me;
+#else 
+      TEUCHOS_ASSERT(false);
+#endif
     }
   }
 
@@ -1470,6 +1476,7 @@ namespace panzer_stk {
                              const Teuchos::RCP<panzer::GlobalData> & global_data,
                              bool is_transient,double t_init) const
   {
+#if PANZER_HAVE_EPETRA
     Teuchos::RCP<Thyra::ModelEvaluatorDefaultBase<double> > thyra_me;
     if(!buildThyraME) {
       Teuchos::RCP<panzer::ModelEvaluator_Epetra> ep_me
@@ -1487,6 +1494,9 @@ namespace panzer_stk {
     }
 
     return thyra_me;
+#else 
+    TEUCHOS_ASSERT(false);
+#endif
   }
 
   template<typename ScalarT>
@@ -1601,6 +1611,7 @@ namespace panzer_stk {
                  const bool write_graphviz_file,
                  const std::string& graphviz_file_prefix)
   {
+#if PANZER_HAVE_EPETRA
     typedef panzer::ModelEvaluator<double> PanzerME;
 
     Teuchos::ParameterList & p = *this->getNonconstParameterList();
@@ -1634,6 +1645,9 @@ namespace panzer_stk {
     }
 
     TEUCHOS_ASSERT(false);
+#else
+    TEUCHOS_ASSERT(false);
+#endif
   }
 }
 

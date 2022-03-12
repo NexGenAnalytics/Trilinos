@@ -51,9 +51,11 @@
 
 namespace panzer_stk {
 
+#if PANZER_HAVE_EPETRA
 static void gather_in_block(const std::string & blockId, const panzer::GlobalIndexer& dofMngr,
                             const Epetra_Vector & x,const std::vector<std::size_t> & localCellIds,
                             std::map<std::string,Kokkos::DynRankView<double,PHX::Device> > & fc);
+#endif
 
 static void build_local_ids(const panzer_stk::STK_Interface & mesh,
                             std::map<std::string,Teuchos::RCP<std::vector<std::size_t> > > & localIds);
@@ -81,6 +83,7 @@ void write_cell_data(panzer_stk::STK_Interface & mesh,const std::vector<double> 
    }
 }
 
+#if PANZER_HAVE_EPETRA
 void write_solution_data(const panzer::GlobalIndexer& dofMngr,panzer_stk::STK_Interface & mesh,const Epetra_MultiVector & x,const std::string & prefix,const std::string & postfix)
 {
    write_solution_data(dofMngr,mesh,*x(0),prefix,postfix);
@@ -149,6 +152,7 @@ void gather_in_block(const std::string & blockId, const panzer::GlobalIndexer& d
       Kokkos::deep_copy(fc[fieldStr], field);
    }
 }
+#endif
 
 void build_local_ids(const panzer_stk::STK_Interface & mesh,
                    std::map<std::string,Teuchos::RCP<std::vector<std::size_t> > > & localIds)

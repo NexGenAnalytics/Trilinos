@@ -68,7 +68,9 @@
 
 #include "Panzer_NodeType.hpp"
 
-#include "Thyra_EpetraModelEvaluator.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_EpetraModelEvaluator.hpp"
+#endif
 
 #ifdef PANZER_HAVE_TEKO
 #include "Teko_RequestHandler.hpp"
@@ -338,6 +340,7 @@ template <typename BuilderT>
 int ModelEvaluatorFactory<ScalarT>::
 addResponse(const std::string & responseName,const std::vector<panzer::WorksetDescriptor> & wkstDesc,const BuilderT & builder)
 {
+#if PANZER_HAVE_EPETRA
   typedef panzer::ModelEvaluator<double> PanzerME;
 
   Teuchos::RCP<Thyra::EpetraModelEvaluator> thyra_ep_me = Teuchos::rcp_dynamic_cast<Thyra::EpetraModelEvaluator>(m_physics_me);
@@ -356,6 +359,9 @@ addResponse(const std::string & responseName,const std::vector<panzer::WorksetDe
 
   TEUCHOS_ASSERT(false);
   return -1;
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 }

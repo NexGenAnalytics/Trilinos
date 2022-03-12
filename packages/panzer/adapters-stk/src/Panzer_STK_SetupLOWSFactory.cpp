@@ -49,9 +49,11 @@
 
 #include "Stratimikos_DefaultLinearSolverBuilder.hpp"
 
-#include "Epetra_MpiComm.h"
-#include "Epetra_Vector.h"
-#include "EpetraExt_VectorOut.h"
+#if PANZER_HAVE_EPETRA
+   #include "Epetra_MpiComm.h"
+   #include "Epetra_Vector.h"
+   #include "EpetraExt_VectorOut.h"
+#endif
 
 #include "ml_rbm.h"
 
