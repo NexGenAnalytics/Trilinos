@@ -51,8 +51,10 @@
 #include <string>
 #include <vector>
 
-// Epetra
-#include "Epetra_MpiComm.h"
+#if PANZER_HAVE_EPETRA
+  // Epetra
+  #include "Epetra_MpiComm.h"
+#endif
 // Kokkos
 #include "Kokkos_View_Fad.hpp"
 
@@ -131,7 +133,7 @@ namespace panzer {
   // These are used when computing df/dx*dx/dp with the tangent evaluation type
   void testGatherScatter(const bool enable_tangents, Teuchos::FancyOStream& out, bool& success)
   {
-
+#if PANZER_HAVE_EPETRA
    #ifdef HAVE_MPI
       Teuchos::RCP<Epetra_Comm> eComm = Teuchos::rcp(new Epetra_MpiComm(MPI_COMM_WORLD));
    #else
@@ -641,6 +643,7 @@ namespace panzer {
         }
        }
     }
+#endif
   }
 
 

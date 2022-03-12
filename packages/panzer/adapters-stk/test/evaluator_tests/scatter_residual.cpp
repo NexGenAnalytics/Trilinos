@@ -93,7 +93,7 @@ namespace panzer {
 
   TEUCHOS_UNIT_TEST(block_assembly, scatter_solution_residual)
   {
-
+#if PANZER_HAVE_EPETRA
    #ifdef HAVE_MPI
       Teuchos::RCP<Teuchos::MpiComm<int> > tComm = Teuchos::rcp(new Teuchos::MpiComm<int>(MPI_COMM_WORLD));
    #else
@@ -298,11 +298,12 @@ namespace panzer {
        double target = 789.0+myRank;
        TEST_ASSERT(data[i]==target || data[i]==2.0*target);
     }
+#endif
   }
 
   TEUCHOS_UNIT_TEST(block_assembly, scatter_solution_jacobian)
   {
-
+#if PANZER_HAVE_EPETRA
    #ifdef HAVE_MPI
       Teuchos::RCP<Teuchos::MpiComm<int> > tComm = Teuchos::rcp(new Teuchos::MpiComm<int>(MPI_COMM_WORLD));
    #else
@@ -514,6 +515,7 @@ namespace panzer {
        TEST_ASSERT(data[i]==target || data[i]==2.0*target);
        out << data[i] << std::endl;
     }
+#endif
   }
 
   Teuchos::RCP<panzer::PureBasis> buildBasis(std::size_t worksetSize,const std::string & basisName)

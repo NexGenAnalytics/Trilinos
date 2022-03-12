@@ -47,10 +47,12 @@
 
 #include "Teuchos_RCP.hpp"
 
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_MultiVector.h"
-#include "Epetra_Operator.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_Map.h"
+  #include "Epetra_Vector.h"
+  #include "Epetra_MultiVector.h"
+  #include "Epetra_Operator.h"
+#endif
 
 #include "Thyra_VectorSpaceBase.hpp"
 #include "Thyra_VectorBase.hpp"
@@ -69,6 +71,7 @@ public:
 
    virtual ~ResponseMESupportBase() {}
 
+#if PANZER_HAVE_EPETRA
    // This is the epetra view of the world
    ///////////////////////////////////////////////////////////
 
@@ -79,6 +82,7 @@ public:
      * constructed from the vector space returned by <code>getMap</code>.
      */
    virtual void setVector(const Teuchos::RCP<Epetra_Vector> & destVec) = 0;
+#endif
 
    // This is the Thyra view of the world
    ///////////////////////////////////////////////////////////
@@ -108,6 +112,7 @@ public:
    //! Does this response support derivative evaluation?
    virtual bool supportsDerivative() const = 0;
 
+#if PANZER_HAVE_EPETRA
    // This is the epetra view of the world
    ///////////////////////////////////////////////////////////
 
@@ -117,6 +122,7 @@ public:
    /** Set the derivative (to be filled) for this response. 
      */
    virtual void setDerivative(const Teuchos::RCP<Epetra_MultiVector> & derivative) = 0;
+#endif
 
    // This is the Thyra view of the world
    ///////////////////////////////////////////////////////////
@@ -143,6 +149,7 @@ public:
 
    virtual ~ResponseMESupportBase() {}
 
+#if PANZER_HAVE_EPETRA
    // This is the epetra view of the world
    ///////////////////////////////////////////////////////////
 
@@ -153,6 +160,7 @@ public:
      * constructed from the vector space returned by <code>getMap</code>.
      */
    virtual void setVector(const Teuchos::RCP<Epetra_MultiVector> & destVec) = 0;
+#endif
 
    // This is the Thyra view of the world
    ///////////////////////////////////////////////////////////

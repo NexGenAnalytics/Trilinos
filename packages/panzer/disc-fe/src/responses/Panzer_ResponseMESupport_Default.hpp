@@ -50,24 +50,36 @@
 
 #include "Panzer_ResponseMESupportBase.hpp"
 
-#include "Thyra_EpetraThyraWrappers.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_EpetraThyraWrappers.hpp"
+#endif
 
 #include "Thyra_DefaultSpmdVectorSpace.hpp"
 #include "Thyra_SpmdVectorBase.hpp"
 
-#include "Epetra_LocalMap.h"
-#include "Epetra_Map.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_LocalMap.h"
+  #include "Epetra_Map.h"
+#endif
 
 namespace panzer {
 
 template <typename EvalT>
 class ResponseMESupport_Default : public ResponseMESupportBase<EvalT> {
 public:
+#if PANZER_HAVE_EPETRA
    ResponseMESupport_Default(const std::string & responseName,MPI_Comm comm)
      : ResponseMESupportBase<EvalT>(responseName), useEpetra_(false), eComm_(comm), useThyra_(false)
    {
      tComm_ = Teuchos::rcp(new Teuchos::MpiComm<Thyra::Ordinal>(Teuchos::opaqueWrapper(comm)));
    }
+#else 
+   ResponseMESupport_Default(const std::string & responseName,MPI_Comm comm)
+     : ResponseMESupportBase<EvalT>(responseName), useEpetra_(false), useThyra_(false)
+   {
+     tComm_ = Teuchos::rcp(new Teuchos::MpiComm<Thyra::Ordinal>(Teuchos::opaqueWrapper(comm)));
+   }
+#endif
 
    virtual ~ResponseMESupport_Default() {}
 
@@ -77,6 +89,7 @@ public:
    //! Is the vector distributed (or replicated)
    virtual bool vectorIsDistributed() const = 0;
 
+#if PANZER_HAVE_EPETRA
    // This is the epetra view of the world
    ///////////////////////////////////////////////////////////
 
@@ -87,6 +100,7 @@ public:
      * constructed from the vector space returned by <code>getMap</code>.
      */
    void setVector(const Teuchos::RCP<Epetra_Vector> & destVec);
+#endif
 
    // This is the Thyra view of the world
    ///////////////////////////////////////////////////////////
@@ -117,8 +131,10 @@ protected:
    //! Is Thyra the right vector
    bool useThyra() const { return useThyra_; }
 
+#if PANZER_HAVE_EPETRA
    //! Access the epetra vector
    Epetra_Vector & getEpetraVector() const;
+#endif
 
    //! Access the thyra vector
    Thyra::ArrayRCP<double> getThyraVector() const;
@@ -134,9 +150,11 @@ private:
    ResponseMESupport_Default(const ResponseMESupport_Default<EvalT> &);
 
    bool useEpetra_;
+#if PANZER_HAVE_EPETRA
    Epetra_MpiComm eComm_;
    mutable Teuchos::RCP<const Epetra_Map> map_;
    Teuchos::RCP<Epetra_Vector> eVector_;
+#endif
 
    bool useThyra_;
    mutable Teuchos::RCP<const Thyra::VectorSpaceBase<double> > vSpace_;
@@ -170,6 +188,7 @@ public:
    Teuchos::RCP<Thyra::MultiVectorBase<double> > getDerivative() const
    { return derivative_; }
 
+#if PANZER_HAVE_EPETRA
    // This is the epetra view of the world
    ///////////////////////////////////////////////////////////
 
@@ -198,6 +217,7 @@ public:
 
      derivative_ = Thyra::create_MultiVector(derivative,getDerivativeVectorSpace());
    }
+#endif
 
    // This is the Thyra view of the world
    ///////////////////////////////////////////////////////////
@@ -241,7 +261,9 @@ private:
 
    Teuchos::RCP<const Teuchos::Comm<Thyra::Ordinal> > tComm_;
    Teuchos::RCP<const Thyra::VectorSpaceBase<double> > derivVecSpace_;
+#if PANZER_HAVE_EPETRA
    mutable Teuchos::RCP<const Epetra_Map> eMap_;
+#endif
 
    Teuchos::RCP<Thyra::MultiVectorBase<double> > derivative_;
 };
@@ -251,11 +273,19 @@ class ResponseMESupport_Default<panzer::Traits::Tangent> : public ResponseMESupp
 public:
   typedef panzer::Traits::Tangent EvalT;
 
+#if PANZER_HAVE_EPETRA
     ResponseMESupport_Default(const std::string & responseName,MPI_Comm comm)
      : ResponseMESupportBase<EvalT>(responseName), useEpetra_(false), eComm_(comm), useThyra_(false)
    {
      tComm_ = Teuchos::rcp(new Teuchos::MpiComm<Thyra::Ordinal>(Teuchos::opaqueWrapper(comm)));
    }
+#else
+    ResponseMESupport_Default(const std::string & responseName,MPI_Comm comm)
+     : ResponseMESupportBase<EvalT>(responseName), useEpetra_(false), useThyra_(false)
+   {
+     tComm_ = Teuchos::rcp(new Teuchos::MpiComm<Thyra::Ordinal>(Teuchos::opaqueWrapper(comm)));
+   }
+#endif
 
    virtual ~ResponseMESupport_Default() {}
 
@@ -265,6 +295,7 @@ public:
    //! Is the vector distributed (or replicated)
    virtual bool vectorIsDistributed() const = 0;
 
+#if PANZER_HAVE_EPETRA
    // This is the epetra view of the world
    ///////////////////////////////////////////////////////////
 
@@ -293,6 +324,7 @@ public:
      eVector_ = destVec;
      useEpetra_ = true;
    }
+#endif
 
    // This is the Thyra view of the world
    ///////////////////////////////////////////////////////////
@@ -333,11 +365,13 @@ protected:
    //! Is Thyra the right vector
    bool useThyra() const { return useThyra_; }
 
+#if PANZER_HAVE_EPETRA
    //! Access the epetra vector
    Epetra_MultiVector & getEpetraMultiVector() const {
      TEUCHOS_ASSERT(useEpetra());
      return *eVector_;
    }
+#endif
 
    //! Access the thyra vector
    Thyra::ArrayRCP< Thyra::ArrayRCP<double> > getThyraMultiVector() const {
@@ -351,10 +385,14 @@ protected:
 
   //! Return the number of columns in the multivector
   int numDeriv() const {
+#if PANZER_HAVE_EPETRA
     if (useEpetra())
       return eVector_->NumVectors();
     else
       return tVector_->domain()->dim();
+#else
+    TEUCHOS_ASSERT(false);
+#endif
   }
 
 
@@ -364,9 +402,11 @@ private:
    ResponseMESupport_Default(const ResponseMESupport_Default<EvalT> &);
 
    bool useEpetra_;
+#if PANZER_HAVE_EPETRA
    Epetra_MpiComm eComm_;
    mutable Teuchos::RCP<const Epetra_Map> map_;
    Teuchos::RCP<Epetra_MultiVector> eVector_;
+#endif
 
    bool useThyra_;
    mutable Teuchos::RCP<const Thyra::VectorSpaceBase<double> > vSpace_;

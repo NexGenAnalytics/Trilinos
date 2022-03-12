@@ -34,25 +34,23 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   NUM_MPI_PROCS 2
   )
 
-IF(PANZER_HAVE_EPETRA)
-  TRIBITS_ADD_EXECUTABLE_AND_TEST(
-    tBasisTimesVector
-    SOURCES basis_times_vector.cpp ${UNIT_TEST_DRIVER}
-    COMM serial mpi
-    NUM_MPI_PROCS 1
-    )
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  tBasisTimesVector
+  SOURCES basis_times_vector.cpp ${UNIT_TEST_DRIVER}
+  COMM serial mpi
+  NUM_MPI_PROCS 1
+  )
 
-  TRIBITS_ADD_EXECUTABLE_AND_TEST(
-    tPointBasisValuesEvaluator
-    SOURCES point_basis_values_evaluator.cpp ${UNIT_TEST_DRIVER}
-    COMM serial mpi
-    NUM_MPI_PROCS 1
-    )
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  tPointBasisValuesEvaluator
+  SOURCES point_basis_values_evaluator.cpp ${UNIT_TEST_DRIVER}
+  COMM serial mpi
+  NUM_MPI_PROCS 1
+  )
 
-  TRIBITS_ADD_EXECUTABLE_AND_TEST(
-    tDomainInterface
-    SOURCES domain_interface.cpp ${UNIT_TEST_DRIVER}
-    COMM mpi
-    NUM_MPI_PROCS 2
-    )
-ENDIF(PANZER_HAVE_EPETRA)
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  tDomainInterface
+  SOURCES domain_interface.cpp ${UNIT_TEST_DRIVER}
+  COMM mpi
+  NUM_MPI_PROCS 2
+  )
