@@ -108,10 +108,14 @@ private: // data members
   void applyDirichletBCs(const Teuchos::RCP<Thyra::VectorBase<Scalar> > & x,
                          const Teuchos::RCP<Thyra::VectorBase<Scalar> > & f) const
   {
+#if PANZER_HAVE_EPETRA
     if(panzerModel_!=Teuchos::null)       { panzerModel_->applyDirichletBCs(x,f); return; }
     if(panzerEpetraModel_!=Teuchos::null) { panzerEpetraModel_->applyDirichletBCs(x,f); return; }
 
     TEUCHOS_ASSERT(false);
+#else 
+    TEUCHOS_ASSERT(false);
+#endif
   }
 
   /** This method builds the inverse mass matrix from the underlying model evaluator.
@@ -149,8 +153,10 @@ private: // data members
   //! Access to the panzer model evaluator pointer (thyra version)
   Teuchos::RCP<const panzer::ModelEvaluator<Scalar> > panzerModel_;
 
+#if PANZER_HAVE_EPETRA
   //! Access to the epetra panzer model evaluator pointer 
   Teuchos::RCP<const panzer::ModelEvaluator_Epetra> panzerEpetraModel_;
+#endif
 
   mutable Teuchos::RCP<Thyra::LinearOpBase<Scalar> > mass_;
   mutable Teuchos::RCP<const Thyra::LinearOpBase<Scalar> > invMassMatrix_;

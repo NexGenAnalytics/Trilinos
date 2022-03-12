@@ -54,6 +54,7 @@ namespace panzer {
   Teuchos::RCP<Thyra::ModelEvaluator<ScalarT> > 
   buildModelEvaluator() const
   { 
+#if PANZER_HAVE_EPETRA
     Teuchos::RCP<Thyra::ModelEvaluator<ScalarT> > me;
     
     std::string type = getMyParamList.get<std::string>("Model Evaluator Type");
@@ -75,7 +76,9 @@ namespace panzer {
 			 "Tpetra version not supported yet, use Epetra!");
     }
     
-
+#else
+    TEUCHOS_ASSERT(false);
+#endif
 
   }
 

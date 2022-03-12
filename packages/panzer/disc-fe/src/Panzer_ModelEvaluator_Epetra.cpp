@@ -40,6 +40,7 @@
 // ***********************************************************************
 // @HEADER
 
+#if PANZER_HAVE_EPETRA
 #include "PanzerDiscFE_config.hpp"
 #include "Panzer_ModelEvaluator_Epetra.hpp"
 #include "Panzer_FieldManagerBuilder.hpp"
@@ -942,3 +943,5 @@ setOneTimeDirichletBeta(const double & beta) const
   oneTimeDirichletBeta_on_ = true;
   oneTimeDirichletBeta_    = beta;
 }
+
+#endif

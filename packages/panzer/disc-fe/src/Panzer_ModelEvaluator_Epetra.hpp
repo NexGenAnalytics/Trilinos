@@ -43,6 +43,7 @@
 #ifndef PANZER_MODEL_EVALUATOR_EPETRA_HPP
 #define PANZER_MODEL_EVALUATOR_EPETRA_HPP
 
+#if PANZER_HAVE_EPETRA
 #include "EpetraExt_ModelEvaluator.h"
 
 #include "Epetra_Map.h"
@@ -423,4 +424,5 @@ namespace panzer {
   
 }
 
+#endif
 #endif

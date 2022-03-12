@@ -181,6 +181,7 @@ panzer::GatherSolution_Epetra<panzer::Traits::Residual, TRAITS, LO, GO>::
 preEvaluate(
   typename TRAITS::PreEvalData d)
 {
+#if PANZER_HAVE_EPETRA
   using std::string;
   using Teuchos::RCP;
   using Teuchos::rcp_dynamic_cast;
@@ -224,6 +225,9 @@ preEvaluate(
   // As a last resort, try to extract an EpetraVector_ReadOnly object.  This
   // will throw an exception if it doesn't work.
   xEvRoGed_ = rcp_dynamic_cast<EVROGED>(ged, true);
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of preEvaluate() (Residual Specialization)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -237,6 +241,7 @@ panzer::GatherSolution_Epetra<panzer::Traits::Residual, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::size_t;
   using std::string;
@@ -284,7 +289,9 @@ evaluateFields(
     } // end loop over localCellIds
     Kokkos::deep_copy(field.get_static_view(), field_h);
   } // end loop over the fields to be gathered
-
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields() (Residual Specialization)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -400,6 +407,7 @@ panzer::GatherSolution_Epetra<panzer::Traits::Tangent, TRAITS, LO, GO>::
 preEvaluate(
   typename TRAITS::PreEvalData d)
 {
+#if PANZER_HAVE_EPETRA
   using std::string;
   using Teuchos::RCP;
   using Teuchos::rcp_dynamic_cast;
@@ -443,6 +451,9 @@ preEvaluate(
   // As a last resort, try to extract an EpetraVector_ReadOnly object.  This
   // will throw an exception if it doesn't work.
   xEvRoGed_ = rcp_dynamic_cast<EVROGED>(ged, true);
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of preEvaluate() (Tangent Specialization)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -456,6 +467,7 @@ panzer::GatherSolution_Epetra<panzer::Traits::Tangent, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::size_t;
   using std::string;
@@ -526,6 +538,9 @@ evaluateFields(
     } // end if (hasTangentFields_)
     Kokkos::deep_copy(field.get_static_view(), field_h);
   } // end loop over the fields to be gathered
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields() (Tangent Specialization)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -622,6 +637,7 @@ panzer::GatherSolution_Epetra<panzer::Traits::Jacobian, TRAITS, LO, GO>::
 preEvaluate(
   typename TRAITS::PreEvalData d)
 {
+#if PANZER_HAVE_EPETRA
   using std::string;
   using Teuchos::RCP;
   using Teuchos::rcp_dynamic_cast;
@@ -671,6 +687,9 @@ preEvaluate(
   // As a last resort, try to extract an EpetraVector_ReadOnly object.  This
   // will throw an exception if it doesn't work.
   xEvRoGed_ = rcp_dynamic_cast<EVROGED>(ged, true);
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of preEvaluate() (Jacobian Specialization)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -684,6 +703,7 @@ panzer::GatherSolution_Epetra<panzer::Traits::Jacobian, TRAITS, LO, GO>::
 evaluateFields(
   typename TRAITS::EvalData workset)
 {
+#if PANZER_HAVE_EPETRA
   using PHX::MDField;
   using std::size_t;
   using std::string;
@@ -781,7 +801,9 @@ evaluateFields(
     } // end if (applySensitivities_)
     Kokkos::deep_copy(field.get_static_view(), field_h);
   } // end loop over the fields to be gathered
-
+#else 
+  TEUCHOS_ASSERT(false);
+#endif
 } // end of evaluateFields() (Jacobian Specialization)
 
 #endif // __Panzer_GatherSolution_Epetra_impl_hpp__

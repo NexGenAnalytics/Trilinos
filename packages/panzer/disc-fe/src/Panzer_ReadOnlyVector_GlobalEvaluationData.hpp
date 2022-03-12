@@ -101,14 +101,19 @@ public:
   operator[](
     const int& lid) const
   {
+#if PANZER_HAVE_EPETRA
     if (lid < static_cast<int>(ownedView_.extent(0)))
       return ownedView_(lid);
     else // if (lid >= static_cast<int>(ownedView_.extent(0)))
       return ghostedView_(lid - ownedView_.extent(0));
+#else
+    TEUCHOS_ASSERT(false);
+#endif
   } // end of operator[]()
 
 protected:
 
+#if PANZER_HAVE_EPETRA
   /**
    *  \brief The `PHX::View` of the owned vector.
    */
@@ -120,6 +125,7 @@ protected:
    */
   typename panzer::kokkos_utils::VectorToViewTraits<Epetra_Vector>::View
   ghostedView_;
+#endif 
 
 }; // end of class ReadOnlyVector_GlobalEvaluationData
 

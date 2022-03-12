@@ -51,7 +51,9 @@
 #include "Thyra_VectorBase.hpp"
 #include "Thyra_DefaultSpmdVector.hpp"
 
-#include "Epetra_Vector.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_Vector.h"
+#endif
 
 namespace panzer {
 namespace kokkos_utils {
@@ -62,6 +64,7 @@ namespace kokkos_utils {
 template <typename V>
 class VectorToViewTraits { };
 
+#if PANZER_HAVE_EPETRA
 template < >
 class VectorToViewTraits<Epetra_Vector> {
 public:
@@ -75,12 +78,14 @@ public:
   typedef Kokkos::View<const double*,Kokkos::HostSpace ,Kokkos::MemoryTraits<Kokkos::Unmanaged > > View;
   typedef const Thyra::VectorBase<double> ThyraVector;
 };
+#endif
 
 template <typename VectorType>
 inline
 typename VectorToViewTraits<VectorType>::View
 getView(typename VectorToViewTraits<VectorType>::ThyraVector & v);
- 
+
+#if PANZER_HAVE_EPETRA
 template < >
 inline
 typename VectorToViewTraits<Epetra_Vector>::View
@@ -104,6 +109,7 @@ getView<const Epetra_Vector>(typename VectorToViewTraits<const Epetra_Vector>::T
  
   return view;
 }
+#endif
 
 }
 }

@@ -47,7 +47,9 @@
 #include "Teuchos_CommHelpers.hpp"
 #include "Teuchos_dyn_cast.hpp"
 
-#include "Epetra_LocalMap.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_LocalMap.h"
+#endif
 
 #include "Sacado_Traits.hpp"
 
@@ -57,6 +59,7 @@ template <typename EvalT>
 void Response_Functional<EvalT>::
 scatterResponse()
 {
+#if PANZER_HAVE_EPETRA
   double locValue = Sacado::ScalarValue<ScalarT>::eval(value);
   double glbValue = 0.0;
 
@@ -76,6 +79,9 @@ scatterResponse()
 
     this->getThyraVector()[0] = glbValue;
   }
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 template < >
@@ -124,6 +130,7 @@ template < >
 void Response_Functional<panzer::Traits::Tangent>::
 scatterResponse()
 {
+#if PANZER_HAVE_EPETRA
   const int n = value.size();
   const int num_deriv = this->numDeriv();
   TEUCHOS_ASSERT(n == 0 || n == num_deriv);
@@ -152,6 +159,9 @@ scatterResponse()
     for (int i=0; i<num_deriv; ++i)
       deriv[i][0] = glbValue.dx(i);
   }
+#else 
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 // Do nothing unless derivatives are actually required

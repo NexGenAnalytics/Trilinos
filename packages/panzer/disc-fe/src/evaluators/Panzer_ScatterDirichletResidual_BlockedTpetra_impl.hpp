@@ -48,9 +48,11 @@
 
 #include "Phalanx_DataLayout.hpp"
 
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_CrsMatrix.h"
+#if PANZER_HAVE_EPETRA
+  #include "Epetra_Map.h"
+  #include "Epetra_Vector.h"
+  #include "Epetra_CrsMatrix.h"
+#endif
 
 #include "Panzer_GlobalIndexer.hpp"
 #include "Panzer_BlockedDOFManager.hpp"
@@ -63,7 +65,9 @@
 #include "Thyra_SpmdVectorBase.hpp"
 #include "Thyra_ProductVectorBase.hpp"
 #include "Thyra_BlockedLinearOpBase.hpp"
-#include "Thyra_get_Epetra_Operator.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_get_Epetra_Operator.hpp"
+#endif
 
 #include "Teuchos_FancyOStream.hpp"
 

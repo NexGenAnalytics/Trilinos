@@ -43,12 +43,16 @@
 #ifndef PANZER_EXPLICIT_MODEL_EVALUATOR_IMPL_HPP
 #define PANZER_EXPLICIT_MODEL_EVALUATOR_IMPL_HPP
 
-#include "Thyra_EpetraModelEvaluator.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_EpetraModelEvaluator.hpp"
+#endif
 #include "Thyra_DefaultDiagonalLinearOp.hpp"
 #include "Thyra_LinearOpWithSolveFactoryBase.hpp"
 
-#include "Thyra_get_Epetra_Operator.hpp"
-#include "EpetraExt_RowMatrixOut.h"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_get_Epetra_Operator.hpp"
+  #include "EpetraExt_RowMatrixOut.h"
+#endif
 
 namespace panzer {
 
@@ -62,6 +66,7 @@ ExplicitModelEvaluator(const Teuchos::RCP<Thyra::ModelEvaluator<Scalar> > & mode
    , constantMassMatrix_(constantMassMatrix)
    , massLumping_(useLumpedMass)
 {
+#if PANZER_HAVE_EPETRA
   using Teuchos::RCP;
   using Teuchos::rcp_dynamic_cast;
 
@@ -74,10 +79,12 @@ ExplicitModelEvaluator(const Teuchos::RCP<Thyra::ModelEvaluator<Scalar> > & mode
   RCP<Thyra::EpetraModelEvaluator> epME = rcp_dynamic_cast<Thyra::EpetraModelEvaluator>(model);
   if(epME!=Teuchos::null)
     panzerEpetraModel_ = rcp_dynamic_cast<const panzer::ModelEvaluator_Epetra>(epME->getEpetraModel());
-
   // note at this point its possible that panzerModel_ = panzerEpetraModel_ = Teuchos::null
 
   buildArgsPrototypes();
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 template<typename Scalar>
@@ -164,6 +171,7 @@ template<typename Scalar>
 void ExplicitModelEvaluator<Scalar>::
 buildInverseMassMatrix(const Thyra::ModelEvaluatorBase::InArgs<Scalar> &inArgs) const
 {
+#if PANZER_HAVE_EPETRA
   typedef Thyra::ModelEvaluatorBase MEB;
   using Teuchos::RCP;
   using Thyra::createMember;
@@ -225,6 +233,9 @@ buildInverseMassMatrix(const Thyra::ModelEvaluatorBase::InArgs<Scalar> &inArgs) 
 
     invMassMatrix_ = Thyra::diagonal(invLumpMass);
   }
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 template<typename Scalar>
@@ -251,6 +262,7 @@ template<typename Scalar>
 void ExplicitModelEvaluator<Scalar>::
 setOneTimeDirichletBeta(double beta,const Thyra::ModelEvaluator<Scalar> & me) const
 {
+#if PANZER_HAVE_EPETRA
   using Teuchos::Ptr;
   using Teuchos::ptrFromRef;
   using Teuchos::ptr_dynamic_cast;
@@ -287,6 +299,9 @@ setOneTimeDirichletBeta(double beta,const Thyra::ModelEvaluator<Scalar> & me) co
   TEUCHOS_TEST_FOR_EXCEPTION(true,std::logic_error,
                              "panzer::ExplicitModelEvaluator::setOneTimeDirichletBeta can't find a panzer::ME or a panzer::EpetraME. "
                              "The deepest model is also not a delegator. Thus the recursion failed and an exception was generated.");
+#else
+  TEUCHOS_ASSERT(false);
+#endif
 }
 
 } // end namespace panzer
