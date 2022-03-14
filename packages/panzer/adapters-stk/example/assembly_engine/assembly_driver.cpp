@@ -49,7 +49,9 @@
 using Teuchos::RCP;
 using Teuchos::rcp;
 
-#include "Thyra_get_Epetra_Operator.hpp"
+#if PANZER_HAVE_EPETRA
+  #include "Thyra_get_Epetra_Operator.hpp"
+#endif
 
 #include "Teuchos_DefaultComm.hpp"
 #include "Teuchos_GlobalMPISession.hpp"

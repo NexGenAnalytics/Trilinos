@@ -129,9 +129,9 @@ namespace panzer {
     { return Teuchos::rcp(new ResponseEvaluatorFactory_Functional<T,int,int>(comm,1,true,"",linearObjFactory)); }
   };
 
+#if PANZER_HAVE_EPETRA
   TEUCHOS_UNIT_TEST(response_library2, test)
   {
-
     std::vector<Teuchos::RCP<panzer::PhysicsBlock> > physics_blocks;
     panzer::ClosureModelFactory_TemplateManager<panzer::Traits> cm_factory;
     Teuchos::ParameterList closure_models("Closure Models");
@@ -324,6 +324,7 @@ namespace panzer {
     TEST_FLOATING_EQUALITY((*eVec)[0],0.5*tValue,1e-14);
     TEST_FLOATING_EQUALITY((*eVec2)[0],2.0*iValue,1e-14);
   }
+#endif
 
   void testInitialzation(const Teuchos::RCP<Teuchos::ParameterList>& ipb,
 			 std::vector<panzer::BC>& bcs)

@@ -4,11 +4,13 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 SET(UNIT_TEST_DRIVER
   ${PANZER_UNIT_TEST_MAIN})
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  integration_rule
-  SOURCES integration_rule.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    integration_rule
+    SOURCES integration_rule.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+ENDIF(PANZER_HAVE_EPETRA)
 
 #TRIBITS_ADD_EXECUTABLE_AND_TEST(
 #  integration_values
@@ -16,23 +18,27 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
 #  NUM_MPI_PROCS 1
 #  )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  integration_values2
-  SOURCES integration_values2.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    integration_values2
+    SOURCES integration_values2.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+ENDIF(PANZER_HAVE_EPETRA)
   
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   dimension
   SOURCES dimension.cpp ${UNIT_TEST_DRIVER}
   NUM_MPI_PROCS 1
   )
-  
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  basis
-  SOURCES basis.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    basis
+    SOURCES basis.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+ENDIF(PANZER_HAVE_EPETRA)
   
 #TRIBITS_ADD_EXECUTABLE_AND_TEST(
 #  basis_values
@@ -40,29 +46,31 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
 #  NUM_MPI_PROCS 1
 #  )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  basis_values2
-  SOURCES basis_values2.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    basis_values2
+    SOURCES basis_values2.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  point_values2 
-  SOURCES point_values2.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    point_values2 
+    SOURCES point_values2.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  boundary_condition
-  SOURCES boundary_condition.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
-  
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  material_model_entry
-  SOURCES material_model_entry.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    boundary_condition
+    SOURCES boundary_condition.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    material_model_entry
+    SOURCES material_model_entry.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+ENDIF(PANZER_HAVE_EPETRA)
   
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   stlmap_utilities
@@ -76,35 +84,37 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   NUM_MPI_PROCS 1
   )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  evaluators
-  SOURCES evaluators.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    evaluators
+    SOURCES evaluators.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  element_block_to_physics_block_map
-  SOURCES element_block_to_physics_block_map.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    element_block_to_physics_block_map
+    SOURCES element_block_to_physics_block_map.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  zero_sensitivities
-  SOURCES zero_sensitivities.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    zero_sensitivities
+    SOURCES zero_sensitivities.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  output_stream
-  SOURCES output_stream.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    output_stream
+    SOURCES output_stream.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  global_data
-  SOURCES global_data.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    global_data
+    SOURCES global_data.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+ENDIF(PANZER_HAVE_EPETRA)
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   parameter_library
@@ -112,11 +122,13 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   NUM_MPI_PROCS 1
   )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  cell_topology_info
-  SOURCES cell_topology_info.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    cell_topology_info
+    SOURCES cell_topology_info.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+ENDIF(PANZER_HAVE_EPETRA)
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   parameter_list_acceptance_test
@@ -130,17 +142,19 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   NUM_MPI_PROCS 1
   )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  check_bc_consistency
-  SOURCES check_bc_consistency.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+IF(PANZER_HAVE_EPETRA)
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    check_bc_consistency
+    SOURCES check_bc_consistency.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  hierarchic_team_policy
-  SOURCES hierarchic_team_policy.cpp ${UNIT_TEST_DRIVER}
-  NUM_MPI_PROCS 1
-  )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    hierarchic_team_policy
+    SOURCES hierarchic_team_policy.cpp ${UNIT_TEST_DRIVER}
+    NUM_MPI_PROCS 1
+    )
+ENDIF(PANZER_HAVE_EPETRA)
 
 #TRIBITS_ADD_EXECUTABLE_AND_TEST(
 #  epetra_test
