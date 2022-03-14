@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
                                           input_params->sublist("Closure Models"),
                                           user_data);
       }
-  
+#if PANZER_HAVE_EPETRA
       {
         Teuchos::RCP<panzer::ResponseMESupportBase<panzer::Traits::Residual> > resp
             = Teuchos::rcp_dynamic_cast<panzer::ResponseMESupportBase<panzer::Traits::Residual> >(fluxResponseLibrary->getResponse<panzer::Traits::Residual>("HO-Flux"),true);
@@ -306,6 +306,7 @@ int main(int argc, char *argv[])
         Teuchos::RCP<Epetra_Vector> vec = Teuchos::rcp(new Epetra_Vector(*resp->getMap()));
         resp->setVector(vec);
       }
+#endif
     }
     
     ////////////////////////////////////////////////////////////////

@@ -81,10 +81,12 @@
 #include "Panzer_STK_ResponseEvaluatorFactory_SolutionWriter.hpp"
 #include "Panzer_HierarchicParallelism.hpp"
 
+#if PANZER_HAVE_EPETRA
 #include "Epetra_MpiComm.h"
 
 #include "EpetraExt_RowMatrixOut.h"
 #include "EpetraExt_VectorOut.h"
+#endif
 
 #include "BelosPseudoBlockGmresSolMgr.hpp"
 #include "BelosTpetraAdapter.hpp"
@@ -94,7 +96,9 @@
 #include "Example_ClosureModel_Factory_TemplateBuilder.hpp"
 #include "Example_EquationSetFactory.hpp"
 
+#if PANZER_HAVE_EPETRA
 #include "AztecOO.h"
+#endif
 
 #include <sstream>
 
@@ -129,7 +133,6 @@ int main(int argc,char * argv[])
 
      Teuchos::GlobalMPISession mpiSession(&argc,&argv);
      Kokkos::initialize(argc,argv);
-     RCP<Epetra_Comm> Comm = Teuchos::rcp(new Epetra_MpiComm(MPI_COMM_WORLD));
      Teuchos::RCP<const Teuchos::MpiComm<int> > comm = Teuchos::rcp(new Teuchos::MpiComm<int>(MPI_COMM_WORLD));
      Teuchos::FancyOStream out(Teuchos::rcpFromRef(std::cout));
      out.setOutputToRootOnly(0);
@@ -540,6 +543,7 @@ int main(int argc,char * argv[])
 
 void solveEpetraSystem(panzer::LinearObjContainer & container)
 {
+#if PANZER_HAVE_EPETRA
    // convert generic linear object container to epetra container
    panzer::EpetraLinearObjContainer & ep_container
          = Teuchos::dyn_cast<panzer::EpetraLinearObjContainer>(container);
@@ -570,6 +574,7 @@ void solveEpetraSystem(panzer::LinearObjContainer & container)
    // Therefore we have  J*e=-J*u which implies e = -u
    // thus we will scale the solution vector
    ep_container.get_x()->Scale(-1.0);
+#endif
 }
 
 void solveTpetraSystem(panzer::LinearObjContainer & container)
