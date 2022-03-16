@@ -115,6 +115,8 @@ private: // data members
     TEUCHOS_ASSERT(false);
 #else 
     TEUCHOS_ASSERT(false);
+    (void)(x);
+    (void)(f);
 #endif
   }
 

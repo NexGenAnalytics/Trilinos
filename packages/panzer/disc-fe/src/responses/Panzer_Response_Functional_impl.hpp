@@ -48,7 +48,7 @@
 #include "Teuchos_dyn_cast.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Epetra_LocalMap.h"
+#include "Epetra_LocalMap.h"
 #endif
 
 #include "Sacado_Traits.hpp"

@@ -50,8 +50,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #if PANZER_HAVE_EPETRA
-  // Epetra
-  #include "Epetra_Vector.h"
+// Epetra
+#include "Epetra_Vector.h"
 #endif
 
 // Panzer
@@ -247,6 +247,7 @@ evaluateFields(
   } // end loop over the fields to be gathered
 #else
   TEUCHOS_ASSERT(false);
+  (void)(workset);
 #endif
 } // end of evaluateFields()
 

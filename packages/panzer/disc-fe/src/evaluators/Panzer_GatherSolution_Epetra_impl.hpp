@@ -50,8 +50,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #if PANZER_HAVE_EPETRA
-  // Epetra
-  #include "Epetra_Vector.h"
+// Epetra
+#include "Epetra_Vector.h"
 #endif
 
 // Panzer
@@ -227,6 +227,7 @@ preEvaluate(
   xEvRoGed_ = rcp_dynamic_cast<EVROGED>(ged, true);
 #else
   TEUCHOS_ASSERT(false);
+  (void)(d);
 #endif
 } // end of preEvaluate() (Residual Specialization)
 
@@ -291,6 +292,7 @@ evaluateFields(
   } // end loop over the fields to be gathered
 #else
   TEUCHOS_ASSERT(false);
+  (void)(workset);
 #endif
 } // end of evaluateFields() (Residual Specialization)
 
@@ -453,6 +455,7 @@ preEvaluate(
   xEvRoGed_ = rcp_dynamic_cast<EVROGED>(ged, true);
 #else
   TEUCHOS_ASSERT(false);
+  (void)(d);
 #endif
 } // end of preEvaluate() (Tangent Specialization)
 
@@ -540,6 +543,7 @@ evaluateFields(
   } // end loop over the fields to be gathered
 #else
   TEUCHOS_ASSERT(false);
+  (void)(workset);
 #endif
 } // end of evaluateFields() (Tangent Specialization)
 
@@ -689,6 +693,7 @@ preEvaluate(
   xEvRoGed_ = rcp_dynamic_cast<EVROGED>(ged, true);
 #else
   TEUCHOS_ASSERT(false);
+  (void)(d);
 #endif
 } // end of preEvaluate() (Jacobian Specialization)
 
@@ -803,6 +808,7 @@ evaluateFields(
   } // end loop over the fields to be gathered
 #else 
   TEUCHOS_ASSERT(false);
+  (void)(workset);
 #endif
 } // end of evaluateFields() (Jacobian Specialization)
 

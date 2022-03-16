@@ -47,8 +47,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #if PANZER_HAVE_EPETRA
-  // Epetra
-  #include "Epetra_Export.h"
+// Epetra
+#include "Epetra_Export.h"
 #endif
 
 // Panzer
@@ -56,7 +56,7 @@
 
 // Thyra
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_EpetraThyraWrappers.hpp"
+#include "Thyra_EpetraThyraWrappers.hpp"
 #endif
 #include "Thyra_LinearOpBase.hpp"
 #include "Thyra_SpmdVectorBase.hpp"

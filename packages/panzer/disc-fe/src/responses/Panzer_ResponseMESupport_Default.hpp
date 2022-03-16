@@ -51,15 +51,15 @@
 #include "Panzer_ResponseMESupportBase.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_EpetraThyraWrappers.hpp"
+#include "Thyra_EpetraThyraWrappers.hpp"
 #endif
 
 #include "Thyra_DefaultSpmdVectorSpace.hpp"
 #include "Thyra_SpmdVectorBase.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Epetra_LocalMap.h"
-  #include "Epetra_Map.h"
+#include "Epetra_LocalMap.h"
+#include "Epetra_Map.h"
 #endif
 
 namespace panzer {

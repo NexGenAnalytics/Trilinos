@@ -50,10 +50,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #if PANZER_HAVE_EPETRA
-  // Epetra
-  #include "Epetra_Export.h"
-  #include "Epetra_Map.h"
-  #include "Epetra_Vector.h"
+// Epetra
+#include "Epetra_Export.h"
+#include "Epetra_Map.h"
+#include "Epetra_Vector.h"
 #endif
 
 // Panzer
@@ -102,6 +102,9 @@ namespace panzer
       {
 #if PANZER_HAVE_EPETRA
         initialize(src.exporter_, src.ghostedMap_, src.ownedMap_);
+#else 
+        TEUCHOS_ASSERT(false);
+        (void)(src);
 #endif
       } // end of Copy Constructor
 

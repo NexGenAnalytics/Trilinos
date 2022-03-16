@@ -49,9 +49,9 @@
 #include "Phalanx_DataLayout.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Epetra_Map.h"
-  #include "Epetra_Vector.h"
-  #include "Epetra_CrsMatrix.h"
+#include "Epetra_Map.h"
+#include "Epetra_Vector.h"
+#include "Epetra_CrsMatrix.h"
 #endif
 
 #include "Panzer_GlobalIndexer.hpp"
@@ -172,6 +172,7 @@ preEvaluate(typename TRAITS::PreEvalData d)
   }
 #else
   TEUCHOS_ASSERT(false);
+  (void)(d);
 #endif
 }
 
@@ -258,6 +259,7 @@ evaluateFields(typename TRAITS::EvalData workset)
    }
 #else
    TEUCHOS_ASSERT(false);
+   (void)(workset);
 #endif
 }
 
@@ -383,6 +385,7 @@ preEvaluate(typename TRAITS::PreEvalData d)
   }
 #else 
   TEUCHOS_ASSERT(false);
+  (void)(d);
 #endif
 }
 
@@ -486,6 +489,7 @@ evaluateFields(typename TRAITS::EvalData workset)
    }
 #else
    TEUCHOS_ASSERT(false);
+   (void)(workset);
 #endif
 }
 
@@ -596,6 +600,7 @@ preEvaluate(typename TRAITS::PreEvalData d)
   }
 #else
   TEUCHOS_ASSERT(false);
+  (void)(d);
 #endif
 }
 
@@ -708,6 +713,7 @@ evaluateFields(typename TRAITS::EvalData workset)
    }
 #else
    TEUCHOS_ASSERT(false);
+   (void)(workset);
 #endif
 }
 

@@ -108,6 +108,7 @@ public:
       return ghostedView_(lid - ownedView_.extent(0));
 #else
     TEUCHOS_ASSERT(false);
+    (void)(lid);
 #endif
   } // end of operator[]()
 

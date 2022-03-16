@@ -54,9 +54,9 @@
 #include "Thyra_VectorSpaceBase.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Epetra_Map.h"
-  #include "Epetra_Vector.h"
-  #include "Epetra_MpiComm.h"
+#include "Epetra_Map.h"
+#include "Epetra_Vector.h"
+#include "Epetra_MpiComm.h"
 #endif
 
 #include "Panzer_ResponseMESupport_Default.hpp"

@@ -53,7 +53,7 @@
 #include "Thyra_ProductVectorBase.hpp"
 
 #if PANZER_HAVE_EPETRA
-   #include "Epetra_Map.h"
+#include "Epetra_Map.h"
 #endif
 
 #include <unordered_map>

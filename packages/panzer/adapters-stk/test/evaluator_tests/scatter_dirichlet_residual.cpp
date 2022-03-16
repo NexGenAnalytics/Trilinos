@@ -76,9 +76,9 @@ using Teuchos::rcp;
 #include "Thyra_ProductVectorBase.hpp"
 #include "Thyra_SpmdVectorBase.hpp"
 #if PANZER_HAVE_EPETRA
-   #include "Thyra_get_Epetra_Operator.hpp"
+#include "Thyra_get_Epetra_Operator.hpp"
 
-   #include "Epetra_CrsMatrix.h"
+#include "Epetra_CrsMatrix.h"
 #endif
 
 #include "user_app_EquationSetFactory.hpp"
@@ -347,9 +347,9 @@ namespace panzer {
 #endif
   }
 
+#if PANZER_HAVE_EPETRA
   TEUCHOS_UNIT_TEST(block_assembly, scatter_dirichlet_jacobian)
   {
-#if PANZER_HAVE_EPETRA
    #ifdef HAVE_MPI
       Teuchos::RCP<Teuchos::MpiComm<int> > tComm = Teuchos::rcp(new Teuchos::MpiComm<int>(MPI_COMM_WORLD));
    #else
@@ -601,8 +601,8 @@ namespace panzer {
        {  TEST_EQUALITY(data[i],target); dd_count++; }
     }
     TEST_EQUALITY(dd_count,2*workset.num_cells); // there are 2 nodes on the side and the sides are not shared
-#endif
   }
+#endif
 
   Teuchos::RCP<panzer::PureBasis> buildBasis(std::size_t worksetSize,const std::string & basisName)
   { 

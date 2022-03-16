@@ -48,9 +48,9 @@
 #include <map>
 
 #if PANZER_HAVE_EPETRA
-   // Epetra includes
-   #include "Epetra_Vector.h"
-   #include "Epetra_CrsMatrix.h"
+// Epetra includes
+#include "Epetra_Vector.h"
+#include "Epetra_CrsMatrix.h"
 #endif
 
 #include "Panzer_LinearObjFactory.hpp" 
@@ -61,9 +61,9 @@
 #include "Thyra_VectorBase.hpp"
 #include "Thyra_LinearOpBase.hpp"
 #if PANZER_HAVE_EPETRA
-   #include "Thyra_EpetraLinearOp.hpp"
-   #include "Thyra_EpetraThyraWrappers.hpp"
-   #include "Thyra_get_Epetra_Operator.hpp"
+#include "Thyra_EpetraLinearOp.hpp"
+#include "Thyra_EpetraThyraWrappers.hpp"
+#include "Thyra_get_Epetra_Operator.hpp"
 #endif
 
 namespace panzer {
@@ -144,6 +144,7 @@ public:
       A->PutScalar(value); 
 #else
       TEUCHOS_ASSERT(false);
+      (void)(value);
 #endif
    }
 

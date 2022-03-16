@@ -69,7 +69,7 @@
 #include "Panzer_NodeType.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_EpetraModelEvaluator.hpp"
+#include "Thyra_EpetraModelEvaluator.hpp"
 #endif
 
 #ifdef PANZER_HAVE_TEKO
@@ -361,6 +361,9 @@ addResponse(const std::string & responseName,const std::vector<panzer::WorksetDe
   return -1;
 #else
   TEUCHOS_ASSERT(false);
+  PAR_UNUSED(responseName);
+  PAR_UNUSED(wkstDesc);
+  PAR_UNUSED(builder);
 #endif
 }
 

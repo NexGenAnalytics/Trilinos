@@ -49,9 +49,9 @@
 #include "Phalanx_DataLayout.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Epetra_Map.h"
-  #include "Epetra_Vector.h"
-  #include "Epetra_CrsMatrix.h"
+#include "Epetra_Map.h"
+#include "Epetra_Vector.h"
+#include "Epetra_CrsMatrix.h"
 #endif
 
 #include "Panzer_GlobalIndexer.hpp"
@@ -68,7 +68,7 @@
 #include "Thyra_DefaultProductVector.hpp"
 #include "Thyra_BlockedLinearOpBase.hpp"
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_get_Epetra_Operator.hpp"
+#include "Thyra_get_Epetra_Operator.hpp"
 #endif
 
 #include "Teuchos_FancyOStream.hpp"
@@ -813,6 +813,7 @@ evaluateFields(typename TRAITS::EvalData workset)
    }
 #else
    TEUCHOS_ASSERT(false);
+   (void)(workset);
 #endif
 }
 

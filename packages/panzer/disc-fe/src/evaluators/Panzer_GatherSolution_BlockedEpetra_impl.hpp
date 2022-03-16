@@ -305,6 +305,7 @@ evaluateFields(
   } // end loop over the fields to be gathered
 #else
   TEUCHOS_ASSERT(false);
+  (void)(workset);
 #endif
 } // end of evaluateFields() (Residual Specialization)
 
@@ -588,6 +589,7 @@ evaluateFields(
   } // end if (hasTangentFields_)
 #else
   TEUCHOS_ASSERT(false);
+  (void)(workset);
 #endif
 } // end of evaluateFields() (Tangent Specialization)
 
@@ -840,6 +842,7 @@ evaluateFields(
   } // end loop over the fields to be gathered
 #else
   TEUCHOS_ASSERT(false);
+  (void)(workset);
 #endif
 } // end of evaluateFields() (Jacobian Specialization)
 

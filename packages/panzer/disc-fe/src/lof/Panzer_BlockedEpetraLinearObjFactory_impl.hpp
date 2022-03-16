@@ -44,15 +44,15 @@
 #define   __Panzer_BlockedEpetraLinearObjFactory_impl_hpp__
 
 #if PANZER_HAVE_EPETRA
-  // Epetra
-  #include "Epetra_CrsMatrix.h"
-  #include "Epetra_MpiComm.h"
-  #include "Epetra_MultiVector.h"
-  #include "Epetra_Vector.h"
+// Epetra
+#include "Epetra_CrsMatrix.h"
+#include "Epetra_MpiComm.h"
+#include "Epetra_MultiVector.h"
+#include "Epetra_Vector.h"
 
-  // EpetraExt
-  #include "EpetraExt_VectorIn.h"
-  #include "EpetraExt_VectorOut.h"
+// EpetraExt
+#include "EpetraExt_VectorIn.h"
+#include "EpetraExt_VectorOut.h"
 #endif
 
 // Panzer
@@ -69,9 +69,9 @@
 #include "Thyra_DefaultProductVector.hpp"
 #include "Thyra_DefaultProductVectorSpace.hpp"
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_EpetraLinearOp.hpp"
-  #include "Thyra_EpetraThyraWrappers.hpp"
-  #include "Thyra_get_Epetra_Operator.hpp"
+#include "Thyra_EpetraLinearOp.hpp"
+#include "Thyra_EpetraThyraWrappers.hpp"
+#include "Thyra_get_Epetra_Operator.hpp"
 #endif
 #include "Thyra_SpmdVectorBase.hpp"
 #include "Thyra_VectorStdOps.hpp"
@@ -147,6 +147,8 @@ BlockedEpetraLinearObjFactory(const Teuchos::RCP<const Teuchos::MpiComm<int> > &
    tComm_ = Teuchos::rcp(new Teuchos::MpiComm<int>(rawMpiComm_));
 #else 
    TEUCHOS_ASSERT(false);
+   (void)(gidProvider);
+   (void)(colGidProvider);
 #endif
 }
 
@@ -208,6 +210,9 @@ readVector(const std::string & identifier,LinearObjContainer & loc,int id) const
   }
 #else
   TEUCHOS_ASSERT(false);
+  (void)(identifier);
+  (void)(loc);
+  (void)(id);
 #endif
 }
 
@@ -257,7 +262,10 @@ writeVector(const std::string & identifier,const LinearObjContainer & loc,int id
     TEUCHOS_ASSERT(0==EpetraExt::VectorToMatrixMarketFile(ss.str().c_str(),*ex));
   }
 #else 
-    TEUCHOS_ASSERT(false);
+  TEUCHOS_ASSERT(false);
+  (void)(identifier);
+  (void)(loc);
+  (void)(id);
 #endif
 }
 
@@ -356,6 +364,9 @@ void BlockedEpetraLinearObjFactory<Traits,LocalOrdinalT>::globalToGhostContainer
    }
 #else 
    TEUCHOS_ASSERT(false);
+   (void)(in);
+   (void)(out);
+   (void)(mem);
 #endif
 }
 
@@ -402,6 +413,9 @@ void BlockedEpetraLinearObjFactory<Traits,LocalOrdinalT>::ghostToGlobalContainer
    }
 #else 
    TEUCHOS_ASSERT(false);
+   (void)(in);
+   (void)(out);
+   (void)(mem);
 #endif
 }
 
@@ -494,6 +508,11 @@ adjustForDirichletConditions(const LinearObjContainer & localBCRows,
    }
 #else
    TEUCHOS_ASSERT(false);
+   (void)(localBCRows);
+   (void)(globalBCRows);
+   (void)(ghostedObjs);
+   (void)(zeroVectorRows);
+   (void)(adjustX);
 #endif
 }
 
@@ -831,6 +850,8 @@ makeRoomForBlocks(
   } // end if (colBlockCnt > 0)
 #else 
   TEUCHOS_ASSERT(false);
+  (void)(blockCnt);
+  (void)(colBlockCnt);
 #endif
 } // end of makeRoomForBlocks()
 
@@ -1158,6 +1179,9 @@ ghostToGlobalThyraVector(const Teuchos::RCP<const Thyra::VectorBase<double> > & 
    }
 #else
    TEUCHOS_ASSERT(false);
+   (void)(in);
+   (void)(out);
+   (void)(col);
 #endif
 }
 
@@ -1208,6 +1232,8 @@ ghostToGlobalThyraMatrix(const Thyra::LinearOpBase<double> & in,Thyra::LinearOpB
    }
 #else 
    TEUCHOS_ASSERT(false);
+   (void)(in);
+   (void)(out);
 #endif
 }
 
@@ -1250,6 +1276,9 @@ globalToGhostThyraVector(const Teuchos::RCP<const Thyra::VectorBase<double> > & 
    }
 #else
    TEUCHOS_ASSERT(false);
+   (void)(in);
+   (void)(out);
+   (void)(col);
 #endif
 }
 

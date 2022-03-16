@@ -103,7 +103,7 @@
 
 // Piro solver objects
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_EpetraModelEvaluator.hpp"
+#include "Thyra_EpetraModelEvaluator.hpp"
 #endif
 #include "Piro_ConfigDefs.hpp"
 #include "Piro_NOXSolver.hpp"
@@ -1336,7 +1336,9 @@ namespace panzer_stk {
                             const Teuchos::Ptr<const Teuchos::ParameterList> & bc_list,
                             const Teuchos::RCP<Thyra::ModelEvaluator<ScalarT> > & physics_me_in) const
   {
+#if PANZER_HAVE_EPETRA
     typedef panzer::ModelEvaluator<ScalarT> PanzerME;
+#endif
 
     Teuchos::RCP<Thyra::ModelEvaluator<ScalarT> > physics_me = physics_me_in==Teuchos::null ? m_physics_me : physics_me_in;
 
@@ -1496,6 +1498,16 @@ namespace panzer_stk {
     return thyra_me;
 #else 
     TEUCHOS_ASSERT(false);
+    PAR_UNUSED(buildThyraME);
+    PAR_UNUSED(fmb);
+    PAR_UNUSED(rLibrary);
+    PAR_UNUSED(lof);
+    PAR_UNUSED(p_names);
+    PAR_UNUSED(p_values);
+    PAR_UNUSED(solverFactory);
+    PAR_UNUSED(global_data);
+    PAR_UNUSED(is_transient);
+    PAR_UNUSED(t_init);
 #endif
   }
 
@@ -1647,6 +1659,9 @@ namespace panzer_stk {
     TEUCHOS_ASSERT(false);
 #else
     TEUCHOS_ASSERT(false);
+    PAR_UNUSED(cm_factory);
+    PAR_UNUSED(write_graphviz_file);
+    PAR_UNUSED(graphviz_file_prefix);
 #endif
   }
 }

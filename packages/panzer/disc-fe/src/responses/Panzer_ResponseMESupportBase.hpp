@@ -48,10 +48,10 @@
 #include "Teuchos_RCP.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Epetra_Map.h"
-  #include "Epetra_Vector.h"
-  #include "Epetra_MultiVector.h"
-  #include "Epetra_Operator.h"
+#include "Epetra_Map.h"
+#include "Epetra_Vector.h"
+#include "Epetra_MultiVector.h"
+#include "Epetra_Operator.h"
 #endif
 
 #include "Thyra_VectorSpaceBase.hpp"

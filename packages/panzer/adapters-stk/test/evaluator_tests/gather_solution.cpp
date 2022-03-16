@@ -52,8 +52,8 @@
 #include <vector>
 
 #if PANZER_HAVE_EPETRA
-  // Epetra
-  #include "Epetra_MpiComm.h"
+// Epetra
+#include "Epetra_MpiComm.h"
 #endif
 // Kokkos
 #include "Kokkos_View_Fad.hpp"
@@ -643,6 +643,11 @@ namespace panzer {
         }
        }
     }
+#else 
+    TEUCHOS_ASSERT(false);
+    PAR_UNUSED(enable_tangents);
+    PAR_UNUSED(out);
+    PAR_UNUSED(success);
 #endif
   }
 

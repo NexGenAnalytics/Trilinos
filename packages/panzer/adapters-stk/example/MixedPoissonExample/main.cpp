@@ -574,6 +574,9 @@ void solveEpetraSystem(panzer::LinearObjContainer & container)
    // Therefore we have  J*e=-J*u which implies e = -u
    // thus we will scale the solution vector
    ep_container.get_x()->Scale(-1.0);
+#else
+   TEUCHOS_ASSERT(false);
+   PAR_UNUSED(container);
 #endif
 }
 

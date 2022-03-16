@@ -46,8 +46,8 @@
 #include "Panzer_STK_Interface.hpp"
 
 #if PANZER_HAVE_EPETRA
-   #include "Epetra_Vector.h"
-   #include "Epetra_MultiVector.h"
+#include "Epetra_Vector.h"
+#include "Epetra_MultiVector.h"
 #endif
 
 namespace panzer {

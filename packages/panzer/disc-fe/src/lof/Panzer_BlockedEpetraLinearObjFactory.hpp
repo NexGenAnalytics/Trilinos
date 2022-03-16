@@ -46,11 +46,11 @@
 #include <map>
 
 #if PANZER_HAVE_EPETRA
-  // Epetra includes
-  #include "Epetra_Map.h"
-  #include "Epetra_CrsGraph.h"
-  #include "Epetra_Import.h"
-  #include "Epetra_Export.h"
+// Epetra includes
+#include "Epetra_Map.h"
+#include "Epetra_CrsGraph.h"
+#include "Epetra_Import.h"
+#include "Epetra_Export.h"
 #endif
 
 #include "PanzerDiscFE_config.hpp"

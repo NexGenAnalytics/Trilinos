@@ -44,14 +44,14 @@
 #define PANZER_EXPLICIT_MODEL_EVALUATOR_IMPL_HPP
 
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_EpetraModelEvaluator.hpp"
+#include "Thyra_EpetraModelEvaluator.hpp"
 #endif
 #include "Thyra_DefaultDiagonalLinearOp.hpp"
 #include "Thyra_LinearOpWithSolveFactoryBase.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Thyra_get_Epetra_Operator.hpp"
-  #include "EpetraExt_RowMatrixOut.h"
+#include "Thyra_get_Epetra_Operator.hpp"
+#include "EpetraExt_RowMatrixOut.h"
 #endif
 
 namespace panzer {
@@ -84,6 +84,7 @@ ExplicitModelEvaluator(const Teuchos::RCP<Thyra::ModelEvaluator<Scalar> > & mode
   buildArgsPrototypes();
 #else
   TEUCHOS_ASSERT(false);
+  (void)(applyMassInverse);
 #endif
 }
 
@@ -235,6 +236,7 @@ buildInverseMassMatrix(const Thyra::ModelEvaluatorBase::InArgs<Scalar> &inArgs) 
   }
 #else
   TEUCHOS_ASSERT(false);
+  (void)(inArgs);
 #endif
 }
 
@@ -301,6 +303,7 @@ setOneTimeDirichletBeta(double beta,const Thyra::ModelEvaluator<Scalar> & me) co
                              "The deepest model is also not a delegator. Thus the recursion failed and an exception was generated.");
 #else
   TEUCHOS_ASSERT(false);
+  (void)(me);
 #endif
 }
 

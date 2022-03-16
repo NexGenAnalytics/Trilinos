@@ -6,7 +6,7 @@
 
 #include "Panzer_TpetraLinearObjFactory.hpp"
 #if PANZER_HAVE_EPETRA
-  #include "Panzer_BlockedEpetraLinearObjFactory.hpp"
+#include "Panzer_BlockedEpetraLinearObjFactory.hpp"
 #endif
 #include "Panzer_BlockedTpetraLinearObjFactory.hpp"
 

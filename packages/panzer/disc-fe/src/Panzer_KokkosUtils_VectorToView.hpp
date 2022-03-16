@@ -52,7 +52,7 @@
 #include "Thyra_DefaultSpmdVector.hpp"
 
 #if PANZER_HAVE_EPETRA
-  #include "Epetra_Vector.h"
+#include "Epetra_Vector.h"
 #endif
 
 namespace panzer {
