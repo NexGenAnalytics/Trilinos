@@ -89,8 +89,7 @@ template <typename EvalT>
 void Response_Probe<EvalT>::
 scatterResponse()
 {
-#if PANZER_HAVE_EPETRA
-  double glbValue = Sacado::ScalarValue<ScalarT>::eval(value);
+  double glbValue = Sacado::scalarValue(value);
 
   // find the minimum processor who has the probe value
   int locProc = have_probe ? this->getComm()->getRank() : this->getComm()->getSize();
@@ -115,9 +114,6 @@ scatterResponse()
 
     this->getThyraVector()[0] = glbValue;
   }
-#else
-  TEUCHOS_ASSERT(false);
-#endif
 }
 
 template < >

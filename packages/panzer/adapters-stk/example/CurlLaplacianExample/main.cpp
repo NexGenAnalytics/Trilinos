@@ -59,7 +59,7 @@
 #include "Panzer_AssemblyEngine_TemplateManager.hpp"
 #include "Panzer_AssemblyEngine_TemplateBuilder.hpp"
 #include "Panzer_LinearObjFactory.hpp"
-#include "Panzer_BlockedEpetraLinearObjFactory.hpp"
+
 #include "Panzer_TpetraLinearObjFactory.hpp"
 #include "Panzer_DOFManagerFactory.hpp"
 #include "Panzer_FieldManagerBuilder.hpp"
@@ -82,9 +82,8 @@
 #include "Panzer_STK_Utilities.hpp"
 #include "Panzer_STK_ResponseEvaluatorFactory_SolutionWriter.hpp"
 
-#if PANZER_HAVE_EPETRA
-#include "Epetra_MpiComm.h"
-
+#ifdef PANZER_HAVE_EPETRA
+#include "Panzer_BlockedEpetraLinearObjFactory.hpp"
 #include "EpetraExt_RowMatrixOut.h"
 #include "EpetraExt_VectorOut.h"
 #endif
@@ -203,6 +202,12 @@ int main(int argc,char * argv[])
    clp.setOption("basis-order",&basis_order);
    clp.setOption("output-filename",&output_filename);
 
+#ifndef PANZER_HAVE_EPETRA
+  if(!useTpetra) {
+    throw std::runtime_error("Panzer is built without Epetra! Either use Panzer_ENABLE_Epetra=ON or run this example with `use-tpetra` flag");
+  }
+#endif
+
    // parse commandline argument
    Teuchos::CommandLineProcessor::EParseCommandLineReturn r_parse= clp.parse( argc, argv );
    if (r_parse == Teuchos::CommandLineProcessor::PARSE_HELP_PRINTED) return  0;
@@ -297,7 +302,7 @@ int main(int argc,char * argv[])
    // finish building mesh, set required field variables and mesh bulk data
    ////////////////////////////////////////////////////////////////////////
 
-   for (const auto pb : physicsBlocks) {
+   for (const auto& pb : physicsBlocks) {
       const std::vector<StrPureBasisPair> & blockFields = pb->getProvidedDOFs();
 
       // insert all fields into a set
@@ -341,6 +346,7 @@ int main(int argc,char * argv[])
 
    // build the connection manager
    if(!useTpetra) {
+#ifdef PANZER_HAVE_EPETRA
      const Teuchos::RCP<panzer::ConnManager> conn_manager = Teuchos::rcp(new panzer_stk::STKConnManager(mesh));
 
      panzer::DOFManagerFactory globalIndexerFactory;
@@ -350,6 +356,7 @@ int main(int argc,char * argv[])
 
      // construct some linear algebra object, build object to pass to evaluators
      linObjFactory = Teuchos::rcp(new panzer::BlockedEpetraLinearObjFactory<panzer::Traits,int>(comm.getConst(),dofManager_int));
+#endif // PANZER_HAVE_EPETRA
    }
    else {
      const Teuchos::RCP<panzer::ConnManager> conn_manager
@@ -606,7 +613,7 @@ int main(int argc,char * argv[])
 
 void solveEpetraSystem(panzer::LinearObjContainer & container)
 {
-#if PANZER_HAVE_EPETRA
+#ifdef PANZER_HAVE_EPETRA
    // convert generic linear object container to epetra container
    panzer::EpetraLinearObjContainer & ep_container
          = Teuchos::dyn_cast<panzer::EpetraLinearObjContainer>(container);
@@ -633,10 +640,7 @@ void solveEpetraSystem(panzer::LinearObjContainer & container)
    // Therefore we have  J*e=-J*u which implies e = -u
    // thus we will scale the solution vector
    ep_container.get_x()->Scale(-1.0);
-#else 
-   TEUCHOS_ASSERT(false);
-   PAR_UNUSED(container);
-#endif
+#endif // PANZER_HAVE_EPETRA
 }
 
 void solveTpetraSystem(panzer::LinearObjContainer & container)

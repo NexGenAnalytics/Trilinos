@@ -59,8 +59,7 @@ template <typename EvalT>
 void Response_Functional<EvalT>::
 scatterResponse()
 {
-#if PANZER_HAVE_EPETRA
-  double locValue = Sacado::ScalarValue<ScalarT>::eval(value);
+  double locValue = Sacado::scalarValue(value);
   double glbValue = 0.0;
 
   // do global summation
@@ -79,9 +78,6 @@ scatterResponse()
 
     this->getThyraVector()[0] = glbValue;
   }
-#else
-  TEUCHOS_ASSERT(false);
-#endif
 }
 
 template < >

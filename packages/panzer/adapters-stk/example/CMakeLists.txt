@@ -1,8 +1,8 @@
 IF(PANZER_HAVE_EPETRA)
     ADD_SUBDIRECTORY(PoissonExample)
+    ADD_SUBDIRECTORY(assembly_engine)
     ADD_SUBDIRECTORY(PoissonInterfaceExample)
     ADD_SUBDIRECTORY(ModelEvaluator)
-    ADD_SUBDIRECTORY(assembly_engine)
 ENDIF(PANZER_HAVE_EPETRA)
 
 ADD_SUBDIRECTORY(square_mesh)
