@@ -81,7 +81,6 @@ namespace panzer {
 
   TEUCHOS_UNIT_TEST(bcstrategy, basic_construction)
   {
-
     std::size_t bc_id = 0;
     panzer::BCType neumann = BCT_Dirichlet;
     std::string sideset_id = "4";
