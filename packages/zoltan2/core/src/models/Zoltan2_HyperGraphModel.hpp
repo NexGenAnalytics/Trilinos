@@ -217,6 +217,18 @@ public:
     return nv;
   }
 
+  size_t getVertexListKokkos(
+    Kokkos::View<const gno_t *, typename node_t::device_type> &Ids,
+    Kokkos::View<input_t *, typename node_t::device_type> &wgts) const
+  {
+      ia_->getIDsKokkosView(Ids);
+
+      if(numWeightsPerVertex_ > 0) {
+        ia_->getWeightsKokkosView(wgts);
+      }
+    return getLocalNumVertices();
+  }
+
   /*! \brief Sets pointers to this process' vertex coordinates, if available
 
       \param xyz If vertex coordinate data is available, \c xyz
@@ -227,6 +239,14 @@ public:
     size_t nv = gids_.size();
     xyz = vCoords_.view(0, vCoordDim_);
     return nv;
+  }
+
+  size_t getVertexCoordsKokkos(Kokkos::View<input_t *, typename node_t::device_type> &xyz) const
+  {
+      auto adapterWithCoords = dynamic_cast<const AdapterWithCoords<user_t>*>(&(*ia_));
+      adapterWithCoords->getCoordinatesKokkosView(xyz);
+
+      return getLocalNumObjects();
   }
 
   /*! \brief Sets pointer to the ownership of this processes vertices.
@@ -240,6 +260,20 @@ public:
     size_t nv = isOwner_.size();
     isOwner = isOwner_(0, nv);
     return nv;
+  }
+
+  size_t getOwnedListKokkos(Kokkos::View<bool *, typename node_t::device_type> &isOwner) const
+  {
+      // MPL Fill isOwner using isOwner_
+      typedef Kokkos::View<bool *, typename node_t::device_type> ownedList_t;
+      ownedList_t non_const_owned_list = ownedList_t("owned_list", getLocalNumObjects());
+      typename ownedList_t::HostMirror host_owned_list = Kokkos::create_mirror_view(non_const_owned_list);
+      for(size_t i = 0; i < this->getLocalNumObjects(); ++i) {
+          host_owned_list(i) = isOwner_[i];
+      }
+      Kokkos::deep_copy(non_const_owned_list, host_owned_list);
+      isOwner = non_const_owned_list;
+      return getLocalNumObjects;
   }
 
   /*! \brief Sets pointers to the vertex map with copies and the vertex map without copies
@@ -273,6 +307,18 @@ public:
     return nv;
   }
 
+  size_t getEdgeListKokkos(Kokkos::View<const gno_t *, typename node_t::device_type> &edgeIds,
+    Kokkos::View<const offset_t *, typename node_t::device_type> &offsets,
+    Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
+  {
+      ia_->getEdgesKokkosView(offsets, edgeIds);
+
+      if(nWeightsPerEdge_ > 0) {
+        ia_->getWeightsKokkosView(wgts);
+      }
+    return edgeGids_.size();
+  }
+
   /*! \brief Sets pointers to this process' pins global Ids based on 
     the centric view given by getCentricView()
 
@@ -293,6 +339,18 @@ public:
     offsets = offsets_.view(0, offsets_.size());
     wgts = pWeights_.view(0, nWeightsPerPin_);
     return pinGids_.size();
+  }
+
+  size_t getPinListKokkos(Kokkos::View<const gno_t *, typename node_t::device_type> &pinIds,
+                          Kokkos::View<offset_t *, typename node_t::device_type> &offsets,
+                          Kokkos::View<input_t *, typename node_t::device_type> &wgts) const
+  {
+      ia_->getEdgesKokkosView(offsets, pinIds);
+
+      if(numWeightsPerVertex_ > 0) {
+          ia_->getWeightsKokkosView(wgts);
+      }
+      return getLocalNumPins();
   }
 
 
@@ -317,6 +375,7 @@ private:
   void shared_GetVertexCoords(const AdapterWithCoords *ia);
   
 
+  RCP<const MeshAdapter<user_t>> ia_;
   const RCP<const Environment > env_;
   const RCP<const Comm<int> > comm_;
 
@@ -396,6 +455,7 @@ HyperGraphModel<Adapter>::HyperGraphModel(
        numGlobalEdges_(0),
        numLocalPins_(0)
 {
+  this->ia_ = ia;
   env_->timerStart(MACRO_TIMERS, "HyperGraphModel constructed from MeshAdapter");
   //Model Type is either traditional or ghosting
   //  Traditional:

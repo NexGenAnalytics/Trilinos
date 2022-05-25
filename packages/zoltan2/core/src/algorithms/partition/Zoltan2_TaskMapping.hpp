@@ -251,6 +251,7 @@ void getCoarsenedPartGraph(
   typedef typename Adapter::gno_t t_gno_t;
   typedef typename Adapter::scalar_t t_scalar_t;
   typedef typename Adapter::offset_t t_offset_t;
+    typedef typename Adapter::node_t      node_t;
   typedef typename Zoltan2::GraphModel<
     typename Adapter::base_adapter_t>::input_t t_input_t;
 
@@ -271,10 +272,13 @@ void getCoarsenedPartGraph(
   t_lno_t localNumVertices = graph->getLocalNumVertices();
   t_lno_t localNumEdges = graph->getLocalNumEdges();
 
-  //get the vertex global ids, and weights
+  // MPL: get the vertex global ids, and weights
   ArrayView<const t_gno_t> Ids;
   ArrayView<t_input_t> v_wghts;
-  graph->getVertexList(Ids, v_wghts);
+   graph->getVertexList(Ids, v_wghts);
+//  Kokkos::View<const t_gno_t *, typename node_t::device_type> Ids;
+//  Kokkos::View<t_scalar_t **, typename node_t::device_type> v_wghts;
+//  graph->getVertexListKokkos(Ids, v_wghts);
 
   //get the edge ids, and weights
   ArrayView<const t_gno_t> edgeIds;
@@ -282,13 +286,26 @@ void getCoarsenedPartGraph(
   ArrayView<t_input_t> e_wgts;
   graph->getEdgeList(edgeIds, offsets, e_wgts);
 
+//      Kokkos::View<const t_gno_t *, typename node_t::device_type> edgeIds;
+//      Kokkos::View<const t_offset_t *, typename node_t::device_type> offsets;
+//      Kokkos::View<t_scalar_t **, typename node_t::device_type> e_wgts;
+//      graph->getEdgeListKokkos(edgeIds, offsets, e_wgts);
+
   std::vector<t_scalar_t> edge_weights;
   int numWeightPerEdge = graph->getNumWeightsPerEdge();
+  std::cout << "TM: OK A:  "<< comm->getRank()<< " "<<edgeIds.size()<<" "<< offsets.size() << " " <<e_wgts.size() << std::endl;
+  for (t_lno_t i = 0; i < graph->getLocalNumVertices() + 1; ++i) {
+      if(comm->getRank() == 0) {
+          std::cout << "edge i : " << comm->getRank() << " " << i << " " << offsets[i] << std::endl; // NonKokkos
+//          std::cout << "edge i : " << comm->getRank() << " " << i << " " << offsets(i) << std::endl; // Kokkos
+      }
+  }
 
   if (numWeightPerEdge > 0) {
     edge_weights =  std::vector<t_scalar_t>(localNumEdges);
     for (t_lno_t i = 0; i < localNumEdges; ++i) {
-      edge_weights[i] = e_wgts[0][i];
+//      edge_weights[i] = e_wgts(0,i); // Kokkos
+        edge_weights[i] = e_wgts[0][i]; // Non Kokkos
     }
   }
 

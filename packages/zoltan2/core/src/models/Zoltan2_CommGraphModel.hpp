@@ -199,14 +199,12 @@ public:
     Kokkos::View<const gno_t *, typename node_t::device_type> &Ids,
     Kokkos::View<input_t *, typename node_t::device_type> &wgts) const
   {
-      // TODO review, how can we be sure that getIDsKokkosView is of Vexted Ids ?
-      // getVertexIDsView ???
       ia_->getIDsKokkosView(Ids);
 
       if(nWeightsPerVertex_ > 0) {
-        ia_->getWeightsKokkosView(wgts); // getVertexWeightsView ??
+        ia_->getWeightsKokkosView(wgts);
       }
-
+    return getLocalNumVertices();
   }
 
   // Implied Vertex LNOs from getVertexList are used as indices to offsets
@@ -223,21 +221,15 @@ public:
   }
 
   size_t getEdgeListKokkos(Kokkos::View<const gno_t *, typename node_t::device_type> &edgeIds,
-    Kokkos::View<offset_t *, typename node_t::device_type> &offsets,
-    Kokkos::View<input_t *, typename node_t::device_type> &wgts) const
+    Kokkos::View<const offset_t *, typename node_t::device_type> &offsets,
+    Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-//    edgeIds = eGids_.view(0, nLocalEdges_);
-//    offsets = eOffsets_.view(0, nLocalVertices_+1);
+      ia_->getEdgesKokkosView(offsets, edgeIds);
 
-    // TO review, how can we be sure that getIDsKokkosView is of edgeIds ?
-    ia_->getIDsKokkosView(edgeIds);
-
-    // offsets : getEdgesView()
-
-    if(nWeightsPerVertex_ > 0) {
-      ia_->getWeightsKokkosView(wgts);
-    }
-    return nLocalEdges_;
+      if(nWeightsPerVertex_ > 0) {
+        ia_->getWeightsKokkosView(wgts);
+      }
+    return getLocalNumEdges();
   }
 
 
@@ -253,6 +245,19 @@ public:
                                "when consecutiveIdsRequired");
     }
   }
+
+  inline void getVertexDistKokkos(Kokkos::View<size_t *, typename node_t::device_type> &vtxdist) const
+  {
+
+      typedef Kokkos::View<size_t *, typename node_t::device_type> vtxdist_t;
+      vtxdist_t non_const_vtxdist = vtxdist_t("vtxdist", getLocalNumObjects());
+      typename vtxdist_t::HostMirror host_vtxdist = Kokkos::create_mirror_view(non_const_vtxdist);
+      for(size_t i = 0; i < this->getLocalNumObjects(); ++i) {
+          host_vtxdist(i) = vtxDist_[i];
+      }
+      Kokkos::deep_copy(non_const_vtxdist, host_vtxdist);
+      vtxdist = non_const_vtxdist;
+ }
 
   ////////////////////////////////////////////////////
   // The Model interface.
