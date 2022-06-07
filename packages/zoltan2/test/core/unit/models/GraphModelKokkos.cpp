@@ -96,638 +96,434 @@ typedef typename xGAdapter_t::offset_t    zoffset_t;
 using std::string;
 using std::vector;
 
-/////////////////////////////////////////////////////////////////////////////
-template<typename offset_t>
-void printGraph(zlno_t nrows, const zgno_t *v,
-    const zgno_t *elid, const zgno_t *egid,
-    const offset_t *idx,
-    const RCP<const Comm<int> > &comm)
-{
-  int rank = comm->getRank();
-  int nprocs = comm->getSize();
-  comm->barrier();
+void testGraphModelWithGraphAdapter(string fname,  const RCP<const Comm<int> > &comm, int nVtxWeights
+                                    ,int nnzWgtIdx) {
+    int rank = comm->getRank();
+    // Input generator
+    UserInputForTests *uinput;
 
-  for (int p=0; p < nprocs; p++){
-    if (p == rank){
-      std::cout << "Rank " << p << std::endl;
-      for (zlno_t i=0; i < nrows; i++){
-        std::cout << "  Vtx " << i << ": ";
-        if (elid)
-          for (offset_t j=idx[i]; j < idx[i+1]; j++)
-            std::cout << *elid++ << " ";
-        else
-          for (offset_t j=idx[i]; j < idx[i+1]; j++)
-            std::cout << *egid++ << " ";
-        std::cout << std::endl;
-      }
-      std::cout.flush();
-    }
-    comm->barrier();
-  }
-  comm->barrier();
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-template <typename MatrixOrGraph>
-void computeNumDiags(
-    RCP<const MatrixOrGraph> &M,
-    size_t &numLocalDiags,
-    size_t &numGlobalDiags
-)
-{
-  // See specializations below
-}
-
-template <>
-void computeNumDiags<tcrsGraph_t>(
-    RCP<const tcrsGraph_t> &M,
-    size_t &numLocalDiags,
-    size_t &numGlobalDiags
-)
-{
-  typedef typename tcrsGraph_t::global_ordinal_type gno_t;
-
-  size_t maxnnz = M->getLocalMaxNumRowEntries();
-  typename tcrsGraph_t::nonconst_global_inds_host_view_type colGids("colGIds", maxnnz);
-  numLocalDiags = 0;
-  numGlobalDiags = 0;
-
-  int nLocalRows = M->getLocalNumRows();
-  for (int i = 0; i < nLocalRows; i++) {
-
-    gno_t rowGid = M->getRowMap()->getGlobalElement(i);
-    size_t nnz;
-    M->getGlobalRowCopy(rowGid, colGids, nnz);
-
-    for (size_t j = 0; j < nnz; j++) {
-      if (rowGid == colGids[j]) {
-        numLocalDiags++;
-        break;
-      }
-    }
-  }
-  Teuchos::reduceAll<int, size_t>(*(M->getComm()), Teuchos::REDUCE_SUM, 1,
-                                  &numLocalDiags, &numGlobalDiags);
-}
-
-template <>
-void computeNumDiags<tcrsMatrix_t>(
-    RCP<const tcrsMatrix_t> &M,
-    size_t &numLocalDiags,
-    size_t &numGlobalDiags
-)
-{
-  RCP<const tcrsGraph_t> graph = M->getCrsGraph();
-  computeNumDiags<tcrsGraph_t>(graph, numLocalDiags, numGlobalDiags);
-}
-
-
-/////////////////////////////////////////////////////////////////////////////
-template <typename BaseAdapter, typename Adapter, typename MatrixOrGraph>
-void testAdapter(
-    RCP<const MatrixOrGraph> &M,
-    RCP<const Tpetra::CrsGraph<zlno_t, zgno_t> > &Mgraph,
-    const RCP<const Comm<int> > &comm,
-    bool idsAreConsecutive,
-    int nVtxWeights, int nEdgeWeights, int nnzWgtIdx, int coordDim,
-    bool consecutiveIdsRequested, bool removeSelfEdges, bool buildLocalGraph)
-{
-  typedef Zoltan2::StridedData<zlno_t, zscalar_t> input_t;
-  typedef typename
-    Zoltan2::InputTraits<typename BaseAdapter::user_t>::offset_t offset_t;
-
-  int fail=0;
-  int rank = comm->getRank();
-  int nprocs = comm->getSize();
-  RCP<const Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
-
-  zlno_t nLocalRows = M->getLocalNumRows();
-  zlno_t nLocalNZ = M->getLocalNumEntries();
-  zgno_t nGlobalRows =  M->getGlobalNumRows();
-  zgno_t nGlobalNZ = M->getGlobalNumEntries();
-
-  std::bitset<Zoltan2::NUM_MODEL_FLAGS> modelFlags;
-  if (consecutiveIdsRequested)
-    modelFlags.set(Zoltan2::GENERATE_CONSECUTIVE_IDS);
-  if (removeSelfEdges)
-    modelFlags.set(Zoltan2::REMOVE_SELF_EDGES);
-  if (buildLocalGraph)
-    modelFlags.set(Zoltan2::BUILD_LOCAL_GRAPH);
-
-  // Set up some fake input
-  zscalar_t **coords=NULL;
-  zscalar_t **rowWeights=NULL;
-
-  if (coordDim > 0){
-    coords = new zscalar_t * [coordDim];
-    for (int i=0; i < coordDim; i++){
-      coords[i] = new zscalar_t [nLocalRows];
-      for (zlno_t j=0; j < nLocalRows; j++){
-        coords[i][j] = 100000*i + j;
-      }
-    }
-  }
-
-  if (nVtxWeights > 0){
-    rowWeights = new zscalar_t * [nVtxWeights];
-    for (int i=0; i < nVtxWeights; i++){
-      if (nnzWgtIdx == i)
-        rowWeights[i] = NULL;
-      else{
-        rowWeights[i] = new zscalar_t [nLocalRows];
-        for (zlno_t j=0; j < nLocalRows; j++){
-          rowWeights[i][j] = 200000*i + j;
-        }
-      }
-    }
-  }
-
-  if (nEdgeWeights > 0 && rank == 0){
-    std::cout << "TODO:  STILL NEED TO TEST EDGE WEIGHTS!" << std::endl;
-  }
-
-  // Create a matrix or graph input adapter.
-
-  Adapter tmi(M, nVtxWeights);
-
-  for (int i=0; i < nVtxWeights; i++){
-    if (nnzWgtIdx == i)
-      tmi.setWeightIsDegree(i);
-    else
-      tmi.setWeights(rowWeights[i], 1, i);
-  }
-
-  zgno_t *gids = NULL;
-
-  simpleVAdapter_t *via = NULL;
-
-  if (coordDim > 0) {
-    gids = new zgno_t[nLocalRows];
-    for (zlno_t i = 0; i < nLocalRows; i++)
-      gids[i] = M->getRowMap()->getGlobalElement(i);
-    via = new simpleVAdapter_t(nLocalRows, gids, coords[0],
-                                           (coordDim > 1 ? coords[1] : NULL), 
-                                           (coordDim > 2 ? coords[2] : NULL),
-                                            1,1,1);
-    tmi.setCoordinateInput(via);
-  }
-
-  size_t numLocalDiags = 0;
-  size_t numGlobalDiags = 0;
-  if (removeSelfEdges) {
-    computeNumDiags<MatrixOrGraph>(M, numLocalDiags, numGlobalDiags);
-  }
-
-  const RCP<const tmap_t> rowMap = M->getRowMap();
-  const RCP<const tmap_t> colMap = M->getColMap();
-
-  // How many neighbor vertices are not on my process.
-
-  int *numNbors = new int [nLocalRows];
-  int *numLocalNbors = new int [nLocalRows];
-  bool *haveDiag = new bool [nLocalRows];
-  size_t totalLocalNbors = 0;
-
-  for (zlno_t i=0; i < nLocalRows; i++){
-    numLocalNbors[i] = 0;
-    haveDiag[i] = false;
-
-    typename Tpetra::CrsGraph<zlno_t, zgno_t>::local_inds_host_view_type idx;
-    Mgraph->getLocalRowView(i, idx);
-    numNbors[i] = idx.extent(0);
-
-    for (std::size_t j=0; j < idx.size(); j++){
-      if (idx[j] == i){
-        haveDiag[i] = true;
-        numLocalNbors[i]++;
-        totalLocalNbors++;
-      }
-      else{
-        zgno_t gidVal = colMap->getGlobalElement(idx[j]);
-        if (rowMap->getLocalElement(gidVal) !=
-            Teuchos::OrdinalTraits<zlno_t>::invalid()) {
-          // nbor is local to this process
-          numLocalNbors[i]++;
-          totalLocalNbors++;
-        }
-      }
-    }
-  }
-
-  // Create a GraphModel based on this input data.
-
-  if (rank == 0) std::cout << "        Creating GraphModel" << std::endl;
-  Zoltan2::GraphModel<BaseAdapter> *model = NULL;
-  RCP<const BaseAdapter> baseTmi = rcp(dynamic_cast<BaseAdapter *>(&tmi),false);
-
-  try{
-    model = new Zoltan2::GraphModel<BaseAdapter>(baseTmi, env, 
-                                                 comm, modelFlags);
-  }
-  catch (std::exception &e){
-    std::cerr << rank << ") " << e.what() << std::endl;
-    fail = 1;
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "Creating graph model", 1)
-
-  // Test the GraphModel interface
-
-  if (rank == 0) std::cout << "        Checking counts" << std::endl;
-  if (model->getLocalNumVertices() != size_t(nLocalRows)) fail = 1;
-  TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalNumVertices", 1)
-
-  if (buildLocalGraph) {
-    if (model->getLocalNumVertices() != size_t(nLocalRows)) fail = 1;
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getGlobalNumVertices", 1)
-
-    size_t num = (removeSelfEdges ? totalLocalNbors - numLocalDiags
-                                  : totalLocalNbors);
-    if (model->getLocalNumEdges() != num) fail = 1;
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalNumEdges", 1)
-
-    if (model->getGlobalNumEdges() != num) fail = 1;
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getGlobalNumEdges", 1)
-  }
-  else {
-    if (model->getGlobalNumVertices() != size_t(nGlobalRows)) fail = 1;
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getGlobalNumVertices", 1)
-
-    size_t num = (removeSelfEdges ? nLocalNZ-numLocalDiags : nLocalNZ);
-    if (model->getLocalNumEdges() != num) fail = 1;
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalNumEdges", 1)
-
-    num = (removeSelfEdges ? (nGlobalNZ-numGlobalDiags) : nGlobalNZ);
-    if (model->getGlobalNumEdges() != num) fail = 1;
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getGlobalNumEdges", 1)
-  }
-
-  if (model->getNumWeightsPerVertex() != nVtxWeights) fail = 1;
-  TEST_FAIL_AND_EXIT(*comm, !fail, "getNumWeightsPerVertex", 1)
-
-  if (model->getNumWeightsPerEdge() != 0) fail = 1;
-  TEST_FAIL_AND_EXIT(*comm, !fail, "getNumWeightsPerEdge", 1)
-
-  if (model->getCoordinateDim() != coordDim) fail = 1;
-  TEST_FAIL_AND_EXIT(*comm, !fail, "getCoordinateDim", 1)
-
-  ///////////
-  if (rank == 0) std::cout << "        Checking vertices" << std::endl;
-  ArrayView<const zgno_t> vertexGids;
-  ArrayView<input_t> crds;
-  ArrayView<input_t> wgts;
-
-  try{
-    model->getVertexList(vertexGids, wgts);
-    if (coordDim) model->getVertexCoords(crds);
-  }
-  catch (std::exception &e){
-    std::cerr << rank << ") Error " << e.what() << std::endl;
-    fail = 1;
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "getVertexList", 1)
-
-  if (vertexGids.size() != nLocalRows) fail = 1;
-  TEST_FAIL_AND_EXIT(*comm, !fail, "getVertexList size", 1)
-
-  if (buildLocalGraph) {
-    // For local graph, vertexGIDs are 0 to n-1, where n = nLocalRows
-    for (zlno_t i = 0; i < nLocalRows; i++) {
-      if (vertexGids[i] != i) {
-        fail = 1;
-        break;
-      }
-    }
-  }
-  else {
-    // We know model stores things in same order we gave it.
-    if (idsAreConsecutive){
-      zgno_t minLocalGID = rowMap->getMinGlobalIndex();
-      for (zlno_t i=0; i < nLocalRows; i++){
-        if (vertexGids[i] != minLocalGID + i) {
-          fail = 1;
-          break;
-        }
-      }
-    }
-    else{  // round robin ids
-      if (consecutiveIdsRequested) {
-        zgno_t myFirstRow;
-        zgno_t tnLocalRows = nLocalRows;
-        scan(*comm, Teuchos::REDUCE_SUM, 1, &tnLocalRows, &myFirstRow);
-        myFirstRow -= nLocalRows;
-        for (zlno_t i=0; i < nLocalRows; i++){
-          if (vertexGids[i] != myFirstRow+i){
-            std::cout << rank << " Row " << i << " of " << nLocalRows
-                      << " myFirstRow+i " << myFirstRow+i
-                      << " vertexGids " << vertexGids[i] 
-                      << std::endl;
-            fail = 1;
-            break;
-          }
-        }
-      }
-      else {
-        zgno_t myGid = rank;
-        for (zlno_t i=0; i < nLocalRows; i++, myGid += nprocs){
-          if (vertexGids[i] != myGid){
-            std::cout << rank << " Row " << i << " of " << nLocalRows
-                      << " myGid " << myGid << " vertexGids " << vertexGids[i] 
-                      << std::endl;
-            fail = 1;
-            break;
-          }
-        }
-      }
-    }
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "vertex gids", 1)
-
-  ////////////////
-  if ((crds.size() != coordDim) || (wgts.size() != nVtxWeights)) fail = 1;
-  TEST_FAIL_AND_EXIT(*comm, !fail, "coord or weight array size", 1)
-
-  for (int i=0; !fail && i < coordDim; i++){
-    for (zlno_t j=0; j < nLocalRows; j++){
-      if (crds[i][j] != 100000*i + j){
-        fail = 1;
-        break;
-      }
-    }
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "coord values", 1)
-
-  for (int i=0; !fail && i < nVtxWeights; i++){
-    if (nnzWgtIdx == i){
-      for (zlno_t j=0; j < nLocalRows; j++){
-        zscalar_t val = (buildLocalGraph ? numLocalNbors[j] : numNbors[j]);
-        if (removeSelfEdges && haveDiag[j])
-          val -= 1;
-        if (wgts[i][j] != val){
-          fail = 1;
-          break;
-        }
-      }
-    }
-    else{
-      for (zlno_t j=0; j < nLocalRows; j++){
-        if (wgts[i][j] != 200000*i + j){
-          fail = 1;
-          break;
-        }
-      }
-    }
-  }
-
-  TEST_FAIL_AND_EXIT(*comm, !fail, "row weight values", 1)
-  
-  ////////////////
-  if (rank == 0) std::cout << "        Checking edges" << std::endl;
-
-  if (!buildLocalGraph) {
-    ArrayView<const zgno_t> edgeGids;
-    ArrayView<const offset_t> offsets;
-    size_t numEdges=0;
-
-    try{
-      numEdges = model->getEdgeList(edgeGids, offsets, wgts);
-    }
-    catch(std::exception &e){
-      std::cerr << rank << ") Error " << e.what() << std::endl;
-      fail = 1;
-    }
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getEdgeList", 1)
-
-    TEST_FAIL_AND_EXIT(*comm, wgts.size() == 0, "edge weights present", 1)
-
-    size_t num = 0;
-    for (typename ArrayView<const offset_t>::size_type i=0;
-      i < offsets.size()-1; i++){
-      offset_t edgeListSize = offsets[i+1] - offsets[i];
-      num += edgeListSize;
-      size_t val = numNbors[i];
-      if (removeSelfEdges && haveDiag[i])
-        val--;
-      if (edgeListSize != val){
-        fail = 1;
-        break;
-      }
-    }
-
-    TEST_FAIL_AND_EXIT(*comm, numEdges==num, "getEdgeList size", 1)
-    if (nGlobalRows < SMALL_NUMBER_OF_ROWS){
-      if (rank == 0)
-        std::cout << "Printing graph now " << nGlobalRows << std::endl;
-      printGraph<offset_t>(nLocalRows, vertexGids.getRawPtr(), NULL,
-        edgeGids.getRawPtr(), offsets.getRawPtr(), comm);
-    }
-    else{
-      if (rank==0) 
-        std::cout << "    " << nGlobalRows << " total rows" << std::endl;
-    }
-  }
-
-  else { // buildLocalGraph
-    // Get graph restricted to this process
-
-    if (rank == 0) std::cout << "        Checking local edges" << std::endl;
-    ArrayView<const zgno_t> localEdges;
-    ArrayView<const offset_t> localOffsets;
-    size_t numLocalNeighbors=0;
-
-    try{
-      numLocalNeighbors= model->getEdgeList(localEdges, localOffsets, wgts);
-    }
-    catch(std::exception &e){
-      std::cout << rank << ") Error " << e.what() << std::endl;
-      std::cerr << rank << ") Error " << e.what() << std::endl;
-      fail = 1;
-    }
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalEdgeList", 1)
-    TEST_FAIL_AND_EXIT(*comm, ((localOffsets.size()-1) == nLocalRows),
-                       "getLocalEdgeList localOffsets.size", 1)
-
-    size_t num = 0;
-    for (zlno_t i=0; i < nLocalRows; i++){
-      offset_t edgeListSize = localOffsets[i+1] - localOffsets[i];
-      num += edgeListSize;
-      size_t val = numLocalNbors[i];
-      if (removeSelfEdges && haveDiag[i])
-        val--;
-      if (edgeListSize != val){
-          std::cout << rank << "vtx " << i << " of " << localOffsets.size()
-                    << " Number of local edges in model " << edgeListSize
-                    << " not equal to expected number of edges " << val 
-                    << std::endl;
-        fail = 1;
-        break;
-      }
-    }
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalEdgeList list sizes", 1)
-  
-    TEST_FAIL_AND_EXIT(*comm, numLocalNeighbors==num,
-                       "getLocalEdgeList sum size", 1)
-
-    fail = ((removeSelfEdges ? totalLocalNbors-numLocalDiags
-                             : totalLocalNbors)
-            != numLocalNeighbors);
-    TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalEdgeList total size", 1)
-
-    if (nGlobalRows < SMALL_NUMBER_OF_ROWS){
-      if (totalLocalNbors == 0){
-        if (rank == 0)
-        std::cout << "  Graph of local edges is empty" << std::endl; 
-      }
-      else{
-        printGraph<offset_t>(nLocalRows, vertexGids.getRawPtr(),
-          localEdges.getRawPtr(), NULL, localOffsets.getRawPtr(), comm);
-      }
-    }
-  }
-
-  if (rank == 0) std::cout << "        Cleaning up" << std::endl;
-  delete model;
-
-  if (nLocalRows){
-    delete [] numNbors;
-    delete [] numLocalNbors;
-    delete [] haveDiag;
-
-    if (nVtxWeights > 0){
-      for (int i=0; i < nVtxWeights; i++){
-        if (rowWeights[i])
-          delete [] rowWeights[i];
-      }
-      delete [] rowWeights;
-    }
-
-    if (coordDim > 0){
-      delete via;
-      delete [] gids;
-      for (int i=0; i < coordDim; i++){
-        if (coords[i])
-          delete [] coords[i];
-      }
-      delete [] coords;
-    }
-  }
-
-  if (rank==0) std::cout << "    OK" << std::endl;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-void testGraphModel(string fname, zgno_t xdim, zgno_t ydim, zgno_t zdim,
-    const RCP<const Comm<int> > &comm,
-    int nVtxWeights, int nnzWgtIdx, int coordDim,
-    bool consecutiveIdsRequested, bool removeSelfEdges, bool buildLocalGraph)
-{
-  int rank = comm->getRank();
-
-  if (rank==0){
-    std::cout << std::endl << "=======================" << std::endl;
-    if (fname.size() > 0)
-      std::cout << std::endl << "Test parameters: file name " << fname << std::endl;
-    else{
-      std::cout << std::endl << "Test parameters: dimension ";
-      std::cout  << xdim << "x" << ydim << "x" << zdim << std::endl;
-    }
-
-    std::cout << "Num Vertex Weights: " << nVtxWeights << std::endl;
-    if (nnzWgtIdx >= 0)
-     std::cout << "  Dimension " << nnzWgtIdx << " is number of neighbors" << std::endl;
-
-    std::cout << "Coordinate dim: " << coordDim << std::endl;
-    std::cout << "Request consecutive vertex gids: ";
-    std::cout << (consecutiveIdsRequested ? "yes" : "no") << std::endl;
-    std::cout << "Request to remove self edges: ";
-    std::cout << (removeSelfEdges ? "yes" : "no") << std::endl;
-  }
-
-  // Input generator
-  UserInputForTests *uinput;
-
-  if (fname.size() > 0)
     uinput = new UserInputForTests(testDataFilePath, fname, comm, true);
-  else
-    uinput = new UserInputForTests(xdim,ydim,zdim,string(""), comm, true, true);
 
-  RCP<tcrsMatrix_t> M = uinput->getUITpetraCrsMatrix();
+    RCP<tcrsMatrix_t> M = uinput->getUITpetraCrsMatrix();
+    zlno_t nLocalRows = M->getLocalNumRows();
 
-  // Row Ids of test input are already consecutive
+    // Weights:
+    zscalar_t **rowWeights=NULL;
+    if (nVtxWeights > 0){
+      rowWeights = new zscalar_t * [nVtxWeights];
+      for (int i=0; i < nVtxWeights; i++){
+        if (nnzWgtIdx == i)
+          rowWeights[i] = NULL;
+        else{
+          rowWeights[i] = new zscalar_t [nLocalRows];
+          for (zlno_t j=0; j < nLocalRows; j++){
+            rowWeights[i][j] = 200000*i + j;
+          }
+        }
+      }
+    }
+  ////  TEST_FAIL_AND_EXIT(*comm, numEdges==num, "getEdgeList size", 1)
 
-  RCP<const tcrsMatrix_t> Mconsec = rcp_const_cast<const tcrsMatrix_t>(M);
 
-  RCP<const Tpetra::CrsGraph<zlno_t, zgno_t> > graph = Mconsec->getCrsGraph();
+    RCP<const tcrsMatrix_t> Mconsec = rcp_const_cast<const tcrsMatrix_t>(M);
+    RCP<const Tpetra::CrsGraph<zlno_t, zgno_t> > graph = Mconsec->getCrsGraph();
+    xGAdapter_t tmi(graph, nVtxWeights);
+    for (int i=0; i < nVtxWeights; i++){
+        if (nnzWgtIdx == i)
+            tmi.setWeightIsDegree(i);
+        else
+            tmi.setWeights(rowWeights[i], 1, i);
+    }
 
-//  printTpetraGraph<zlno_t, zgno_t>(comm, *graph, std::cout, 100, 
-//    "Graph having consecutive IDs");
+      simpleVAdapter_t *via = NULL;
 
-  if (rank == 0) 
-    std::cout << "   TEST MatrixAdapter for graph having Consecutive IDs"
-              << std::endl;
-  bool idsAreConsecutive = true;
 
-  testAdapter<baseMAdapter_t,xMAdapter_t,tcrsMatrix_t>(Mconsec, graph, comm,
-                                                       idsAreConsecutive,
-                                                       nVtxWeights, 0, 
-                                                       nnzWgtIdx, coordDim,
-                                                       consecutiveIdsRequested,
-                                                       removeSelfEdges,
-                                                       buildLocalGraph);
+      // Set up some fake input
+      zscalar_t **coords=NULL;
+      int coordDim= 3;
 
-  if (rank == 0) 
-    std::cout << "   TEST GraphAdapter for graph having Consecutive IDs"
-              << std::endl;
-  testAdapter<baseGAdapter_t,xGAdapter_t,tcrsGraph_t>(graph, graph, comm,
-                                                      idsAreConsecutive,
-                                                      nVtxWeights, 1, 
-                                                      nnzWgtIdx, coordDim,
-                                                      consecutiveIdsRequested,
-                                                      removeSelfEdges,
-                                                      buildLocalGraph);
+      if (coordDim > 0){
+        coords = new zscalar_t * [coordDim];
+        for (int i=0; i < coordDim; i++){
+          coords[i] = new zscalar_t [nLocalRows];
+          for (zlno_t j=0; j < nLocalRows; j++){
+            coords[i][j] = 100000*i + j;
+          }
+        }
+      }
 
-  // Do a round robin migration so that global IDs are not consecutive.
 
-  Array<zgno_t> myNewRows;
-  int nprocs = comm->getSize();
-  for (size_t i=rank; i < Mconsec->getGlobalNumRows(); i+=nprocs)
-    myNewRows.push_back(i);
+      zgno_t *gids = NULL;
+      if (coordDim > 0) {
+        gids = new zgno_t[nLocalRows];
+        for (zlno_t i = 0; i < nLocalRows; i++)
+          gids[i] = M->getRowMap()->getGlobalElement(i);
+        via = new simpleVAdapter_t(nLocalRows, gids, coords[0],
+                                               (coordDim > 1 ? coords[1] : NULL),
+                                               (coordDim > 2 ? coords[2] : NULL),
+                                                1,1,1);
+        tmi.setCoordinateInput(via);
+      }
 
-  RCP<const tcrsMatrix_t> Mnonconsec = rcp_const_cast<const tcrsMatrix_t>(
-    Zoltan2::XpetraTraits<tcrsMatrix_t>::doMigration(
-      *Mconsec, myNewRows.size(), myNewRows.getRawPtr()));
+      if (rank == 0) std::cout << "        Creating GraphModel" << std::endl;
+      Zoltan2::GraphModel<baseMAdapter_t> *model = NULL;
+      RCP<const baseMAdapter_t> baseTmi = rcp(dynamic_cast<baseMAdapter_t *>(&tmi),false);
+      RCP<const Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
 
-  graph = Mnonconsec->getCrsGraph();
+      std::bitset<Zoltan2::NUM_MODEL_FLAGS> modelFlags;
+  //    if (consecutiveIdsRequested)
+        modelFlags.set(Zoltan2::GENERATE_CONSECUTIVE_IDS);
+  //    if (removeSelfEdges)
+  //      modelFlags.set(Zoltan2::REMOVE_SELF_EDGES);
+  //    if (buildLocalGraph)
+  //      modelFlags.set(Zoltan2::BUILD_LOCAL_GRAPH);
 
-//  printTpetraGraph<zlno_t, zgno_t>(comm, *graph, std::cout, 100, 
-//    "Graph having non-consecutive (Round-Robin) IDs");
+        int fail=0;
+      try{
+        model = new Zoltan2::GraphModel<baseMAdapter_t>(baseTmi, env,
+                                                     comm, modelFlags);
+      }
+      catch (std::exception &e){
+        std::cerr << rank << ") " << e.what() << std::endl;
+        fail = 1;
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "Creating graph model", 1)
 
-  if (rank == 0)
-    std::cout << "   TEST MatrixAdapter graph having Round-Robin IDs"
-              << std::endl;
-  idsAreConsecutive = false;
+      typedef Zoltan2::StridedData<zlno_t, zscalar_t> input_t;
 
-  testAdapter<baseMAdapter_t,xMAdapter_t,tcrsMatrix_t>(Mnonconsec, graph, comm,
-                                                       idsAreConsecutive,
-                                                       nVtxWeights, 0, 
-                                                       nnzWgtIdx, coordDim,
-                                                       consecutiveIdsRequested,
-                                                       removeSelfEdges,
-                                                       buildLocalGraph);
+      // TEST of getVertexList and getVertexListKokkos
+      ArrayView<const zgno_t> vertexIds;
+      ArrayView<input_t> wgts;
+      Kokkos::View<const zgno_t *, typename znode_t::device_type> kVertexIds;
+      Kokkos::View<zscalar_t **, typename znode_t::device_type> kWgts;
+      auto nbVertices = model->getVertexList(vertexIds, wgts);
+      auto kNbVertices = model->getVertexListKokkos(kVertexIds, kWgts);
+      auto nbWeightPerVertex = model->getNumWeightsPerVertex();
+      std::cout << "nbVertices kNbVertices"<<nbVertices << " "<< kNbVertices << std::endl;
+      if(nbVertices != kNbVertices)
+      {
+          fail = 1;
+          TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexList != getVertexListKokkos", 1)
+      }
 
-  if (rank == 0)
-    std::cout << "   TEST GraphAdapter graph having Round-Robin IDs"
-              << std::endl;
-  testAdapter<baseGAdapter_t,xGAdapter_t,tcrsGraph_t>(graph, graph, comm,
-                                                      idsAreConsecutive,
-                                                      nVtxWeights, 0, 
-                                                      nnzWgtIdx, coordDim,
-                                                      consecutiveIdsRequested,
-                                                      removeSelfEdges,
-                                                      buildLocalGraph);
+      // MPL: NEED TO SHARE DATA BETWEEN MODEL AND CONSTRUCTOR
+      for(size_t i = 0; i < nbVertices; ++i) {
+  //        std::cout << "vertexIds[i] "<< vertexIds[i] << " kVertexIds(i) "<< kVertexIds(i)<<std::endl;
+         if (vertexIds[i] != kVertexIds(i))
+             fail = 1;
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "vertexIds != kVertexIds", 1)
 
-  delete uinput;
+      int stride;
+      for(size_t w = 0; w < nbWeightPerVertex; ++w) {
+          const zscalar_t *vwgts;
+          tmi.getVertexWeightsView(vwgts, stride, w);
+          for(size_t i = 0; i < nbVertices; ++i) {
+  //            std::cout << "wgts[w][i] "<< wgts[w][i] << " kWgts(i, w) "<< kWgts(i, w)<<std::endl;
+              if (wgts[w][i] != kWgts(i, w))
+                  fail = 1;
+          }
+
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "weight outputs of getVertexWeightsView and getVertexCoordsKokkos are different", 1)
+
+
+      // TEST of getVertexCoords and getVertexCoordsKokkos
+      ArrayView<input_t> cxyz;
+      Kokkos::View<zscalar_t **,Kokkos::LayoutLeft, typename znode_t::device_type> kcxyz;
+      auto nbVerticesFromCoords = model->getVertexCoords(cxyz);
+      auto kNbVerticesFromKCoords = model->getVertexCoordsKokkos(kcxyz);
+      std::cout << "nbVerticesFromCoords kNbVerticesFromKCoords"<<nbVerticesFromCoords << " "<< kNbVerticesFromKCoords << std::endl;
+      if(nbVerticesFromCoords != kNbVerticesFromKCoords)
+      {
+                  fail = 1;
+          TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexCoords != getVertexCoordsKokkos", 1)
+      }
+
+      for(size_t d = 0; d < model->getCoordinateDim(); ++d) {
+          for(size_t i = 0; i < nbVerticesFromCoords; ++i) {
+  //            std::cout << "cxyz[d][i] "<< cxyz[d][i] << " kcxyz(i, d) "<< kcxyz(i, d)<<std::endl;
+              if (cxyz[d][i] != kcxyz(i, d))
+                  fail = 1;
+          }
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "coordinates ouputs of getVertexCoords  and getVertexCoordsKokkos are different", 1)
+
+      // TEST of getEdgeList and getEdgeListKokkos
+      ArrayView<const zgno_t> edgesIds;
+      ArrayView<const zoffset_t> offsets;
+      ArrayView<input_t> eWgts;
+      Kokkos::View<const zgno_t *, typename znode_t::device_type> kEdgeIds;
+      Kokkos::View<const zoffset_t *, typename znode_t::device_type> kOffsets;
+      Kokkos::View<zscalar_t **, typename znode_t::device_type> kEWgts;
+      auto nbEdges =  model->getEdgeList(edgesIds, offsets, eWgts);
+      auto kNbEdges =  model->getEdgeListKokkos(kEdgeIds, kOffsets, kEWgts);
+      std::cout << "nbEdges kNbEdges"<<nbEdges << " "<< kNbEdges << std::endl;
+      if(nbEdges != kNbEdges)
+      {
+          fail = 1;
+          TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getEdgeList != getEdgeListKokkos", 1)
+      }
+      for(size_t i = 0; i < nbEdges; ++i) {
+  //        std::cout << "edgesIds[i] "<< edgesIds[i] << " kEdgeIds(i) "<< kEdgeIds(i)<<std::endl;
+          if (edgesIds[i] != kEdgeIds(i))
+              fail = 1;
+      }
+
+      for(size_t i = 0; i < model->getLocalNumObjects() +1; ++i) {
+  //        std::cout << "offsets[i] "<< offsets[i] << " kOffsets(i) "<< kOffsets(i)<<std::endl;
+                 if (offsets[i] != kOffsets(i))
+                     fail = 1;
+      }
+
+      std::cout << "getNumWeightsPerEdge "<< model->getNumWeightsPerEdge() << "getLocalNumObjects) "<<model->getLocalNumObjects()<<std::endl;
+      for(size_t w = 0; w < model->getNumWeightsPerEdge(); ++w) {
+          for(size_t i = 0; i < model->getLocalNumObjects(); ++i) {
+                  //            std::cout << "eWgts[w][i] "<< eWgts[w][i] << " kEWgts(i, w) "<< kEWgts(i, w)<<std::endl;
+              if (eWgts[w][i] != kEWgts(i, w))
+                  fail = 1;
+          }
+      }
+      // TEST of getVertexDist and getVertexDistKokkos
+      ArrayView<size_t> vtxDist;
+      Kokkos::View<size_t *, typename znode_t::device_type> kVtxDist;
+      model->getVertexDist(vtxDist);
+      model->getVertexDistKokkos(kVtxDist);
+      for(size_t i = 0; i < comm->getSize() + 1; ++i) {
+          if (vtxDist[i] != kVtxDist(i))
+              fail = 1;
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "getVertexDist != getVertexDistKokkos", 1)
+
+
+        delete model;
+    if (coordDim > 0){
+        delete via;
+        delete [] gids;
+        for (int i=0; i < coordDim; i++){
+            if (coords[i])
+                delete [] coords[i];
+        }
+        delete [] coords;
+    }
+
+  //    delete coordArray;
+    delete uinput;
 }
+
+void testGraphModelWithMatrixAdapter(string fname,  const RCP<const Comm<int> > &comm, int nVtxWeights
+                                    ,int nnzWgtIdx) {
+    int rank = comm->getRank();
+    // Input generator
+    UserInputForTests *uinput;
+
+    uinput = new UserInputForTests(testDataFilePath, fname, comm, true);
+
+    RCP<tcrsMatrix_t> M = uinput->getUITpetraCrsMatrix();
+    zlno_t nLocalRows = M->getLocalNumRows();
+
+    // Weights:
+    zscalar_t **rowWeights=NULL;
+    if (nVtxWeights > 0){
+      rowWeights = new zscalar_t * [nVtxWeights];
+      for (int i=0; i < nVtxWeights; i++){
+        if (nnzWgtIdx == i)
+          rowWeights[i] = NULL;
+        else{
+          rowWeights[i] = new zscalar_t [nLocalRows];
+          for (zlno_t j=0; j < nLocalRows; j++){
+            rowWeights[i][j] = 200000*i + j;
+          }
+        }
+      }
+    }
+  ////  TEST_FAIL_AND_EXIT(*comm, numEdges==num, "getEdgeList size", 1)
+
+
+    RCP<const tcrsMatrix_t> Mconsec = rcp_const_cast<const tcrsMatrix_t>(M);
+    RCP<const Tpetra::CrsGraph<zlno_t, zgno_t> > graph = Mconsec->getCrsGraph();
+    xMAdapter_t tmi(M, nVtxWeights);
+    for (int i=0; i < nVtxWeights; i++){
+        if (nnzWgtIdx == i)
+            tmi.setWeightIsDegree(i);
+        else
+            tmi.setWeights(rowWeights[i], 1, i);
+    }
+
+      simpleVAdapter_t *via = NULL;
+
+
+      // Set up some fake input
+      zscalar_t **coords=NULL;
+      int coordDim= 3;
+
+      if (coordDim > 0){
+        coords = new zscalar_t * [coordDim];
+        for (int i=0; i < coordDim; i++){
+          coords[i] = new zscalar_t [nLocalRows];
+          for (zlno_t j=0; j < nLocalRows; j++){
+            coords[i][j] = 100000*i + j;
+          }
+        }
+      }
+
+
+      zgno_t *gids = NULL;
+      if (coordDim > 0) {
+        gids = new zgno_t[nLocalRows];
+        for (zlno_t i = 0; i < nLocalRows; i++)
+          gids[i] = M->getRowMap()->getGlobalElement(i);
+        via = new simpleVAdapter_t(nLocalRows, gids, coords[0],
+                                               (coordDim > 1 ? coords[1] : NULL),
+                                               (coordDim > 2 ? coords[2] : NULL),
+                                                1,1,1);
+        tmi.setCoordinateInput(via);
+      }
+
+      if (rank == 0) std::cout << "        Creating GraphModel" << std::endl;
+      Zoltan2::GraphModel<baseGAdapter_t> *model = NULL;
+      RCP<const baseGAdapter_t> baseTmi = rcp(dynamic_cast<baseGAdapter_t *>(&tmi),false);
+      RCP<const Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
+
+      std::bitset<Zoltan2::NUM_MODEL_FLAGS> modelFlags;
+  //    if (consecutiveIdsRequested)
+        modelFlags.set(Zoltan2::GENERATE_CONSECUTIVE_IDS);
+  //    if (removeSelfEdges)
+  //      modelFlags.set(Zoltan2::REMOVE_SELF_EDGES);
+  //    if (buildLocalGraph)
+  //      modelFlags.set(Zoltan2::BUILD_LOCAL_GRAPH);
+
+        int fail=0;
+      try{
+        model = new Zoltan2::GraphModel<baseGAdapter_t>(baseTmi, env,
+                                                     comm, modelFlags);
+      }
+      catch (std::exception &e){
+        std::cerr << rank << ") " << e.what() << std::endl;
+        fail = 1;
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "Creating graph model", 1)
+
+      typedef Zoltan2::StridedData<zlno_t, zscalar_t> input_t;
+
+      // TEST of getVertexList and getVertexListKokkos
+      ArrayView<const zgno_t> vertexIds;
+      ArrayView<input_t> wgts;
+      Kokkos::View<const zgno_t *, typename znode_t::device_type> kVertexIds;
+      Kokkos::View<zscalar_t **, typename znode_t::device_type> kWgts;
+      auto nbVertices = model->getVertexList(vertexIds, wgts);
+      auto kNbVertices = model->getVertexListKokkos(kVertexIds, kWgts);
+      auto nbWeightPerVertex = model->getNumWeightsPerVertex();
+      std::cout << "nbVertices kNbVertices"<<nbVertices << " "<< kNbVertices << std::endl;
+      if(nbVertices != kNbVertices)
+      {
+          fail = 1;
+          TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexList != getVertexListKokkos", 1)
+      }
+
+      // MPL: NEED TO SHARE DATA BETWEEN MODEL AND CONSTRUCTOR
+      for(size_t i = 0; i < nbVertices; ++i) {
+  //        std::cout << "vertexIds[i] "<< vertexIds[i] << " kVertexIds(i) "<< kVertexIds(i)<<std::endl;
+         if (vertexIds[i] != kVertexIds(i))
+             fail = 1;
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "vertexIds != kVertexIds", 1)
+
+      int stride;
+      for(size_t w = 0; w < nbWeightPerVertex; ++w) {
+          for(size_t i = 0; i < nbVertices; ++i) {
+  //            std::cout << "wgts[w][i] "<< wgts[w][i] << " kWgts(i, w) "<< kWgts(i, w)<<std::endl;
+              if (wgts[w][i] != kWgts(i, w))
+                  fail = 1;
+          }
+
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "weight outputs of getVertexWeightsView and getVertexCoordsKokkos are different", 1)
+
+
+      // TEST of getVertexCoords and getVertexCoordsKokkos
+      ArrayView<input_t> cxyz;
+      Kokkos::View<zscalar_t **,Kokkos::LayoutLeft, typename znode_t::device_type> kcxyz;
+      auto nbVerticesFromCoords = model->getVertexCoords(cxyz);
+      auto kNbVerticesFromKCoords = model->getVertexCoordsKokkos(kcxyz);
+      std::cout << "nbVerticesFromCoords kNbVerticesFromKCoords"<<nbVerticesFromCoords << " "<< kNbVerticesFromKCoords << std::endl;
+      if(nbVerticesFromCoords != kNbVerticesFromKCoords)
+      {
+                  fail = 1;
+          TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexCoords != getVertexCoordsKokkos", 1)
+      }
+
+      for(size_t d = 0; d < model->getCoordinateDim(); ++d) {
+          for(size_t i = 0; i < nbVerticesFromCoords; ++i) {
+  //            std::cout << "cxyz[d][i] "<< cxyz[d][i] << " kcxyz(i, d) "<< kcxyz(i, d)<<std::endl;
+              if (cxyz[d][i] != kcxyz(i, d))
+                  fail = 1;
+          }
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "coordinates ouputs of getVertexCoords  and getVertexCoordsKokkos are different", 1)
+
+      // TEST of getEdgeList and getEdgeListKokkos
+      ArrayView<const zgno_t> edgesIds;
+      ArrayView<const zoffset_t> offsets;
+      ArrayView<input_t> eWgts;
+      Kokkos::View<const zgno_t *, typename znode_t::device_type> kEdgeIds;
+      Kokkos::View<const zoffset_t *, typename znode_t::device_type> kOffsets;
+      Kokkos::View<zscalar_t **, typename znode_t::device_type> kEWgts;
+      auto nbEdges =  model->getEdgeList(edgesIds, offsets, eWgts);
+      auto kNbEdges =  model->getEdgeListKokkos(kEdgeIds, kOffsets, kEWgts);
+      std::cout << "nbEdges kNbEdges"<<nbEdges << " "<< kNbEdges << std::endl;
+      if(nbEdges != kNbEdges)
+      {
+          fail = 1;
+          TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getEdgeList != getEdgeListKokkos", 1)
+      }
+      for(size_t i = 0; i < nbEdges; ++i) {
+  //        std::cout << "edgesIds[i] "<< edgesIds[i] << " kEdgeIds(i) "<< kEdgeIds(i)<<std::endl;
+          if (edgesIds[i] != kEdgeIds(i))
+              fail = 1;
+      }
+
+      for(size_t i = 0; i < model->getLocalNumObjects() +1; ++i) {
+  //        std::cout << "offsets[i] "<< offsets[i] << " kOffsets(i) "<< kOffsets(i)<<std::endl;
+                 if (offsets[i] != kOffsets(i))
+                     fail = 1;
+      }
+
+      std::cout << "getNumWeightsPerEdge "<< model->getNumWeightsPerEdge() << "getLocalNumObjects) "<<model->getLocalNumObjects()<<std::endl;
+      for(size_t w = 0; w < model->getNumWeightsPerEdge(); ++w) {
+          for(size_t i = 0; i < model->getLocalNumObjects(); ++i) {
+                  //            std::cout << "eWgts[w][i] "<< eWgts[w][i] << " kEWgts(i, w) "<< kEWgts(i, w)<<std::endl;
+              if (eWgts[w][i] != kEWgts(i, w))
+                  fail = 1;
+          }
+      }
+      // TEST of getVertexDist and getVertexDistKokkos
+      ArrayView<size_t> vtxDist;
+      Kokkos::View<size_t *, typename znode_t::device_type> kVtxDist;
+      model->getVertexDist(vtxDist);
+      model->getVertexDistKokkos(kVtxDist);
+      for(size_t i = 0; i < comm->getSize() + 1; ++i) {
+          if (vtxDist[i] != kVtxDist(i))
+              fail = 1;
+      }
+      TEST_FAIL_AND_EXIT(*comm, !fail, "getVertexDist != getVertexDistKokkos", 1)
+
+
+        delete model;
+    if (coordDim > 0){
+        delete via;
+        delete [] gids;
+        for (int i=0; i < coordDim; i++){
+            if (coords[i])
+                delete [] coords[i];
+        }
+        delete [] coords;
+    }
+
+  //    delete coordArray;
+    delete uinput;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////
 int main(int narg, char *arg[])
@@ -749,195 +545,8 @@ int main(int narg, char *arg[])
     std::cout << "TESTING base case (global)" << std::endl;
 
 
-  // Input generator
-  UserInputForTests *uinput;
-
-  uinput = new UserInputForTests(testDataFilePath, fname, comm, true);
-
-  RCP<tcrsMatrix_t> M = uinput->getUITpetraCrsMatrix();
-  zlno_t nLocalRows = M->getLocalNumRows();
-
-  // Weights:
-  zscalar_t **rowWeights=NULL;
-  if (nVtxWeights > 0){
-    rowWeights = new zscalar_t * [nVtxWeights];
-    for (int i=0; i < nVtxWeights; i++){
-      if (nnzWgtIdx == i)
-        rowWeights[i] = NULL;
-      else{
-        rowWeights[i] = new zscalar_t [nLocalRows];
-        for (zlno_t j=0; j < nLocalRows; j++){
-          rowWeights[i][j] = 200000*i + j;
-        }
-      }
-    }
-  }
-////  TEST_FAIL_AND_EXIT(*comm, numEdges==num, "getEdgeList size", 1)
-
-
-  RCP<const tcrsMatrix_t> Mconsec = rcp_const_cast<const tcrsMatrix_t>(M);
-  RCP<const Tpetra::CrsGraph<zlno_t, zgno_t> > graph = Mconsec->getCrsGraph();
-  xGAdapter_t tmi(graph, nVtxWeights);
-  for (int i=0; i < nVtxWeights; i++){
-      if (nnzWgtIdx == i)
-          tmi.setWeightIsDegree(i);
-      else
-          tmi.setWeights(rowWeights[i], 1, i);
-  }
-
-  std::cout << "setWeight finished: " <<std::endl;
-    simpleVAdapter_t *via = NULL;
-
-
-    // Set up some fake input
-    zscalar_t **coords=NULL;
-    int coordDim= 3;
-
-    if (coordDim > 0){
-      coords = new zscalar_t * [coordDim];
-      for (int i=0; i < coordDim; i++){
-        coords[i] = new zscalar_t [nLocalRows];
-        for (zlno_t j=0; j < nLocalRows; j++){
-          coords[i][j] = 100000*i + j;
-        }
-      }
-    }
-
-
-    zgno_t *gids = NULL;
-    if (coordDim > 0) {
-      gids = new zgno_t[nLocalRows];
-      for (zlno_t i = 0; i < nLocalRows; i++)
-        gids[i] = M->getRowMap()->getGlobalElement(i);
-      via = new simpleVAdapter_t(nLocalRows, gids, coords[0],
-                                             (coordDim > 1 ? coords[1] : NULL),
-                                             (coordDim > 2 ? coords[2] : NULL),
-                                              1,1,1);
-      tmi.setCoordinateInput(via);
-    }
-
-
-  // TEST of getIDsView, getIDsKokkosView (compatible with all adapters) and getVertexIDsView (graphAdapter)
-
-  const zgno_t *vertexIds;
-  const zgno_t *ids;
-  Kokkos::View<const zgno_t *, typename znode_t::device_type> kIds;
-
-  int fail=0;
-  if (tmi.getLocalNumVertices() != tmi.getLocalNumIDs())
-      fail = 1;
-  TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalNumVertices != tmi.getLocalNumIDs() for graphAdapter", 1)
-
-
-  tmi.getVertexIDsView(vertexIds);
-  tmi.getIDsView(ids);
-  tmi.getIDsKokkosView(kIds);
-  for(size_t i = 0; i < tmi.getLocalNumIDs(); ++i) {
-     if (ids[i] != vertexIds[i])
-         fail = 1;
-
-     if (kIds(i) != vertexIds[i])
-         fail = 1;
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "ids != vertexIds != kIds", 1)
-
-// TEST of getWeightsView, getWeightsKokkosView and getVertexWeightsView (GRAPH_VERTEX)
-          std::cout << "number of weight: "<< nVtxWeights << std::endl;
-  for (int w=0; !fail && w < nVtxWeights; w++){
-      const zscalar_t *wgts;
-      const zscalar_t *vwgts;
-      Kokkos::View<zscalar_t **, typename znode_t::device_type> wkgts;
-      int stride;
-      tmi.getWeightsView(wgts, stride, w);
-      tmi.getWeightsKokkosView(wkgts);
-      tmi.getVertexWeightsView(vwgts, stride, w);
-      for(size_t i = 0; i < tmi.getLocalNumIDs(); ++i) {
-         if (wgts[stride*i] != vwgts[stride*i])
-             fail = 1;
-
-         if (wkgts(i, w) != vwgts[stride*i])
-             fail = 1;
-      }
-
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "wgts != vwgts != wkgts", 1)
-
-// TEST of getEdgesKokkosView, getEdgesView (GRAPH_VERTEX)
-  const zoffset_t *offsets;
-  const zgno_t *adjids;
-  Kokkos::View<const zoffset_t *, typename znode_t::device_type> kOffsets;
-  Kokkos::View<const zgno_t *, typename znode_t::device_type> kAdjids;
-
-  tmi.getEdgesView(offsets, adjids);
-  tmi.getEdgesKokkosView(kOffsets, kAdjids);
-  for(size_t i = 0; i < tmi.getLocalNumVertices() + 1; ++i) {
-     if (offsets[i] != kOffsets(i))
-         fail = 1;
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "offsets != kOffsets", 1)
-
-
-  for(size_t i = 0; i < tmi.getLocalNumEdges(); ++i) {
-//      std::cout << "adjids: "<< adjids[i] << " "<< kAdjids(i) <<std::endl;
-     if (adjids[i] != kAdjids(i))
-         fail = 1;
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "adjids != kAdjids", 1)
-
-  // TEST of getCoordinatesView, getVertexCoords,
-  // getCoordinatesKokkosView (AdapterWithCoordsWrapper) and getVertexCoordsKokkos
-
-  typedef Zoltan2::StridedData<zlno_t, zscalar_t> input_t;
-  input_t *coordArray = new input_t [coordDim];
-
-  for (int dim=0; dim < coordDim; dim++){
-    int stride;
-    const zscalar_t *coords=NULL;
-    try{
-      tmi.getCoordinateInput()->getCoordinatesView(coords, stride, dim);
-    }
-    Z2_FORWARD_EXCEPTIONS;
-
-    ArrayRCP<const zscalar_t> cArray(coords, 0, tmi.getLocalNumIDs()*stride, false);
-    coordArray[dim] = input_t(cArray, stride);
-  }
-  ArrayRCP<input_t> crds = arcp<input_t>(coordArray, 0, coordDim, true);
-  Kokkos::View<zscalar_t **, Kokkos::LayoutLeft, typename znode_t::device_type> kCrds;
-
-  auto wrapper = dynamic_cast<const Zoltan2::AdapterWithCoordsWrapper<tcrsGraph_t,simpleUser_t>*>(&tmi);
-  tmi.getCoordinateInput()->getCoordinatesKokkosView(kCrds);
-
-  for(size_t i = 0; i < tmi.getLocalNumIDs(); ++i) {
-      for (int j = 0; j < coordDim; j++) {
-          if (crds[j][i] != kCrds(i, j))
-              fail = 1;
-      }
-  }
-  TEST_FAIL_AND_EXIT(*comm, !fail, "crds != kCrds", 1)
-
-
-  // clean
-  if (nVtxWeights > 0){
-    for (int i=0; i < nVtxWeights; i++){
-      if (rowWeights[i])
-        delete [] rowWeights[i];
-    }
-    delete [] rowWeights;
-  }
-
-
-  if (coordDim > 0){
-      delete via;
-      delete [] gids;
-      for (int i=0; i < coordDim; i++){
-          if (coords[i])
-              delete [] coords[i];
-      }
-      delete [] coords;
-  }
-
-//    delete coordArray;
-  delete uinput;
+  testGraphModelWithGraphAdapter(fname, comm, nVtxWeights, nnzWgtIdx);
+  testGraphModelWithMatrixAdapter(fname, comm, nVtxWeights, nnzWgtIdx);
 
   if (rank==0)
   std::cout << "PASS" << std::endl;

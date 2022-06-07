@@ -208,7 +208,8 @@ public:
     return nLocalVertices_;
   }
 
-  size_t getVertexCoordsKokkos(Kokkos::View<scalar_t **, typename node_t::device_type> &xyz) const
+  size_t getVertexCoordsKokkos(Kokkos::View<scalar_t **,
+                                Kokkos::LayoutLeft, typename node_t::device_type> &xyz) const
   {
       const auto type = ia_->adapterType();
       if (type == MeshAdapterType)
@@ -289,7 +290,7 @@ public:
       typedef Kokkos::View<size_t *, typename node_t::device_type> vtxdist_t;
       vtxdist_t non_const_vtxdist = vtxdist_t("vtxdist", getLocalNumObjects());
       typename vtxdist_t::HostMirror host_vtxdist = Kokkos::create_mirror_view(non_const_vtxdist);
-      for(size_t i = 0; i < this->getLocalNumObjects(); ++i) {
+      for(size_t i = 0; i < comm_->getSize() + 1; ++i) {
           host_vtxdist(i) = vtxDist_[i];
       }
       Kokkos::deep_copy(non_const_vtxdist, host_vtxdist);
@@ -424,10 +425,12 @@ GraphModel<Adapter>::GraphModel(
 
   // Save the pointers from the input adapter
   nLocalEdges_ = offsets[nLocalVertices_];
+
   vGids_ = arcp_const_cast<gno_t>(
                 arcp<const gno_t>(vtxIds, 0, nLocalVertices_, false));
   eGids_ = arcp_const_cast<gno_t>(nborIds);
   eOffsets_ = arcp_const_cast<offset_t>(offsets);
+
 
   // Edge weights
   nWeightsPerEdge_ = 0;   // no edge weights from a matrix yet.
@@ -495,8 +498,15 @@ GraphModel<Adapter>::GraphModel(
 
   // Save the pointers from the input adapter
   nLocalEdges_ = offsets[nLocalVertices_];
+//  for(size_t i = 0; i < nLocalVertices_; ++i) {
+//      std::cout << "vtxIds[i] "<< vtxIds[i] <<std::endl;
+//  }
   vGids_ = arcp_const_cast<gno_t>(
                 arcp<const gno_t>(vtxIds, 0, nLocalVertices_, false));
+  for(size_t i = 0; i < nLocalVertices_; ++i) {
+      std::cout << "vGids_[i] "<< vGids_[i] <<std::endl;
+  }
+
   eGids_ = arcp_const_cast<gno_t>(
                 arcp<const gno_t>(nborIds, 0, nLocalEdges_, false));
   eOffsets_ = arcp_const_cast<offset_t>(
@@ -660,6 +670,7 @@ void GraphModel<Adapter>::shared_constructor(
   const RCP<const Adapter> &ia,
   modelFlag_t &modelFlags)
 {
+    std::cout << "shared_constructor " <<std::endl;
   // Model creation flags
   bool consecutiveIdsRequired = modelFlags.test(GENERATE_CONSECUTIVE_IDS);
   bool removeSelfEdges = modelFlags.test(REMOVE_SELF_EDGES);
@@ -708,6 +719,7 @@ void GraphModel<Adapter>::shared_constructor(
     // Loop over edges; keep only those that are local (i.e., on-rank)
     eOffsets_[0] = 0;
     offset_t ecnt = 0;
+    std::cout << "shared_constructor 1111 " <<std::endl;
     for (size_t i = 0; i < nLocalVertices_; i++) {
       vGids_[i] = gno_t(i);
       for (offset_t j = adapterEOffsets[i]; j < adapterEOffsets[i+1]; j++) {
@@ -730,6 +742,10 @@ void GraphModel<Adapter>::shared_constructor(
       }
       eOffsets_[i+1] = ecnt;
     }
+    for(size_t i = 0; i < nLocalVertices_; ++i) {
+        std::cout << "vGids_[i] "<< vGids_[i] <<std::endl;
+    }
+
     nLocalEdges_ = eOffsets_[nLocalVertices_];
     if (nWeightsPerEdge_) {
       for (int w = 0; w < nWeightsPerEdge_; w++) {
