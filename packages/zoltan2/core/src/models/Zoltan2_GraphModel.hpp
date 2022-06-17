@@ -187,12 +187,28 @@ public:
     Kokkos::View<const gno_t *, typename node_t::device_type> &Ids,
     Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      ia_->getIDsKokkosView(Ids);
+      if (localGraph_)
+      {
+        // We cannot use ia_->getIDsKokkosView because the model changed the values of Ids in
+        // sharedConstructor method then they are not the same than Ids coming from the adapters.
+          typedef Kokkos::View<gno_t *, typename node_t::device_type> vtxIds_t;
+          vtxIds_t non_const_vtxIds = vtxIds_t("vtxIds", getLocalNumVertices());
+          typename vtxIds_t::HostMirror host_vtxIds = Kokkos::create_mirror_view(non_const_vtxIds);
+          for(size_t i = 0; i < getLocalNumVertices(); ++i) {
+              host_vtxIds(i) = vGids_[i];
+          }
+          Kokkos::deep_copy(non_const_vtxIds, host_vtxIds);
+          Ids = non_const_vtxIds;
 
-      if(nWeightsPerVertex_ > 0) {
-        ia_->getWeightsKokkosView(wgts);
       }
-    return getLocalNumVertices();
+      else
+      {
+          ia_->getIDsKokkosView(Ids);
+      }
+      if(nWeightsPerVertex_ > 0) {
+          ia_->getWeightsKokkosView(wgts);
+      }
+      return getLocalNumVertices();
   }
 
   /*! \brief Sets pointers to this process' vertex coordinates, if available.
@@ -286,6 +302,12 @@ public:
 
   inline void getVertexDistKokkos(Kokkos::View<size_t *, typename node_t::device_type> &vtxdist) const
   {
+      if (vtxDist_.size() == 0) {
+        throw std::runtime_error("getVertexDist is available only "
+                                 "when consecutiveIdsRequired");
+      }
+      else
+      {
 
       typedef Kokkos::View<size_t *, typename node_t::device_type> vtxdist_t;
       vtxdist_t non_const_vtxdist = vtxdist_t("vtxdist", getLocalNumObjects());
@@ -295,6 +317,7 @@ public:
       }
       Kokkos::deep_copy(non_const_vtxdist, host_vtxdist);
       vtxdist = non_const_vtxdist;
+      }
  }
 
   ////////////////////////////////////////////////////
