@@ -277,9 +277,37 @@ public:
 
         graphAdapter->getEdgesKokkosView(offsets, edgeIds);
 
-        if(nWeightsPerEdge_ > 0) {
-          graphAdapter->getWeightsKokkosView(wgts);
-        }
+//        if(nWeightsPerEdge_ > 0) {
+//          ia_->getWeightsKokkosView(wgts);
+//        }
+      }
+      else {
+          // Edges exist only in GraphAdapter and no in MatrixAdapter. In a such case, we can only
+          // deep copy values coming from getEdgeList method
+
+          // edgesId
+          typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
+          edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", getLocalNumEdges());
+          typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
+          for(size_t i = 0; i < getLocalNumEdges(); ++i) {
+              host_edgeIds(i) = eGids_[i];
+          }
+          Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
+          edgeIds = non_const_edgeIds;
+
+          // offsets
+          typedef Kokkos::View<offset_t *, typename node_t::device_type> offsets_t;
+          offsets_t non_const_offsets = offsets_t("offsets", getLocalNumVertices() + 1);
+          typename offsets_t::HostMirror host_offsets = Kokkos::create_mirror_view(non_const_offsets);
+          for(size_t i = 0; i < getLocalNumVertices() + 1; ++i) {
+              host_offsets(i) = eOffsets_[i];
+          }
+          Kokkos::deep_copy(non_const_offsets, host_offsets);
+          offsets = non_const_offsets;
+      }
+
+      if(nWeightsPerEdge_ > 0) {
+        ia_->getWeightsKokkosView(wgts);
       }
 
 
