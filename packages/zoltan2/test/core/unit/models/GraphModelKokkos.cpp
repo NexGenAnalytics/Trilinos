@@ -546,12 +546,6 @@ void testGraphModelWithMeshAdapter(string fname,  const RCP<const Comm<int> > &c
     // default values for command-line arguments
     std::string xmlMeshInFileName("Poisson.xml");
 
-//    // Read run-time options.
-//    Teuchos::CommandLineProcessor cmdp (false, false);
-//    cmdp.setOption("xmlfile", &xmlMeshInFileName,
-//                   "XML file with PamGen specifications");
-//    cmdp.parse(narg, arg);
-
     // Read xml file into parameter list
     Teuchos::ParameterList inputMeshList;
 
@@ -589,7 +583,7 @@ void testGraphModelWithMeshAdapter(string fname,  const RCP<const Comm<int> > &c
     typedef Zoltan2::PamgenMeshAdapter<basic_user_t> inputAdapter_t;
 
     inputAdapter_t ia(*comm, "region");
-    inputAdapter_t ia2(*comm, "vertex");
+//    inputAdapter_t ia2(*comm, "vertex");
     ia.print(rank);
 
     if (rank == 0) std::cout << "REGION-BASED TEST" << std::endl;
@@ -755,7 +749,7 @@ int main(int narg, char *arg[])
 
 
   testGraphModelWithGraphAdapter(fname, comm, nVtxWeights, nnzWgtIdx);
-//  testGraphModelWithMatrixAdapter(fname, comm, nVtxWeights, nnzWgtIdx);
+  testGraphModelWithMatrixAdapter(fname, comm, nVtxWeights, nnzWgtIdx);
   testGraphModelWithMeshAdapter(fname, comm, nVtxWeights, nnzWgtIdx);
 
   if (rank==0)
