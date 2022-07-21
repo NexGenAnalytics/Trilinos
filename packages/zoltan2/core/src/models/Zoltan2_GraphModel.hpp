@@ -187,7 +187,8 @@ public:
     Kokkos::View<const gno_t *, typename node_t::device_type> &Ids,
     Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      if (localGraph_)
+      const auto type = ia_->adapterType();
+      if (localGraph_ || type == MeshAdapterType)
       {
         // We cannot use ia_->getIDsKokkosView because the model changed the values of Ids in
         // sharedConstructor method then they are not the same than Ids coming from the adapters.
@@ -203,6 +204,7 @@ public:
       }
       else
       {
+          std::cout << " non local graph detected from model" << std::endl;
           ia_->getIDsKokkosView(Ids);
       }
       if(nWeightsPerVertex_ > 0) {
