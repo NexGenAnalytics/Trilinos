@@ -285,6 +285,15 @@ IF (${PROJECT_NAME}_ENABLE_SCOREC)
   )
 ENDIF()
 
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  HyperGraphModelKokkos
+  SOURCES models/HyperGraphModelKokkos.cpp
+  NUM_MPI_PROCS 2
+  COMM mpi serial
+  PASS_REGULAR_EXPRESSION "PASS"
+  FAIL_REGULAR_EXPRESSION "FAIL"
+)
+
 #
 # Tests for src/models
 #

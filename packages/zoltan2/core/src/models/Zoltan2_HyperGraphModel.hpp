@@ -219,7 +219,7 @@ public:
 
   size_t getVertexListKokkos(
     Kokkos::View<const gno_t *, typename node_t::device_type> &Ids,
-    Kokkos::View<input_t *, typename node_t::device_type> &wgts) const
+    Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
       ia_->getIDsKokkosView(Ids);
 
@@ -241,7 +241,7 @@ public:
     return nv;
   }
 
-  size_t getVertexCoordsKokkos(Kokkos::View<input_t *, typename node_t::device_type> &xyz) const
+  size_t getVertexCoordsKokkos(Kokkos::View<scalar_t **, Kokkos::LayoutLeft, typename node_t::device_type> &xyz) const
   {
       auto adapterWithCoords = dynamic_cast<const AdapterWithCoords<user_t>*>(&(*ia_));
       adapterWithCoords->getCoordinatesKokkosView(xyz);
@@ -311,12 +311,33 @@ public:
     Kokkos::View<const offset_t *, typename node_t::device_type> &offsets,
     Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      ia_->getEdgesKokkosView(offsets, edgeIds);
+      const auto type = ia_->adapterType();
+      if (type == GraphAdapterType)
+      {
+        auto graphAdapter = dynamic_cast<const GraphAdapter<user_t,userCoord_t>*>(&(*ia_));
+
+
+        graphAdapter->getEdgesKokkosView(offsets, edgeIds);
+      }
+      else {
+          // Edges exist only in GraphAdapter and no in MatrixAdapter. In a such case, we can only
+          // deep copy values coming from getEdgeList method
+
+          // edgesId
+          typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
+          edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());
+          typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
+          for(size_t i = 0; i < edgeGids_.size(); ++i) {
+              host_edgeIds(i) = edgeGids_[i];
+          }
+          Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
+          edgeIds = non_const_edgeIds;
+      }
 
       if(nWeightsPerEdge_ > 0) {
         ia_->getWeightsKokkosView(wgts);
       }
-    return edgeGids_.size();
+      return edgeGids_.size();
   }
 
   /*! \brief Sets pointers to this process' pins global Ids based on 

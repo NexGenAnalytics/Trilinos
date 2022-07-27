@@ -197,7 +197,7 @@ public:
 
   size_t getVertexListKokkos(
     Kokkos::View<const gno_t *, typename node_t::device_type> &Ids,
-    Kokkos::View<input_t *, typename node_t::device_type> &wgts) const
+    Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
       ia_->getIDsKokkosView(Ids);
 
