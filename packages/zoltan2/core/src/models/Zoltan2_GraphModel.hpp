@@ -279,9 +279,6 @@ public:
 
         graphAdapter->getEdgesKokkosView(offsets, edgeIds);
 
-//        if(nWeightsPerEdge_ > 0) {
-//          ia_->getWeightsKokkosView(wgts);
-//        }
       }
       else {
           // Edges exist only in GraphAdapter and no in MatrixAdapter. In a such case, we can only

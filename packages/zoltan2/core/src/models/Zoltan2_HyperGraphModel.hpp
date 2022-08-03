@@ -264,16 +264,15 @@ public:
 
   size_t getOwnedListKokkos(Kokkos::View<bool *, typename node_t::device_type> &isOwner) const
   {
-      // MPL Fill isOwner using isOwner_
       typedef Kokkos::View<bool *, typename node_t::device_type> ownedList_t;
-      ownedList_t non_const_owned_list = ownedList_t("owned_list", getLocalNumObjects());
+      ownedList_t non_const_owned_list = ownedList_t("owned_list", isOwner_.size());
       typename ownedList_t::HostMirror host_owned_list = Kokkos::create_mirror_view(non_const_owned_list);
       for(size_t i = 0; i < this->getLocalNumObjects(); ++i) {
           host_owned_list(i) = isOwner_[i];
       }
       Kokkos::deep_copy(non_const_owned_list, host_owned_list);
       isOwner = non_const_owned_list;
-      return getLocalNumObjects;
+      return isOwner_.size();
   }
 
   /*! \brief Sets pointers to the vertex map with copies and the vertex map without copies
@@ -308,31 +307,17 @@ public:
   }
 
   size_t getEdgeListKokkos(Kokkos::View<const gno_t *, typename node_t::device_type> &edgeIds,
-    Kokkos::View<const offset_t *, typename node_t::device_type> &offsets,
     Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      const auto type = ia_->adapterType();
-      if (type == GraphAdapterType)
-      {
-        auto graphAdapter = dynamic_cast<const GraphAdapter<user_t,userCoord_t>*>(&(*ia_));
-
-
-        graphAdapter->getEdgesKokkosView(offsets, edgeIds);
+      // edgesId
+      typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
+      edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());
+      typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
+      for(size_t i = 0; i < edgeGids_.size(); ++i) {
+          host_edgeIds(i) = edgeGids_[i];
       }
-      else {
-          // Edges exist only in GraphAdapter and no in MatrixAdapter. In a such case, we can only
-          // deep copy values coming from getEdgeList method
-
-          // edgesId
-          typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
-          edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());
-          typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
-          for(size_t i = 0; i < edgeGids_.size(); ++i) {
-              host_edgeIds(i) = edgeGids_[i];
-          }
-          Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
-          edgeIds = non_const_edgeIds;
-      }
+      Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
+      edgeIds = non_const_edgeIds;
 
       if(nWeightsPerEdge_ > 0) {
         ia_->getWeightsKokkosView(wgts);
@@ -364,11 +349,33 @@ public:
 
   size_t getPinListKokkos(Kokkos::View<const gno_t *, typename node_t::device_type> &pinIds,
                           Kokkos::View<offset_t *, typename node_t::device_type> &offsets,
-                          Kokkos::View<input_t *, typename node_t::device_type> &wgts) const
+                          Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      ia_->getEdgesKokkosView(offsets, pinIds);
+      // No ways to access Pin data from adapter ?
+//      ia_->getEdgesKokkosView(offsets, pinIds);
 
-      if(numWeightsPerVertex_ > 0) {
+      // edgesId
+      typedef Kokkos::View<gno_t *, typename node_t::device_type> pinIds_t;
+      pinIds_t non_const_pinIds = pinIds_t("pinIds", getLocalNumPins());
+      typename pinIds_t::HostMirror host_pinIds = Kokkos::create_mirror_view(non_const_pinIds);
+      for(size_t i = 0; i < getLocalNumPins(); ++i) {
+          host_pinIds(i) = pinGids_[i];
+      }
+      Kokkos::deep_copy(non_const_pinIds, host_pinIds);
+      pinIds = non_const_pinIds;
+
+      // offsets
+      typedef Kokkos::View<offset_t *, typename node_t::device_type> offsets_t;
+      offsets_t non_const_offsets = offsets_t("offsets", offsets_.size());
+      typename offsets_t::HostMirror host_offsets = Kokkos::create_mirror_view(non_const_offsets);
+      for(size_t i = 0; i < offsets_.size(); ++i) {
+          host_offsets(i) = offsets_[i];
+      }
+      Kokkos::deep_copy(non_const_offsets, host_offsets);
+      offsets = non_const_offsets;
+
+      // MPL: to verify => it is not sure that this method works for PINS
+      if(nWeightsPerPin_ > 0) {
           ia_->getWeightsKokkosView(wgts);
       }
       return getLocalNumPins();

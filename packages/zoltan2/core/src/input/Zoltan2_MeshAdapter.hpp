@@ -461,6 +461,7 @@ public:
   void getIDsKokkosView(Kokkos::View<const gno_t *,
     typename node_t::device_type> &ids) const
   {
+      std::cout << " Mesh ADAPTER: getIDsKokkosView detected" << std::endl;
     Kokkos::View<gno_t *, typename node_t::device_type>
       kokkos_ids("gids", getLocalNumIDs());
     auto host_kokkos_ids = Kokkos::create_mirror_view(kokkos_ids);
@@ -469,6 +470,7 @@ public:
     getIDsView(gnos);
     for(size_t n = 0; n < getLocalNumIDs(); ++n) {
       host_kokkos_ids(n) = gnos[n];
+      std::cout << " host_kokkos_ids i "<< n  << " : " << host_kokkos_ids(n) << std::endl;
     }
     Kokkos::deep_copy(kokkos_ids, host_kokkos_ids);
     ids = kokkos_ids;

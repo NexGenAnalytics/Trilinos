@@ -223,10 +223,9 @@ int main(int narg, char *arg[]) {
   ArrayView<const zgno_t> edgesIds;
   ArrayView<input_t> eWgts;
   Kokkos::View<const zgno_t *, typename znode_t::device_type> kEdgeIds;
-  Kokkos::View<const zoffset_t *, typename znode_t::device_type> kOffsets;
   Kokkos::View<zscalar_t **, typename znode_t::device_type> kEWgts;
   auto nbEdges =  model.getEdgeList(edgesIds, eWgts);
-  auto kNbEdges =  model.getEdgeListKokkos(kEdgeIds, kOffsets, kEWgts);
+  auto kNbEdges =  model.getEdgeListKokkos(kEdgeIds, kEWgts);
   std::cout << "nbEdges kNbEdges"<<nbEdges << " "<< kNbEdges << std::endl;
   if(nbEdges != kNbEdges)
   {
@@ -239,6 +238,34 @@ int main(int narg, char *arg[]) {
           fail = 1;
   }
 
+  // TEST of getPinList and getPinListKokkos
+  ArrayView<const zgno_t> pIds;
+  ArrayView<const zoffset_t> pOffsets;
+  ArrayView<input_t> pWgts;
+  Kokkos::View<const zgno_t *, typename znode_t::device_type> kPIds;
+  Kokkos::View<zoffset_t *, typename znode_t::device_type> kPOffsets;
+  Kokkos::View<zscalar_t **, typename znode_t::device_type> kPWgts;
+  auto nbPins =  model.getPinList(pIds, pOffsets, pWgts);
+  auto kNbPins =  model.getPinListKokkos(kPIds, kPOffsets, kPWgts);
+  std::cout << "nbPins kNbPins"<<nbPins << " "<< kNbPins << std::endl;
+  if(nbPins != kNbPins)
+  {
+      fail = 1;
+      TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getPinList != getPinListKokkos", 1)
+  }
+  for(size_t i = 0; i < nbPins; ++i) {
+      std::cout << "pIds[i] "<< pIds[i] << " kPIds(i) "<< kPIds(i)<<std::endl;
+      if (pIds[i] != kPIds(i))
+          fail = 1;
+  }
+  TEST_FAIL_AND_EXIT(*comm, !fail, "getPinList and  getPinListKokkos are different for pIds", 1)
+
+  for(size_t i = 0; i < kPOffsets.size(); ++i) {
+        std::cout << "pOffsets[i] "<< pOffsets[i] << " kPOffsets(i) "<< kPOffsets(i)<<std::endl;
+     if (pOffsets[i] != kPOffsets(i))
+         fail = 1;
+  }
+  TEST_FAIL_AND_EXIT(*comm, !fail, "getPinList and  getPinListKokkos are different for pOffsets", 1)
 
   std::cout<<"PASS\n";
   return 0;
