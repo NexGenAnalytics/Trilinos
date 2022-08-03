@@ -150,8 +150,9 @@ int main(int narg, char *arg[]) {
 
       int fail=0;
 
-    if (rank == 0) std::cout << "REGION-BASED TEST" << std::endl;
-    RCP<const Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
+    RCP<Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
+    Teuchos::ParameterList &pl = env->getParametersNonConst();
+    pl.set("hypergraph_model_type","ghost");
 
   const baseMeshAdapter_t *base_ia = dynamic_cast<const baseMeshAdapter_t*>(&ia);
   Zoltan2::modelFlag_t graphFlags_;
@@ -180,7 +181,7 @@ int main(int narg, char *arg[]) {
   }
 
   for(size_t i = 0; i < nbVertices; ++i) {
-      std::cout << "vertexIds[i] "<< vertexIds[i] << " kVertexIds(i) "<< kVertexIds(i)<<std::endl;
+//      std::cout << "vertexIds[i] "<< vertexIds[i] << " kVertexIds(i) "<< kVertexIds(i)<<std::endl;
      if (vertexIds[i] != kVertexIds(i))
          fail = 1;
   }
@@ -202,7 +203,7 @@ int main(int narg, char *arg[]) {
   Kokkos::View<zscalar_t **,Kokkos::LayoutLeft, typename znode_t::device_type> kcxyz;
   auto nbVerticesFromCoords = model.getVertexCoords(cxyz);
   auto kNbVerticesFromKCoords = model.getVertexCoordsKokkos(kcxyz);
-  std::cout << "nbVerticesFromCoords kNbVerticesFromKCoords"<<nbVerticesFromCoords << " "<< kNbVerticesFromKCoords << std::endl;
+//  std::cout << "nbVerticesFromCoords kNbVerticesFromKCoords"<<nbVerticesFromCoords << " "<< kNbVerticesFromKCoords << std::endl;
   if(nbVerticesFromCoords != kNbVerticesFromKCoords)
   {
               fail = 1;
@@ -226,7 +227,7 @@ int main(int narg, char *arg[]) {
   Kokkos::View<zscalar_t **, typename znode_t::device_type> kEWgts;
   auto nbEdges =  model.getEdgeList(edgesIds, eWgts);
   auto kNbEdges =  model.getEdgeListKokkos(kEdgeIds, kEWgts);
-  std::cout << "nbEdges kNbEdges"<<nbEdges << " "<< kNbEdges << std::endl;
+//  std::cout << "nbEdges kNbEdges"<<nbEdges << " "<< kNbEdges << std::endl;
   if(nbEdges != kNbEdges)
   {
       fail = 1;
@@ -243,25 +244,25 @@ int main(int narg, char *arg[]) {
   ArrayView<const zoffset_t> pOffsets;
   ArrayView<input_t> pWgts;
   Kokkos::View<const zgno_t *, typename znode_t::device_type> kPIds;
-  Kokkos::View<zoffset_t *, typename znode_t::device_type> kPOffsets;
+  Kokkos::View<const zoffset_t *, typename znode_t::device_type> kPOffsets;
   Kokkos::View<zscalar_t **, typename znode_t::device_type> kPWgts;
   auto nbPins =  model.getPinList(pIds, pOffsets, pWgts);
   auto kNbPins =  model.getPinListKokkos(kPIds, kPOffsets, kPWgts);
-  std::cout << "nbPins kNbPins"<<nbPins << " "<< kNbPins << std::endl;
+//  std::cout << "nbPins kNbPins"<<nbPins << " "<< kNbPins << std::endl;
   if(nbPins != kNbPins)
   {
       fail = 1;
       TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getPinList != getPinListKokkos", 1)
   }
   for(size_t i = 0; i < nbPins; ++i) {
-      std::cout << "pIds[i] "<< pIds[i] << " kPIds(i) "<< kPIds(i)<<std::endl;
+//      std::cout << "pIds[i] "<< pIds[i] << " kPIds(i) "<< kPIds(i)<<std::endl;
       if (pIds[i] != kPIds(i))
           fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "getPinList and  getPinListKokkos are different for pIds", 1)
 
   for(size_t i = 0; i < kPOffsets.size(); ++i) {
-        std::cout << "pOffsets[i] "<< pOffsets[i] << " kPOffsets(i) "<< kPOffsets(i)<<std::endl;
+//        std::cout << "pOffsets[i] "<< pOffsets[i] << " kPOffsets(i) "<< kPOffsets(i)<<std::endl;
      if (pOffsets[i] != kPOffsets(i))
          fail = 1;
   }

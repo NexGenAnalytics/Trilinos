@@ -348,13 +348,34 @@ public:
   }
 
   size_t getPinListKokkos(Kokkos::View<const gno_t *, typename node_t::device_type> &pinIds,
-                          Kokkos::View<offset_t *, typename node_t::device_type> &offsets,
+                          Kokkos::View<const offset_t *, typename node_t::device_type> &offsets,
                           Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      // No ways to access Pin data from adapter ?
-//      ia_->getEdgesKokkosView(offsets, pinIds);
+    // No ways to access Pin data from adapter ?
 
-      // edgesId
+    std::string model_type("traditional");
+    const Teuchos::ParameterList &pl = env_->getParameters();
+    pl.print(std::cout,2,true,true);
+    const Teuchos::ParameterEntry *pe2 = pl.getEntryPtr("hypergraph_model_type");
+    if (pe2){
+      model_type = pe2->getValue<std::string>(&model_type);
+    }
+
+
+    if (model_type=="traditional") {
+      Zoltan2::MeshEntityType primaryEType = ia_->getPrimaryEntityType();
+      Zoltan2::MeshEntityType adjacencyEType = ia_->getAdjacencyEntityType();
+      Zoltan2::MeshEntityType primaryPinType = primaryEType;
+      Zoltan2::MeshEntityType adjacencyPinType = adjacencyEType;
+      if (getCentricView() == HYPEREDGE_CENTRIC) {
+        primaryPinType = adjacencyPinType;
+        adjacencyPinType = primaryEType;
+      }
+
+      ia_->getAdjsKokkosView(primaryPinType,adjacencyPinType,offsets,pinIds);
+    }
+    else {
+      // No way to use the mesh adapter -> we can only deep copy non kokkos method data
       typedef Kokkos::View<gno_t *, typename node_t::device_type> pinIds_t;
       pinIds_t non_const_pinIds = pinIds_t("pinIds", getLocalNumPins());
       typename pinIds_t::HostMirror host_pinIds = Kokkos::create_mirror_view(non_const_pinIds);
@@ -378,7 +399,9 @@ public:
       if(nWeightsPerPin_ > 0) {
           ia_->getWeightsKokkosView(wgts);
       }
-      return getLocalNumPins();
+    }
+
+    return getLocalNumPins();
   }
 
 
