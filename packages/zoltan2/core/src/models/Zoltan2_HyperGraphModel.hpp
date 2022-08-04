@@ -319,15 +319,12 @@ public:
       }
 
       if (model_type=="traditional") {
-          std::cout << " getEdgeListKokkos traditionnal !!!!" << std::endl;
           ia_->getEdgeIDsKokkosView(edgeIds);
       }
       else if (model_type=="ghosting") {
-          std::cout << " getEdgeListKokkos ghosting !!!!" << std::endl;
           ia_->getIDsKokkosView(edgeIds);
       }
       else {
-          std::cout << " getEdgeListKokkos unknown !!!!" << std::endl;
           // model_type unknown => deep copy from non kokkos data
           typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
           edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());

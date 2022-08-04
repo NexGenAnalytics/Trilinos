@@ -267,6 +267,28 @@ int main(int narg, char *arg[]) {
          fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "getPinList and  getPinListKokkos are different for pOffsets", 1)
+  if(kPWgts.size() !=0 ||  pWgts.size() != 0)
+  {
+      fail = 1;
+      TEST_FAIL_AND_EXIT(*comm, !fail, "Weight for edges detected", 1)
+  }
+
+  // TEST of getPinList and getPinListKokkos
+  ArrayView<bool> isOwner;
+  Kokkos::View<bool *, typename znode_t::device_type> kIsOwner;
+  auto nbIsOwner =  model.getOwnedList(isOwner);
+  auto kNbIsOwner =  model.getOwnedListKokkos(kIsOwner);
+  if(nbIsOwner != nbIsOwner)
+  {
+      fail = 1;
+      TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getOwnedList != getOwnedListKokkos", 1)
+  }
+
+  for(size_t i = 0; i < nbIsOwner; ++i) {
+//      std::cout << "isOwner[i] "<< isOwner[i] << " kIsOwner(i) "<< kIsOwner(i)<<std::endl;
+      if (isOwner[i] != kIsOwner(i))
+          fail = 1;
+  }
 
   std::cout<<"PASS\n";
   return 0;
