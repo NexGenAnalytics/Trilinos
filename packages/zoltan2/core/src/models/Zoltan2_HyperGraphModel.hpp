@@ -309,20 +309,40 @@ public:
   size_t getEdgeListKokkos(Kokkos::View<const gno_t *, typename node_t::device_type> &edgeIds,
     Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      // edgesId
-      typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
-      edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());
-      typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
-      for(size_t i = 0; i < edgeGids_.size(); ++i) {
-          host_edgeIds(i) = edgeGids_[i];
+
+      std::string model_type("traditional");
+      const Teuchos::ParameterList &pl = env_->getParameters();
+      pl.print(std::cout,2,true,true);
+      const Teuchos::ParameterEntry *pe2 = pl.getEntryPtr("hypergraph_model_type");
+      if (pe2){
+        model_type = pe2->getValue<std::string>(&model_type);
       }
-      Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
-      edgeIds = non_const_edgeIds;
+
+      if (model_type=="traditional") {
+          std::cout << " getEdgeListKokkos traditionnal !!!!" << std::endl;
+          ia_->getEdgeIDsKokkosView(edgeIds);
+      }
+      else if (model_type=="ghosting") {
+          std::cout << " getEdgeListKokkos ghosting !!!!" << std::endl;
+          ia_->getIDsKokkosView(edgeIds);
+      }
+      else {
+          std::cout << " getEdgeListKokkos unknown !!!!" << std::endl;
+          // model_type unknown => deep copy from non kokkos data
+          typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
+          edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());
+          typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
+          for(size_t i = 0; i < edgeGids_.size(); ++i) {
+              host_edgeIds(i) = edgeGids_[i];
+          }
+          Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
+          edgeIds = non_const_edgeIds;
+      }
 
       if(nWeightsPerEdge_ > 0) {
         ia_->getWeightsKokkosView(wgts);
       }
-      return edgeGids_.size();
+      return edgeIds.size();
   }
 
   /*! \brief Sets pointers to this process' pins global Ids based on 

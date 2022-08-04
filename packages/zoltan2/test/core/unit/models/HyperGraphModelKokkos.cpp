@@ -152,7 +152,7 @@ int main(int narg, char *arg[]) {
 
     RCP<Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
     Teuchos::ParameterList &pl = env->getParametersNonConst();
-    pl.set("hypergraph_model_type","ghost");
+    pl.set("hypergraph_model_type","ghosting");
 
   const baseMeshAdapter_t *base_ia = dynamic_cast<const baseMeshAdapter_t*>(&ia);
   Zoltan2::modelFlag_t graphFlags_;
