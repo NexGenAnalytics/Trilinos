@@ -224,8 +224,30 @@ public:
       ia_->getIDsKokkosView(Ids);
 
       if(numWeightsPerVertex_ > 0) {
-        ia_->getWeightsKokkosView(wgts);
-      }
+        typename Kokkos::View<scalar_t **, typename node_t::device_type>::HostMirror
+        host_wgt = Kokkos::create_mirror_view(wgts);
+        for (int idx=0; idx < numWeightsPerVertex_; idx++){
+         bool useNumNZ = ia_->useDegreeAsWeight(idx);
+         if (useNumNZ){
+           auto ptr_wgts = vWeights_[idx];
+           for (size_t i=0; i < numLocalVertices_; i++){
+             host_wgt(i, idx) = ptr_wgts[i];
+           }
+         }
+         else {
+           const scalar_t * ptr_wgts;
+           int stride;
+           ia_->getWeightsView(ptr_wgts, stride, idx);
+           size_t i = 0;
+           for(size_t n = 0; n < ia_->getLocalNumIDs() * stride; n += stride) {
+             host_wgt(i++,idx) = ptr_wgts[n];
+           }
+         }
+       }
+       Kokkos::deep_copy(wgts, host_wgt);
+
+       // we cannot use ia_->getWeightsKokkosView(wgts) because of the processing data done with useDegreeAsWeight
+    }
     return getLocalNumVertices();
   }
 

@@ -219,7 +219,7 @@ int main(int narg, char *arg[]) {
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "coordinates ouputs of getVertexCoords  and getVertexCoordsKokkos are different", 1)
 
-  // TODO: Pas d'offset pour l'hyperGraphModel
+
   // TEST of getEdgeList and getEdgeListKokkos
   ArrayView<const zgno_t> edgesIds;
   ArrayView<input_t> eWgts;
