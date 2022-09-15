@@ -286,6 +286,15 @@ IF (${PROJECT_NAME}_ENABLE_SCOREC)
 ENDIF()
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  CommGraphModelKokkos
+  SOURCES models/CommGraphModelKokkos.cpp
+  NUM_MPI_PROCS 4
+  COMM serial mpi
+  PASS_REGULAR_EXPRESSION "PASS"
+  FAIL_REGULAR_EXPRESSION "FAIL"
+  )
+
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
   HyperGraphModelKokkos
   SOURCES models/HyperGraphModelKokkos.cpp
   NUM_MPI_PROCS 2
