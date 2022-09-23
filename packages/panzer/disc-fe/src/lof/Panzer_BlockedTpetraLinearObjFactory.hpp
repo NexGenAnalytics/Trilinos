@@ -307,11 +307,24 @@ public:
    virtual void endFill(LinearObjContainer & loc) const;
 
    Teuchos::RCP<const panzer::BlockedDOFManager> getGlobalIndexer() const
-   { return blockedDOFManager_; }
+   {
+      TEUCHOS_ASSERT(!gidProviders_.empty());
+      return gidProviders_[0]->getBlockedIndexer();
+   }
+
+   //! Get the domain unique global indexer this factory was created with.
+   Teuchos::RCP<const panzer::BlockedDOFManager> getDomainBlockedIndexer() const
+   {
+      TEUCHOS_ASSERT(!gidProviders_.empty());
+      return gidProviders_.back()->getBlockedIndexer();
+   }
 
    //! Get the domain unique global indexer this factory was created with.
    Teuchos::RCP<const panzer::GlobalIndexer> getDomainGlobalIndexer() const
-   { return blockProvider_; }
+   {
+      TEUCHOS_ASSERT(!gidProviders_.empty());
+      return gidProviders_.back()->getGlobalIndexer();
+   }
 
    //! Get the range unique global indexer this factory was created with.
    Teuchos::RCP<const panzer::GlobalIndexer> getRangeGlobalIndexer() const

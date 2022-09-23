@@ -223,10 +223,10 @@ namespace panzer
       // TEST_EQUALITY(mat->productDomain()->numBlocks(), 1);
       // TEST_EQUALITY(mat->productDomain()->dim(), 18);
 
-      // TEST_EQUALITY(gmat->productRange()->numBlocks(), 2);
-      // TEST_EQUALITY(gmat->productRange()->dim(), 50);
-      // TEST_EQUALITY(gmat->productDomain()->numBlocks(), 1);
-      // TEST_EQUALITY(gmat->productDomain()->dim(), 10 + 15);
+      TEST_EQUALITY(gmat->productRange()->numBlocks(), 2);
+      TEST_EQUALITY(gmat->productRange()->dim(), 50);
+      TEST_EQUALITY(gmat->productDomain()->numBlocks(), 1);
+      TEST_EQUALITY(gmat->productDomain()->dim(), 10 + 15);
    }
 
    TEUCHOS_UNIT_TEST(tCloneLOF, blocked_tpetra_nonblocked_domain)
