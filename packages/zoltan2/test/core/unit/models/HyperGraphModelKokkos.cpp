@@ -273,7 +273,7 @@ int main(int narg, char *arg[]) {
       TEST_FAIL_AND_EXIT(*comm, !fail, "Weight for edges detected", 1)
   }
 
-  // TEST of getPinList and getPinListKokkos
+  // TEST of getPinList and getOwnedListKokkos
   ArrayView<bool> isOwner;
   Kokkos::View<bool *, typename znode_t::device_type> kIsOwner;
   auto nbIsOwner =  model.getOwnedList(isOwner);

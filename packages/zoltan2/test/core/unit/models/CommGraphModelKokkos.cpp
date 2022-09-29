@@ -82,7 +82,6 @@ typedef typename xGAdapter_t::offset_t    zoffset_t;
 
 int main(int narg, char *arg[]) {
 
-    std::cout << "TESTING main" << std::endl;
   Tpetra::ScopeGuard tscope(&narg, &arg);
   Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
 
@@ -172,11 +171,11 @@ int main(int narg, char *arg[]) {
 
     std::bitset<Zoltan2::NUM_MODEL_FLAGS> modelFlags;
 //    if (consecutiveIdsRequested)
-//        modelFlags.set(Zoltan2::GENERATE_CONSECUTIVE_IDS);
+        modelFlags.set(Zoltan2::GENERATE_CONSECUTIVE_IDS);
 //    if (removeSelfEdges)
 //        modelFlags.set(Zoltan2::REMOVE_SELF_EDGES);
 //    if (buildLocalGraph)
-      modelFlags.set(Zoltan2::BUILD_LOCAL_GRAPH);
+//      modelFlags.set(Zoltan2::BUILD_LOCAL_GRAPH);
 
       int fail=0;
     try{
@@ -200,7 +199,6 @@ int main(int narg, char *arg[]) {
     auto nbVertices = model->getVertexList(vertexIds, wgts);
     auto kNbVertices = model->getVertexListKokkos(kVertexIds, kWgts);
     auto nbWeightPerVertex = model->getNumWeightsPerVertex();
-    std::cout << "nbVertices kNbVertices"<<nbVertices << " "<< kNbVertices << std::endl;
     if(nbVertices != kNbVertices)
     {
         fail = 1;
@@ -208,14 +206,62 @@ int main(int narg, char *arg[]) {
     }
 
     for(size_t i = 0; i < nbVertices; ++i) {
-        std::cout << "vertexIds[i] "<< vertexIds[i] << " kVertexIds(i) "<< kVertexIds(i)<<std::endl;
        if (vertexIds[i] != kVertexIds(i))
            fail = 1;
     }
     TEST_FAIL_AND_EXIT(*comm, !fail, "vertexIds != kVertexIds", 1)
 
+    // MPL: 09/29/2022: the getVertexListKokkos method of CommGraphModel needs to be reviewed
+    for(size_t w = 0; w < nbWeightPerVertex; ++w) {
+        for(size_t i = 0; i < nbVertices; ++i) {
+            if (wgts[w][i] != kWgts(i, w))
+                fail = 1;
+        }
 
-            // CLeaning
+    }
+    TEST_FAIL_AND_EXIT(*comm, !fail, "weight outputs of getVertexList and getVertexListKokkos are different", 1)
+
+    // TEST of getEdgeList and getEdgeListKokkos
+    ArrayView<const zgno_t> edgesIds;
+    ArrayView<const zoffset_t> offsets;
+    ArrayView<input_t> eWgts;
+    Kokkos::View<const zgno_t *, typename znode_t::device_type> kEdgeIds;
+    Kokkos::View<const zoffset_t *, typename znode_t::device_type> kOffsets;
+    Kokkos::View<zscalar_t **, typename znode_t::device_type> kEWgts;
+    auto nbEdges =  model->getEdgeList(edgesIds, offsets, eWgts);
+    auto kNbEdges =  model->getEdgeListKokkos(kEdgeIds, kOffsets, kEWgts);
+    if(nbEdges != kNbEdges)
+    {
+        fail = 1;
+        TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getEdgeList != getEdgeListKokkos", 1)
+    }
+    for(size_t i = 0; i < nbEdges; ++i) {
+      if (edgesIds[i] != kEdgeIds(i))
+        fail = 1;
+    }
+
+    for(size_t i = 0; i <offsets.size(); ++i) {
+      if (offsets[i] != kOffsets(i))
+        fail = 1;
+    }
+
+    TEST_FAIL_AND_EXIT(*comm, !fail, "getEdgeList != getEdgeListKokkos", 1)
+
+    // TEST of getVertexDist and getVertexDistKokkos: only available for consecutiveIds
+    bool consecutiveIdsRequired = modelFlags.test(Zoltan2::GENERATE_CONSECUTIVE_IDS);
+    if(consecutiveIdsRequired)  {
+        ArrayView<size_t> vtxDist;
+        Kokkos::View<size_t *, typename znode_t::device_type> kVtxDist;
+        model->getVertexDist(vtxDist);
+        model->getVertexDistKokkos(kVtxDist);
+        for(size_t i = 0; i < comm->getSize() + 1; ++i) {
+            if (vtxDist[i] != kVtxDist(i))
+                fail = 1;
+        }
+        TEST_FAIL_AND_EXIT(*comm, !fail, "getVertexDist != getVertexDistKokkos", 1)
+    }
+
+    // CLeaning
     delete model;
     if (coordDim > 0){
         delete via;

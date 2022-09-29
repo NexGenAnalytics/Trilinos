@@ -201,9 +201,19 @@ public:
   {
       ia_->getIDsKokkosView(Ids);
 
-      if(nWeightsPerVertex_ > 0) {
-        ia_->getWeightsKokkosView(wgts);
+      wgts = Kokkos::View<scalar_t **, typename node_t::device_type>(
+        "wgts", nLocalVertices_, nWeightsPerVertex_);
+      typename Kokkos::View<scalar_t **, typename node_t::device_type>::HostMirror
+        host_wgt = Kokkos::create_mirror_view(wgts);
+      for(int j = 0; j < nWeightsPerVertex_; ++j) {
+        auto ptr_wgts = vWeights_[j];
+        size_t i = 0;
+        for (size_t n=0; n < nLocalVertices_; n++){
+          host_wgt(i++,j) = ptr_wgts[n];
+        }
       }
+      Kokkos::deep_copy(wgts, host_wgt);
+
     return getLocalNumVertices();
   }
 
@@ -224,12 +234,26 @@ public:
     Kokkos::View<const offset_t *, typename node_t::device_type> &offsets,
     Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      ia_->getEdgesKokkosView(offsets, edgeIds);
+    // edgesId
+    typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
+    edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", getLocalNumEdges());
+    typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
+    for(size_t i = 0; i < getLocalNumEdges(); ++i) {
+        host_edgeIds(i) = eGids_[i];
+    }
+    Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
+    edgeIds = non_const_edgeIds;
 
-      if(nWeightsPerVertex_ > 0) {
-        ia_->getWeightsKokkosView(wgts);
-      }
-    return getLocalNumEdges();
+    // offsets
+    typedef Kokkos::View<offset_t *, typename node_t::device_type> offsets_t;
+    offsets_t non_const_offsets = offsets_t("offsets", getLocalNumVertices() + 1);
+    typename offsets_t::HostMirror host_offsets = Kokkos::create_mirror_view(non_const_offsets);
+    for(size_t i = 0; i < getLocalNumVertices() + 1; ++i) {
+        host_offsets(i) = eOffsets_[i];
+    }
+    Kokkos::deep_copy(non_const_offsets, host_offsets);
+    offsets = non_const_offsets;
+      return getLocalNumEdges();
   }
 
 
@@ -250,9 +274,9 @@ public:
   {
 
       typedef Kokkos::View<size_t *, typename node_t::device_type> vtxdist_t;
-      vtxdist_t non_const_vtxdist = vtxdist_t("vtxdist", getLocalNumObjects());
+      vtxdist_t non_const_vtxdist = vtxdist_t("vtxdist", vtxDist_.size());
       typename vtxdist_t::HostMirror host_vtxdist = Kokkos::create_mirror_view(non_const_vtxdist);
-      for(size_t i = 0; i < this->getLocalNumObjects(); ++i) {
+      for(size_t i = 0; i < vtxDist_.size(); ++i) {
           host_vtxdist(i) = vtxDist_[i];
       }
       Kokkos::deep_copy(non_const_vtxdist, host_vtxdist);
@@ -580,15 +604,12 @@ void CommGraphModel<Adapter>::migrateGraph()
     }
     eWeights_ = arcp<input_t>(eweightInfo, 0, nWeightsPerEdge_, true);
 
-
     // Finalize the migration
     vGids_ = arcp(new gno_t[myVertexShare], 0, myVertexShare, true);
     for(int i = startRank_; i < endRank_; i++)
       vGids_[i-startRank_] = i;
 
     nLocalVertices_ = myVertexShare;
-
-
   }
   else {
 

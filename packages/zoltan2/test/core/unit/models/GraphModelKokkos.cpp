@@ -289,9 +289,7 @@ void testGraphModelWithMatrixAdapter(string fname,  const RCP<const Comm<int> > 
       if (model->getNumWeightsPerEdge() != 0)
           fail = 1;
 
-      TEST_FAIL_AND_EXIT(*comm, !fail, "getVertexDist != getVertexDistKokkos", 1)
-
-
+      TEST_FAIL_AND_EXIT(*comm, !fail, "getEdgeList != getEdgeListKokkos", 1)
 
       // TEST of getVertexDist and getVertexDistKokkos: only available for consecutiveIds
       bool consecutiveIdsRequired = modelFlags.test(Zoltan2::GENERATE_CONSECUTIVE_IDS);
