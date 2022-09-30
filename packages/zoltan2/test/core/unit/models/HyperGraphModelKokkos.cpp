@@ -81,78 +81,30 @@ typedef inputAdapter_t::base_adapter_t mesh_base_adapter_t;
 typedef Zoltan2::XpetraCrsGraphAdapter<tcrsGraph_t,simpleUser_t>   xGAdapter_t;
 typedef typename inputAdapter_t::offset_t    zoffset_t;
 
-int main(int narg, char *arg[]) {
 
-    Tpetra::ScopeGuard tscope(&narg, &arg);
-    Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
+void testUsingModelFlags(Zoltan2::ModelFlags modelFlag) {
 
-    int rank = comm->getRank();
-    int numProcs = comm->getSize();
-    /***************************************************************************/
-    /*************************** GET XML INPUTS ********************************/
-    /***************************************************************************/
+  Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
 
-    // default values for command-line arguments
-    std::string xmlMeshInFileName("Poisson.xml");
+  int rank = comm->getRank();
 
-    // Read xml file into parameter list
-    Teuchos::ParameterList inputMeshList;
+  // Creating mesh adapter
+  if (rank == 0) std::cout << "Creating mesh adapter ... \n\n";
 
-    if(xmlMeshInFileName.length()) {
-      if (rank == 0) {
-        std::cout << "\nReading parameter list from the XML file \""
-                  <<xmlMeshInFileName<<"\" ...\n\n";
-      }
-      Teuchos::updateParametersFromXmlFile(xmlMeshInFileName,
-                                           Teuchos::inoutArg(inputMeshList));
-      if (rank == 0) {
-        inputMeshList.print(std::cout,2,true,true);
-        std::cout << "\n";
-      }
-    }
-    else {
-      std::cout << "Cannot read input file: " << xmlMeshInFileName << "\n";
-    }
+  typedef Zoltan2::PamgenMeshAdapter<basic_user_t> inputAdapter_t;
 
-    // Get pamgen mesh definition
-    std::string meshInput = Teuchos::getParameter<std::string>(inputMeshList,
-                                                               "meshInput");
+  inputAdapter_t ia(*comm, "region");
 
+  if (rank == 0) std::cout << "REGION-BASED TEST" << std::endl;
 
-    // Get dimensions
-    int dim = 3;
-    // Input generator
-    // Generate mesh with Pamgen
-    long long maxInt = std::numeric_limits<long long>::max();
-    Create_Pamgen_Mesh(meshInput.c_str(), dim, rank, numProcs, maxInt);
+  std::bitset<Zoltan2::NUM_MODEL_FLAGS> modelFlags;
+  modelFlags.set(modelFlag);
 
-    // Creating mesh adapter
-    if (rank == 0) std::cout << "Creating mesh adapter ... \n\n";
+  int fail=0;
 
-    typedef Zoltan2::PamgenMeshAdapter<basic_user_t> inputAdapter_t;
-
-    inputAdapter_t ia(*comm, "region");
-//    inputAdapter_t ia2(*comm, "vertex");
-    ia.print(rank);
-
-    if (rank == 0) std::cout << "REGION-BASED TEST" << std::endl;
-    Zoltan2::MeshEntityType primaryEType = ia.getPrimaryEntityType();
-    Zoltan2::MeshEntityType adjEType = ia.getAdjacencyEntityType();
-    Zoltan2::MeshEntityType secondAdjEType = ia.getSecondAdjacencyEntityType();
-
-    std::bitset<Zoltan2::NUM_MODEL_FLAGS> modelFlags;
-//    if (consecutiveIdsRequested)
-      modelFlags.set(Zoltan2::GENERATE_CONSECUTIVE_IDS);
-//    if (removeSelfEdges)
-//        modelFlags.set(Zoltan2::REMOVE_SELF_EDGES);
-//    if (buildLocalGraph)
-//        modelFlags.set(Zoltan2::BUILD_LOCAL_GRAPH);
-
-      int fail=0;
-
-    RCP<Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
-    Teuchos::ParameterList &pl = env->getParametersNonConst();
-    pl.set("hypergraph_model_type","ghosting");
+  RCP<Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
+  Teuchos::ParameterList &pl = env->getParametersNonConst();
+  pl.set("hypergraph_model_type","ghosting");
 
   const baseMeshAdapter_t *base_ia = dynamic_cast<const baseMeshAdapter_t*>(&ia);
   Zoltan2::modelFlag_t graphFlags_;
@@ -161,7 +113,6 @@ int main(int narg, char *arg[]) {
   RCP<const Zoltan2::Environment> envConst = Teuchos::rcp_const_cast<const Zoltan2::Environment>(env);
   Zoltan2::HyperGraphModel<inputAdapter_t> model(baseInputAdapter_,envConst,comm,
                                                  graphFlags_,Zoltan2::HYPEREDGE_CENTRIC);
-
 
   typedef Zoltan2::StridedData<zlno_t, zscalar_t> input_t;
 
@@ -173,28 +124,23 @@ int main(int narg, char *arg[]) {
   auto nbVertices = model.getVertexList(vertexIds, wgts);
   auto kNbVertices = model.getVertexListKokkos(kVertexIds, kWgts);
   auto nbWeightPerVertex = model.getNumWeightsPerVertex();
-  std::cout << "nbVertices kNbVertices"<<nbVertices << " "<< kNbVertices << std::endl;
   if(nbVertices != kNbVertices)
   {
-      fail = 1;
-      TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexList != getVertexListKokkos", 1)
+    fail = 1;
+    TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexList != getVertexListKokkos", 1)
   }
 
   for(size_t i = 0; i < nbVertices; ++i) {
-//      std::cout << "vertexIds[i] "<< vertexIds[i] << " kVertexIds(i) "<< kVertexIds(i)<<std::endl;
-     if (vertexIds[i] != kVertexIds(i))
-         fail = 1;
+   if (vertexIds[i] != kVertexIds(i))
+     fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "vertexIds != kVertexIds", 1)
 
-  int stride;
   for(size_t w = 0; w < nbWeightPerVertex; ++w) {
-      for(size_t i = 0; i < nbVertices; ++i) {
-//              std::cout << "wgts[w][i] "<< wgts[w][i] << " kWgts(i, w) "<< kWgts(i, w)<<std::endl;
-          if (wgts[w][i] != kWgts(i, w))
-              fail = 1;
-      }
-
+    for(size_t i = 0; i < nbVertices; ++i) {
+      if (wgts[w][i] != kWgts(i, w))
+        fail = 1;
+    }
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "weight outputs of getVertexWeightsView and getVertexCoordsKokkos are different", 1)
 
@@ -203,22 +149,19 @@ int main(int narg, char *arg[]) {
   Kokkos::View<zscalar_t **,Kokkos::LayoutLeft, typename znode_t::device_type> kcxyz;
   auto nbVerticesFromCoords = model.getVertexCoords(cxyz);
   auto kNbVerticesFromKCoords = model.getVertexCoordsKokkos(kcxyz);
-//  std::cout << "nbVerticesFromCoords kNbVerticesFromKCoords"<<nbVerticesFromCoords << " "<< kNbVerticesFromKCoords << std::endl;
   if(nbVerticesFromCoords != kNbVerticesFromKCoords)
   {
-              fail = 1;
-      TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexCoords != getVertexCoordsKokkos", 1)
+    fail = 1;
+    TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getVertexCoords != getVertexCoordsKokkos", 1)
   }
 
   for(size_t d = 0; d < model.getCoordinateDim(); ++d) {
-      for(size_t i = 0; i < nbVerticesFromCoords; ++i) {
-//            std::cout << "cxyz[d][i] "<< cxyz[d][i] << " kcxyz(i, d) "<< kcxyz(i, d)<<std::endl;
-          if (cxyz[d][i] != kcxyz(i, d))
-              fail = 1;
-      }
+    for(size_t i = 0; i < nbVerticesFromCoords; ++i) {
+      if (cxyz[d][i] != kcxyz(i, d))
+        fail = 1;
+    }
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "coordinates ouputs of getVertexCoords  and getVertexCoordsKokkos are different", 1)
-
 
   // TEST of getEdgeList and getEdgeListKokkos
   ArrayView<const zgno_t> edgesIds;
@@ -227,16 +170,14 @@ int main(int narg, char *arg[]) {
   Kokkos::View<zscalar_t **, typename znode_t::device_type> kEWgts;
   auto nbEdges =  model.getEdgeList(edgesIds, eWgts);
   auto kNbEdges =  model.getEdgeListKokkos(kEdgeIds, kEWgts);
-//  std::cout << "nbEdges kNbEdges"<<nbEdges << " "<< kNbEdges << std::endl;
   if(nbEdges != kNbEdges)
   {
-      fail = 1;
-      TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getEdgeList != getEdgeListKokkos", 1)
+    fail = 1;
+    TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getEdgeList != getEdgeListKokkos", 1)
   }
   for(size_t i = 0; i < nbEdges; ++i) {
-//        std::cout << "edgesIds[i] "<< edgesIds[i] << " kEdgeIds(i) "<< kEdgeIds(i)<<std::endl;
-      if (edgesIds[i] != kEdgeIds(i))
-          fail = 1;
+    if (edgesIds[i] != kEdgeIds(i))
+      fail = 1;
   }
 
   // TEST of getPinList and getPinListKokkos
@@ -248,29 +189,26 @@ int main(int narg, char *arg[]) {
   Kokkos::View<zscalar_t **, typename znode_t::device_type> kPWgts;
   auto nbPins =  model.getPinList(pIds, pOffsets, pWgts);
   auto kNbPins =  model.getPinListKokkos(kPIds, kPOffsets, kPWgts);
-//  std::cout << "nbPins kNbPins"<<nbPins << " "<< kNbPins << std::endl;
   if(nbPins != kNbPins)
   {
-      fail = 1;
-      TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getPinList != getPinListKokkos", 1)
+    fail = 1;
+    TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getPinList != getPinListKokkos", 1)
   }
   for(size_t i = 0; i < nbPins; ++i) {
-//      std::cout << "pIds[i] "<< pIds[i] << " kPIds(i) "<< kPIds(i)<<std::endl;
-      if (pIds[i] != kPIds(i))
-          fail = 1;
+    if (pIds[i] != kPIds(i))
+      fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "getPinList and  getPinListKokkos are different for pIds", 1)
 
   for(size_t i = 0; i < kPOffsets.size(); ++i) {
-//        std::cout << "pOffsets[i] "<< pOffsets[i] << " kPOffsets(i) "<< kPOffsets(i)<<std::endl;
-     if (pOffsets[i] != kPOffsets(i))
-         fail = 1;
+    if (pOffsets[i] != kPOffsets(i))
+      fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "getPinList and  getPinListKokkos are different for pOffsets", 1)
   if(kPWgts.size() !=0 ||  pWgts.size() != 0)
   {
-      fail = 1;
-      TEST_FAIL_AND_EXIT(*comm, !fail, "Weight for edges detected", 1)
+    fail = 1;
+    TEST_FAIL_AND_EXIT(*comm, !fail, "Weight for edges detected", 1)
   }
 
   // TEST of getPinList and getOwnedListKokkos
@@ -278,18 +216,72 @@ int main(int narg, char *arg[]) {
   Kokkos::View<bool *, typename znode_t::device_type> kIsOwner;
   auto nbIsOwner =  model.getOwnedList(isOwner);
   auto kNbIsOwner =  model.getOwnedListKokkos(kIsOwner);
-  if(nbIsOwner != nbIsOwner)
+  if(nbIsOwner != kNbIsOwner)
   {
-      fail = 1;
-      TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getOwnedList != getOwnedListKokkos", 1)
+    fail = 1;
+    TEST_FAIL_AND_EXIT(*comm, !fail, "Return of getOwnedList != getOwnedListKokkos", 1)
   }
 
   for(size_t i = 0; i < nbIsOwner; ++i) {
-//      std::cout << "isOwner[i] "<< isOwner[i] << " kIsOwner(i) "<< kIsOwner(i)<<std::endl;
-      if (isOwner[i] != kIsOwner(i))
-          fail = 1;
+    if (isOwner[i] != kIsOwner(i))
+      fail = 1;
   }
 
-  std::cout<<"PASS\n";
+}
+
+int main(int narg, char *arg[]) {
+
+  Tpetra::ScopeGuard tscope(&narg, &arg);
+
+  Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
+
+  int rank = comm->getRank();
+  int numProcs = comm->getSize();
+
+
+  /***************************************************************************/
+  /*************************** GET XML INPUTS ********************************/
+  /***************************************************************************/
+
+  // default values for command-line arguments
+  std::string xmlMeshInFileName("Poisson.xml");
+
+  // Read xml file into parameter list
+  Teuchos::ParameterList inputMeshList;
+
+  if(xmlMeshInFileName.length()) {
+    if (rank == 0) {
+      std::cout << "\nReading parameter list from the XML file \""
+                <<xmlMeshInFileName<<"\" ...\n\n";
+    }
+    Teuchos::updateParametersFromXmlFile(xmlMeshInFileName,
+                                         Teuchos::inoutArg(inputMeshList));
+    if (rank == 0) {
+      inputMeshList.print(std::cout,2,true,true);
+      std::cout << "\n";
+    }
+  }
+  else {
+    std::cout << "Cannot read input file: " << xmlMeshInFileName << "\n";
+  }
+
+  // Get pamgen mesh definition
+  std::string meshInput = Teuchos::getParameter<std::string>(inputMeshList,
+                                                             "meshInput");
+
+  // Get dimensions
+  int dim = 3;
+  // Input generator
+  // Generate mesh with Pamgen
+  long long maxInt = std::numeric_limits<long long>::max();
+  Create_Pamgen_Mesh(meshInput.c_str(), dim, rank, numProcs, maxInt);
+
+  testUsingModelFlags(Zoltan2::GENERATE_CONSECUTIVE_IDS);
+  testUsingModelFlags(Zoltan2::REMOVE_SELF_EDGES);
+  testUsingModelFlags(Zoltan2::BUILD_LOCAL_GRAPH);
+
+  if (rank==0)
+    std::cout<<"PASS\n";
+
   return 0;
 }

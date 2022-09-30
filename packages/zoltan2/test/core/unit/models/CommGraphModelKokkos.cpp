@@ -88,9 +88,6 @@ void testUsingModelFlags(Zoltan2::ModelFlags modelFlag) {
 
   int nVtxWeights=5;
   int nnzWgtIdx = -1;
-  bool consecutiveIdsRequested = false;
-  bool removeSelfEdges = false;
-  bool buildLocalGraph = false;
   string fname("simple");
 
   // Input generator

@@ -221,32 +221,32 @@ public:
     Kokkos::View<const gno_t *, typename node_t::device_type> &Ids,
     Kokkos::View<scalar_t **, typename node_t::device_type> &wgts) const
   {
-      ia_->getIDsKokkosView(Ids);
+    ia_->getIDsKokkosView(Ids);
 
-      if(numWeightsPerVertex_ > 0) {
-        typename Kokkos::View<scalar_t **, typename node_t::device_type>::HostMirror
-        host_wgt = Kokkos::create_mirror_view(wgts);
-        for (int idx=0; idx < numWeightsPerVertex_; idx++){
-         bool useNumNZ = ia_->useDegreeAsWeight(idx);
-         if (useNumNZ){
-           auto ptr_wgts = vWeights_[idx];
-           for (size_t i=0; i < numLocalVertices_; i++){
-             host_wgt(i, idx) = ptr_wgts[i];
-           }
-         }
-         else {
-           const scalar_t * ptr_wgts;
-           int stride;
-           ia_->getWeightsView(ptr_wgts, stride, idx);
-           size_t i = 0;
-           for(size_t n = 0; n < ia_->getLocalNumIDs() * stride; n += stride) {
-             host_wgt(i++,idx) = ptr_wgts[n];
-           }
+    if(numWeightsPerVertex_ > 0) {
+      typename Kokkos::View<scalar_t **, typename node_t::device_type>::HostMirror
+      host_wgt = Kokkos::create_mirror_view(wgts);
+      for (int idx=0; idx < numWeightsPerVertex_; idx++){
+       bool useNumNZ = ia_->useDegreeAsWeight(idx);
+       if (useNumNZ){
+         auto ptr_wgts = vWeights_[idx];
+         for (size_t i=0; i < numLocalVertices_; i++){
+           host_wgt(i, idx) = ptr_wgts[i];
          }
        }
-       Kokkos::deep_copy(wgts, host_wgt);
+       else {
+         const scalar_t * ptr_wgts;
+         int stride;
+         ia_->getWeightsView(ptr_wgts, stride, idx);
+         size_t i = 0;
+         for(size_t n = 0; n < ia_->getLocalNumIDs() * stride; n += stride) {
+           host_wgt(i++,idx) = ptr_wgts[n];
+         }
+       }
+     }
+     Kokkos::deep_copy(wgts, host_wgt);
 
-       // we cannot use ia_->getWeightsKokkosView(wgts) because of the processing data done with useDegreeAsWeight
+     // we cannot use ia_->getWeightsKokkosView(wgts) because of the processing data done with useDegreeAsWeight
     }
     return getLocalNumVertices();
   }
@@ -265,10 +265,10 @@ public:
 
   size_t getVertexCoordsKokkos(Kokkos::View<scalar_t **, Kokkos::LayoutLeft, typename node_t::device_type> &xyz) const
   {
-      auto adapterWithCoords = dynamic_cast<const AdapterWithCoords<user_t>*>(&(*ia_));
-      adapterWithCoords->getCoordinatesKokkosView(xyz);
+    auto adapterWithCoords = dynamic_cast<const AdapterWithCoords<user_t>*>(&(*ia_));
+    adapterWithCoords->getCoordinatesKokkosView(xyz);
 
-      return getLocalNumObjects();
+    return getLocalNumObjects();
   }
 
   /*! \brief Sets pointer to the ownership of this processes vertices.
@@ -286,15 +286,15 @@ public:
 
   size_t getOwnedListKokkos(Kokkos::View<bool *, typename node_t::device_type> &isOwner) const
   {
-      typedef Kokkos::View<bool *, typename node_t::device_type> ownedList_t;
-      ownedList_t non_const_owned_list = ownedList_t("owned_list", isOwner_.size());
-      typename ownedList_t::HostMirror host_owned_list = Kokkos::create_mirror_view(non_const_owned_list);
-      for(size_t i = 0; i < this->getLocalNumObjects(); ++i) {
-          host_owned_list(i) = isOwner_[i];
-      }
-      Kokkos::deep_copy(non_const_owned_list, host_owned_list);
-      isOwner = non_const_owned_list;
-      return isOwner_.size();
+    typedef Kokkos::View<bool *, typename node_t::device_type> ownedList_t;
+    ownedList_t non_const_owned_list = ownedList_t("owned_list", isOwner_.size());
+    typename ownedList_t::HostMirror host_owned_list = Kokkos::create_mirror_view(non_const_owned_list);
+    for(size_t i = 0; i < this->getLocalNumObjects(); ++i) {
+        host_owned_list(i) = isOwner_[i];
+    }
+    Kokkos::deep_copy(non_const_owned_list, host_owned_list);
+    isOwner = non_const_owned_list;
+    return isOwner_.size();
   }
 
   /*! \brief Sets pointers to the vertex map with copies and the vertex map without copies
@@ -341,21 +341,21 @@ public:
       }
 
       if (model_type=="traditional") {
-          ia_->getEdgeIDsKokkosView(edgeIds);
+        ia_->getEdgeIDsKokkosView(edgeIds);
       }
       else if (model_type=="ghosting") {
-          ia_->getIDsKokkosView(edgeIds);
+        ia_->getIDsKokkosView(edgeIds);
       }
       else {
-          // model_type unknown => deep copy from non kokkos data
-          typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
-          edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());
-          typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
-          for(size_t i = 0; i < edgeGids_.size(); ++i) {
-              host_edgeIds(i) = edgeGids_[i];
-          }
-          Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
-          edgeIds = non_const_edgeIds;
+        // model_type unknown => deep copy from non kokkos data
+        typedef Kokkos::View<gno_t *, typename node_t::device_type> edgeIds_t;
+        edgeIds_t non_const_edgeIds = edgeIds_t("edgeIds", edgeGids_.size());
+        typename edgeIds_t::HostMirror host_edgeIds = Kokkos::create_mirror_view(non_const_edgeIds);
+        for(size_t i = 0; i < edgeGids_.size(); ++i) {
+            host_edgeIds(i) = edgeGids_[i];
+        }
+        Kokkos::deep_copy(non_const_edgeIds, host_edgeIds);
+        edgeIds = non_const_edgeIds;
       }
 
       if(nWeightsPerEdge_ > 0) {

@@ -93,7 +93,6 @@ using std::vector;
 /////////////////////////////////////////////////////////////////////////////
 int main(int narg, char *arg[])
 {
-    std::cout << "TESTING main" << std::endl;
   Tpetra::ScopeGuard tscope(&narg, &arg);
   Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
 
@@ -101,14 +100,10 @@ int main(int narg, char *arg[])
 
   int nVtxWeights=5;
   int nnzWgtIdx = -1;
-  bool consecutiveIdsRequested = false;
-  bool removeSelfEdges = false;
-  bool buildLocalGraph = false;
   string fname("simple");
 
   if (rank == 0)
     std::cout << "TESTING base case (global)" << std::endl;
-
 
   // Input generator
   UserInputForTests *uinput;
@@ -133,49 +128,45 @@ int main(int narg, char *arg[])
       }
     }
   }
-////  TEST_FAIL_AND_EXIT(*comm, numEdges==num, "getEdgeList size", 1)
-
 
   RCP<const tcrsMatrix_t> Mconsec = rcp_const_cast<const tcrsMatrix_t>(M);
   RCP<const Tpetra::CrsGraph<zlno_t, zgno_t> > graph = Mconsec->getCrsGraph();
   xGAdapter_t tmi(graph, nVtxWeights);
   for (int i=0; i < nVtxWeights; i++){
-      if (nnzWgtIdx == i)
-          tmi.setWeightIsDegree(i);
-      else
-          tmi.setWeights(rowWeights[i], 1, i);
+    if (nnzWgtIdx == i)
+      tmi.setWeightIsDegree(i);
+    else
+      tmi.setWeights(rowWeights[i], 1, i);
   }
 
-  std::cout << "setWeight finished: " <<std::endl;
-    simpleVAdapter_t *via = NULL;
+  simpleVAdapter_t *via = NULL;
 
+  // Set up some fake input
+  zscalar_t **coords=NULL;
+  int coordDim= 3;
 
-    // Set up some fake input
-    zscalar_t **coords=NULL;
-    int coordDim= 3;
-
-    if (coordDim > 0){
-      coords = new zscalar_t * [coordDim];
-      for (int i=0; i < coordDim; i++){
-        coords[i] = new zscalar_t [nLocalRows];
-        for (zlno_t j=0; j < nLocalRows; j++){
-          coords[i][j] = 100000*i + j;
-        }
+  if (coordDim > 0){
+    coords = new zscalar_t * [coordDim];
+    for (int i=0; i < coordDim; i++){
+      coords[i] = new zscalar_t [nLocalRows];
+      for (zlno_t j=0; j < nLocalRows; j++){
+        coords[i][j] = 100000*i + j;
       }
     }
+  }
 
 
-    zgno_t *gids = NULL;
-    if (coordDim > 0) {
-      gids = new zgno_t[nLocalRows];
-      for (zlno_t i = 0; i < nLocalRows; i++)
-        gids[i] = M->getRowMap()->getGlobalElement(i);
-      via = new simpleVAdapter_t(nLocalRows, gids, coords[0],
-                                             (coordDim > 1 ? coords[1] : NULL),
-                                             (coordDim > 2 ? coords[2] : NULL),
-                                              1,1,1);
-      tmi.setCoordinateInput(via);
-    }
+  zgno_t *gids = NULL;
+  if (coordDim > 0) {
+    gids = new zgno_t[nLocalRows];
+    for (zlno_t i = 0; i < nLocalRows; i++)
+      gids[i] = M->getRowMap()->getGlobalElement(i);
+    via = new simpleVAdapter_t(nLocalRows, gids, coords[0],
+                                           (coordDim > 1 ? coords[1] : NULL),
+                                           (coordDim > 2 ? coords[2] : NULL),
+                                            1,1,1);
+    tmi.setCoordinateInput(via);
+  }
 
 
   // TEST of getIDsView, getIDsKokkosView (compatible with all adapters) and getVertexIDsView (graphAdapter)
@@ -186,7 +177,7 @@ int main(int narg, char *arg[])
 
   int fail=0;
   if (tmi.getLocalNumVertices() != tmi.getLocalNumIDs())
-      fail = 1;
+    fail = 1;
   TEST_FAIL_AND_EXIT(*comm, !fail, "getLocalNumVertices != tmi.getLocalNumIDs() for graphAdapter", 1)
 
 
@@ -194,32 +185,30 @@ int main(int narg, char *arg[])
   tmi.getIDsView(ids);
   tmi.getIDsKokkosView(kIds);
   for(size_t i = 0; i < tmi.getLocalNumIDs(); ++i) {
-      std::cout << "ids[i] "<< ids[i] << " kIds(i) "<< kIds(i)<<std::endl;
-     if (ids[i] != vertexIds[i])
-         fail = 1;
+   if (ids[i] != vertexIds[i])
+     fail = 1;
 
-     if (kIds(i) != vertexIds[i])
-         fail = 1;
+   if (kIds(i) != vertexIds[i])
+     fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "ids != vertexIds != kIds", 1)
 
 // TEST of getWeightsView, getWeightsKokkosView and getVertexWeightsView (GRAPH_VERTEX)
-          std::cout << "number of weight: "<< nVtxWeights << std::endl;
   for (int w=0; !fail && w < nVtxWeights; w++){
-      const zscalar_t *wgts;
-      const zscalar_t *vwgts;
-      Kokkos::View<zscalar_t **, typename znode_t::device_type> wkgts;
-      int stride;
-      tmi.getWeightsView(wgts, stride, w);
-      tmi.getWeightsKokkosView(wkgts);
-      tmi.getVertexWeightsView(vwgts, stride, w);
-      for(size_t i = 0; i < tmi.getLocalNumIDs(); ++i) {
-         if (wgts[stride*i] != vwgts[stride*i])
-             fail = 1;
+    const zscalar_t *wgts;
+    const zscalar_t *vwgts;
+    Kokkos::View<zscalar_t **, typename znode_t::device_type> wkgts;
+    int stride;
+    tmi.getWeightsView(wgts, stride, w);
+    tmi.getWeightsKokkosView(wkgts);
+    tmi.getVertexWeightsView(vwgts, stride, w);
+    for(size_t i = 0; i < tmi.getLocalNumIDs(); ++i) {
+      if (wgts[stride*i] != vwgts[stride*i])
+        fail = 1;
 
-         if (wkgts(i, w) != vwgts[stride*i])
-             fail = 1;
-      }
+      if (wkgts(i, w) != vwgts[stride*i])
+        fail = 1;
+    }
 
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "wgts != vwgts != wkgts", 1)
@@ -233,16 +222,14 @@ int main(int narg, char *arg[])
   tmi.getEdgesView(offsets, adjids);
   tmi.getEdgesKokkosView(kOffsets, kAdjids);
   for(size_t i = 0; i < tmi.getLocalNumVertices() + 1; ++i) {
-     if (offsets[i] != kOffsets(i))
-         fail = 1;
+    if (offsets[i] != kOffsets(i))
+      fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "offsets != kOffsets", 1)
 
-
   for(size_t i = 0; i < tmi.getLocalNumEdges(); ++i) {
-//      std::cout << "adjids: "<< adjids[i] << " "<< kAdjids(i) <<std::endl;
-     if (adjids[i] != kAdjids(i))
-         fail = 1;
+    if (adjids[i] != kAdjids(i))
+      fail = 1;
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "adjids != kAdjids", 1)
 
@@ -266,17 +253,15 @@ int main(int narg, char *arg[])
   ArrayRCP<input_t> crds = arcp<input_t>(coordArray, 0, coordDim, true);
   Kokkos::View<zscalar_t **, Kokkos::LayoutLeft, typename znode_t::device_type> kCrds;
 
-  auto wrapper = dynamic_cast<const Zoltan2::AdapterWithCoordsWrapper<tcrsGraph_t,simpleUser_t>*>(&tmi);
   tmi.getCoordinateInput()->getCoordinatesKokkosView(kCrds);
 
   for(size_t i = 0; i < tmi.getLocalNumIDs(); ++i) {
-      for (int j = 0; j < coordDim; j++) {
-          if (crds[j][i] != kCrds(i, j))
-              fail = 1;
-      }
+    for (int j = 0; j < coordDim; j++) {
+      if (crds[j][i] != kCrds(i, j))
+        fail = 1;
+    }
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "crds != kCrds", 1)
-
 
   // clean
   if (nVtxWeights > 0){
@@ -289,21 +274,19 @@ int main(int narg, char *arg[])
 
 
   if (coordDim > 0){
-      delete via;
-      delete [] gids;
-      for (int i=0; i < coordDim; i++){
-          if (coords[i])
-              delete [] coords[i];
-      }
-      delete [] coords;
+    delete via;
+    delete [] gids;
+    for (int i=0; i < coordDim; i++){
+      if (coords[i])
+        delete [] coords[i];
+    }
+    delete [] coords;
   }
 
-//    delete coordArray;
   delete uinput;
 
   if (rank==0)
   std::cout << "PASS" << std::endl;
-
 
   return 0;
 }

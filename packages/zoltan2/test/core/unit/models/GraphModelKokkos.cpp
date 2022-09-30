@@ -144,6 +144,7 @@ void testGraphModelWithMatrixAdapter(Zoltan2::ModelFlags modelFlag, string fname
         tmi.setWeights(rowWeights[i], 1, i);
   }
 
+
   simpleVAdapter_t *via = NULL;
 
   // Set up some fake input
@@ -214,7 +215,6 @@ void testGraphModelWithMatrixAdapter(Zoltan2::ModelFlags modelFlag, string fname
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "vertexIds != kVertexIds", 1)
 
-  int stride;
   for(size_t w = 0; w < nbWeightPerVertex; ++w) {
       for(size_t i = 0; i < nbVertices; ++i) {
           if (wgts[w][i] != kWgts(i, w))
@@ -410,7 +410,6 @@ void testGraphModelWithGraphAdapter(Zoltan2::ModelFlags modelFlag, string fname,
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "vertexIds != kVertexIds", 1)
 
-  int stride;
   for(size_t w = 0; w < nbWeightPerVertex; ++w) {
     for(size_t i = 0; i < nbVertices; ++i) {
       if (wgts[w][i] != kWgts(i, w))
@@ -543,9 +542,6 @@ void testGraphModelWithMeshAdapter(Zoltan2::ModelFlags modelFlag, string fname, 
   inputAdapter_t ia(*comm, "region");
 
   if (rank == 0) std::cout << "REGION-BASED TEST" << std::endl;
-  Zoltan2::MeshEntityType primaryEType = ia.getPrimaryEntityType();
-  Zoltan2::MeshEntityType adjEType = ia.getAdjacencyEntityType();
-  Zoltan2::MeshEntityType secondAdjEType = ia.getSecondAdjacencyEntityType();
 
   std::bitset<Zoltan2::NUM_MODEL_FLAGS> modelFlags;
   modelFlags.set(modelFlag);
@@ -591,7 +587,6 @@ void testGraphModelWithMeshAdapter(Zoltan2::ModelFlags modelFlag, string fname, 
   }
   TEST_FAIL_AND_EXIT(*comm, !fail, "vertexIds != kVertexIds", 1)
 
-  int stride;
   for(size_t w = 0; w < nbWeightPerVertex; ++w) {
     for(size_t i = 0; i < nbVertices; ++i) {
       if (wgts[w][i] != kWgts(i, w))
@@ -670,15 +665,10 @@ void testGraphModelWithMeshAdapter(Zoltan2::ModelFlags modelFlag, string fname, 
 void testUsingModelFlags(Zoltan2::ModelFlags modelFlag) {
 
   Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
-  int rank = comm->getRank();
 
   int nVtxWeights=5;
   int nnzWgtIdx = -1;
-  bool consecutiveIdsRequested = false;
-  bool removeSelfEdges = false;
-  bool buildLocalGraph = false;
   string fname("simple");
-
 
   testGraphModelWithGraphAdapter(modelFlag, fname, comm, nVtxWeights, nnzWgtIdx);
   testGraphModelWithMatrixAdapter(modelFlag, fname, comm, nVtxWeights, nnzWgtIdx);
