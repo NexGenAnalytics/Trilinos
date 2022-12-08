@@ -110,7 +110,7 @@
           <!--       <Parameter name="repartition: remap parts" type="bool" value="true"/> -->
           <!--       <Parameter name="repartition: rebalance P and R" type="bool" value="false"/> -->
           <!--       <ParameterList name="repartition: params"> -->
-          <!--         <Parameter name="algorithm" type="string" value="multijagged"/> -->
+          <!--         <Parameter name="algorithm" type="string" value="quotient"/> -->
           <!--       </ParameterList> -->
 
           <!--       <ParameterList name="Required Parameters"> -->
@@ -246,7 +246,7 @@
                   <Parameter name="repartition: rebalance P and R" type="bool" value="false"/>
                   <Parameter name="repartition: print partition distribution" type="bool" value="true"/>
                   <ParameterList name="repartition: params">
-                    <Parameter name="algorithm" type="string" value="multijagged"/>
+                    <Parameter name="algorithm" type="string" value="quotient"/>
                   </ParameterList>
                 </ParameterList>
 
@@ -302,7 +302,7 @@
                   <Parameter name="repartition: rebalance P and R" type="bool" value="false"/>
                   <Parameter name="repartition: print partition distribution" type="bool" value="true"/>
                   <ParameterList name="repartition: params">
-                    <Parameter name="algorithm" type="string" value="multijagged"/>
+                    <Parameter name="algorithm" type="string" value="quotient"/>
                   </ParameterList>
                 </ParameterList>
               </ParameterList>
