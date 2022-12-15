@@ -134,8 +134,12 @@ public:
     env(env__), problemComm(problemComm__), adapter(adapter__), graphFlags(graphFlags_)
   {
     printf("AlgQuotient with GraphAdapter!\n");
+    try{
     this->innerAlgorithm =
         rcp(new AlgParMETIS<Adapter, graphModel_t>(env, problemComm, adapter, graphFlags));
+    }catch(std::exception& e){
+      printf("Exception! %s\n", e.what());
+    }
   }
 
   /*! \brief Set up validators specific to this algorithm
