@@ -19,8 +19,8 @@ TRIBITS_COPY_FILES_TO_BINARY_DIR(CopyBlockPrecFiles
   maxwell-exterior-small.xml maxwell-exterior-medium.xml maxwell-exterior-large.xml
   solverCG.xml solverGMRES.xml
   solverMueLuRefMaxwell.xml solverMueLuRefMaxwell2D.xml solverMueLuRefMaxwellEpetra.xml
-  solverMueLuMaxwellHO.xml solverMueLuMaxwellHOCuda.xml
-  solverMueLuRefMaxwellOpenMP.xml solverMueLuRefMaxwellCuda.xml
+  solverMueLuMaxwellHO.xml solverMueLuMaxwellHOCuda.xml solverMueLuMaxwellHOHIP.xml
+  solverMueLuRefMaxwellOpenMP.xml solverMueLuRefMaxwellCuda.xml solverMueLuRefMaxwellHIP.xml
   solverAugmentationUseILU.xml
   solverMLRefMaxwell.xml
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
@@ -31,7 +31,7 @@ TRIBITS_COPY_FILES_TO_BINARY_DIR(CopyBlockPrecPerfFiles
   SOURCE_FILES
   maxwell-large.xml
   solverMueLuRefMaxwell.xml solverMueLuRefMaxwell2D.xml solverMueLuRefMaxwellEpetra.xml
-  solverMueLuRefMaxwellOpenMP.xml solverMueLuRefMaxwellCuda.xml
+  solverMueLuRefMaxwellOpenMP.xml solverMueLuRefMaxwellCuda.xml solverMueLuRefMaxwellHIP.xml
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEST_DIR ${CMAKE_CURRENT_BINARY_DIR}
   CATEGORIES PERFORMANCE

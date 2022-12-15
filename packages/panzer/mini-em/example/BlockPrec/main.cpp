@@ -402,6 +402,10 @@ int main_(Teuchos::CommandLineProcessor &clp, int argc,char * argv[])
             if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosCudaWrapperNode).name())
               updateParams("solverMueLuRefMaxwellCuda.xml", lin_solver_pl, comm, out);
 #endif
+#ifdef KOKKOS_ENABLE_HIP
+            if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosHipWrapperNode).name())
+              updateParams("solverMueLuRefMaxwellHIP.xml", lin_solver_pl, comm, out);
+#endif
           } else {
             updateParams("solverMueLuRefMaxwellEpetra.xml", lin_solver_pl, comm, out);
 
@@ -416,6 +420,10 @@ int main_(Teuchos::CommandLineProcessor &clp, int argc,char * argv[])
             if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosCudaWrapperNode).name()) {
               updateParams("solverMueLuMaxwellHOCuda.xml", lin_solver_pl, comm, out);
             }
+#endif
+#ifdef KOKKOS_ENABLE_HIP
+            if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosHipWrapperNode).name())
+              updateParams("solverMueLuRefMaxwellHOHIP.xml", lin_solver_pl, comm, out);
 #endif
             Teuchos::ParameterList& mueluList = lin_solver_pl->sublist("Preconditioner Types").sublist("Teko").sublist("Inverse Factory Library").sublist("Maxwell").sublist("S_E Preconditioner").sublist("Preconditioner Types").sublist("MueLu");
             if (mueluList.isParameter("coarse: type") && mueluList.get<std::string>("coarse: type") == "RefMaxwell")
@@ -956,7 +964,7 @@ int main_(Teuchos::CommandLineProcessor &clp, int argc,char * argv[])
 
           // end for()
           // end Newton loop (nonlinear case)
-          
+
           // print out responses
           {
             Thyra::ModelEvaluatorBase::InArgs<Scalar> respInArgs = physics->createInArgs();
