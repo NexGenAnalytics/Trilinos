@@ -403,7 +403,7 @@ int main_(Teuchos::CommandLineProcessor &clp, int argc,char * argv[])
               updateParams("solverMueLuRefMaxwellCuda.xml", lin_solver_pl, comm, out);
 #endif
 #ifdef KOKKOS_ENABLE_HIP
-            if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosHipWrapperNode).name())
+            if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosHIPWrapperNode).name())
               updateParams("solverMueLuRefMaxwellHIP.xml", lin_solver_pl, comm, out);
 #endif
           } else {
@@ -422,7 +422,7 @@ int main_(Teuchos::CommandLineProcessor &clp, int argc,char * argv[])
             }
 #endif
 #ifdef KOKKOS_ENABLE_HIP
-            if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosHipWrapperNode).name())
+            if (typeid(panzer::TpetraNodeType).name() == typeid(Kokkos::Compat::KokkosHIPWrapperNode).name())
               updateParams("solverMueLuRefMaxwellHOHIP.xml", lin_solver_pl, comm, out);
 #endif
             Teuchos::ParameterList& mueluList = lin_solver_pl->sublist("Preconditioner Types").sublist("Teko").sublist("Inverse Factory Library").sublist("Maxwell").sublist("S_E Preconditioner").sublist("Preconditioner Types").sublist("MueLu");
