@@ -274,7 +274,7 @@ namespace MueLu {
 
         Set(level, "Partition", decomposition);
       } catch (std::exception& e) {
-          printf("EXCEPTION! %s\n", e);
+          printf("EXCEPTION! %s\n", e.what());
       }
     }
   }
