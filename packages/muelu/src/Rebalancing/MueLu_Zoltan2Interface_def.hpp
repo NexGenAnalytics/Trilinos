@@ -194,7 +194,7 @@ namespace MueLu {
           weightsPerRow[i] += A->getNumEntriesInLocalRow(i*blkSize+j);
         }
       }
-     
+
       // MultiJagged: Grab the target rows per process from the Heuristic to use unless the Zoltan2 list says otherwise
       if(algo == "multijagged" && !Zoltan2Params.isParameter("mj_premigration_coordinate_count")) {
         LO heuristicTargetRowsPerProcess = Get<LO>(level,"repartition: heuristic target rows per process");
@@ -235,36 +235,47 @@ namespace MueLu {
 
     } else {
 
-      GO numElements = rowMap->getLocalNumElements();
+      try {
+        GO numElements = rowMap->getLocalNumElements();
 
-      typedef Zoltan2::XpetraCrsGraphAdapter<CrsGraph>  InputAdapterType;
-      typedef Zoltan2::PartitioningProblem<InputAdapterType>   ProblemType;
+        typedef Zoltan2::XpetraCrsGraphAdapter<CrsGraph> InputAdapterType;
+        typedef Zoltan2::PartitioningProblem<InputAdapterType> ProblemType;
 
-      RCP<const Teuchos::MpiComm<int> >            dupMpiComm = rcp_dynamic_cast<const Teuchos::MpiComm<int> >(rowMap->getComm()->duplicate());
-      RCP<const Teuchos::OpaqueWrapper<MPI_Comm> > zoltanComm = dupMpiComm->getRawMpiComm();
+        RCP<const Teuchos::MpiComm<int>> dupMpiComm =
+            rcp_dynamic_cast<const Teuchos::MpiComm<int>>(
+                rowMap->getComm()->duplicate());
+        RCP<const Teuchos::OpaqueWrapper<MPI_Comm>> zoltanComm =
+            dupMpiComm->getRawMpiComm();
 
-      InputAdapterType adapter(A->getCrsGraph());
-      RCP<ProblemType> problem(new ProblemType(&adapter, &Zoltan2Params, (*zoltanComm)()));
+        InputAdapterType adapter(A->getCrsGraph());
+        RCP<ProblemType> problem(
+            new ProblemType(&adapter, &Zoltan2Params, (*zoltanComm)()));
 
-      {
-        SubFactoryMonitor m1(*this, "Zoltan2 " + toString(algo), level);
-        problem->solve();
+        {
+          SubFactoryMonitor m1(*this, "Zoltan2 " + toString(algo), level);
+          problem->solve();
+        }
+
+        RCP<Xpetra::Vector<GO, LO, GO, NO>> decomposition =
+            Xpetra::VectorFactory<GO, LO, GO, NO>::Build(rowMap, false);
+        ArrayRCP<GO> decompEntries = decomposition->getDataNonConst(0);
+
+        const typename InputAdapterType::part_t *parts =
+            problem->getSolution().getPartListView();
+
+        // For blkSize > 1, ignore solution for every row but the first ones in
+        // a block.
+        for (GO i = 0; i < numElements / blkSize; i++) {
+          int partNum = parts[i * blkSize];
+
+          for (LO j = 0; j < blkSize; j++)
+            decompEntries[i * blkSize + j] = partNum;
+        }
+
+        Set(level, "Partition", decomposition);
+      } catch (std::exception& e) {
+          printf("EXCEPTION! %s\n", e);
       }
-
-      RCP<Xpetra::Vector<GO,LO,GO,NO> > decomposition = Xpetra::VectorFactory<GO,LO,GO,NO>::Build(rowMap, false);
-      ArrayRCP<GO>                      decompEntries = decomposition->getDataNonConst(0);
-
-      const typename InputAdapterType::part_t * parts = problem->getSolution().getPartListView();
-
-      // For blkSize > 1, ignore solution for every row but the first ones in a block.
-      for (GO i = 0; i < numElements/blkSize; i++) {
-	int partNum = parts[i*blkSize];
-	
-	for (LO j = 0; j < blkSize; j++)
-	  decompEntries[i*blkSize + j] = partNum;
-      }
-
-      Set(level, "Partition", decomposition);
     }
   }
 

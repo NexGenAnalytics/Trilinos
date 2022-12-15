@@ -133,6 +133,7 @@ public:
           const modelFlag_t& graphFlags_) :
     env(env__), problemComm(problemComm__), adapter(adapter__), graphFlags(graphFlags_)
   {
+    printf("AlgQuotient with GraphAdapter!\n");
     this->innerAlgorithm =
         rcp(new AlgParMETIS<Adapter, graphModel_t>(env, problemComm, adapter, graphFlags));
   }
