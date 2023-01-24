@@ -148,6 +148,7 @@ int main_(Teuchos::CommandLineProcessor &clp, int argc,char * argv[])
     out->setOutputToRootOnly(0);
   }
 
+  printf("Number of ranks %d \n", comm->getSize());
   Teuchos::RCP<Teuchos::StackedTimer> stacked_timer;
   bool use_stacked_timer;
   std::string test_name = "MiniEM 3D RefMaxwell";
