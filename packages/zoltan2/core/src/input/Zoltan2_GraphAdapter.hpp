@@ -115,14 +115,17 @@ private:
 public:
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  typedef typename InputTraits<User>::scalar_t scalar_t;
-  typedef typename InputTraits<User>::lno_t    lno_t;
-  typedef typename InputTraits<User>::gno_t    gno_t;
-  typedef typename InputTraits<User>::node_t   node_t;
-  typedef typename InputTraits<User>::offset_t offset_t;
-  typedef User user_t;
-  typedef UserCoord userCoord_t;
-  typedef GraphAdapter<User, UserCoord> base_adapter_t;
+  using scalar_t = typename InputTraits<User>::scalar_t;
+  using lno_t = typename InputTraits<User>::lno_t;
+  using gno_t = typename InputTraits<User>::gno_t;
+  using node_t = typename InputTraits<User>::node_t;
+  using offset_t = typename InputTraits<User>::offset_t;
+  using user_t = User;
+  using userCoord_t = UserCoord;
+  using base_adapter_t = GraphAdapter<User, UserCoord>;
+
+  using device_t = typename node_t::device_type;
+  using host_t = typename Kokkos::HostSpace::memory_space;
 #endif
 
   enum BaseAdapterType adapterType() const override {return GraphAdapterType;}
@@ -149,6 +152,16 @@ public:
    */
   virtual void getVertexIDsView(const gno_t *&vertexIds) const = 0;
 
+  /*! \brief Sets pointers to this process' graph entries.
+      \param vertexIds will on return a device Kokkos::View with vertex global Ids
+   */
+  virtual void getVertexIDsDeviceView(Kokkos::View<const gno_t*, device_t> &vertexIds) const = 0;
+
+  /*! \brief Sets pointers to this process' graph entries.
+      \param vertexIds will on return a host Kokkos::View with vertex global Ids
+   */
+  virtual void getVertexIDsHostView(Kokkos::View<const gno_t*, host_t> &vertexIds) const = 0;
+
   /*! \brief Gets adjacency lists for all vertices in a compressed
              sparse row (CSR) format.
       \param offsets is an array of size getLocalNumVertices() + 1.
@@ -160,6 +173,28 @@ public:
    */
   virtual void getEdgesView(const offset_t *&offsets,
                             const gno_t *&adjIds) const = 0;
+
+  /*! \brief Gets adjacency lists for all vertices in a compressed
+             sparse row (CSR) format.
+      \param offsets is device Kokkos::View of size getLocalNumVertices() + 1.
+         The neighboring vertices for vertexId[i]
+         begin at adjIds[offsets[i]].
+         The last element of offsets is the size of the adjIds array.
+      \param adjIds Device Kokkos::View of adjacent vertices for for each vertex.
+   */
+  virtual void getEdgesDeviceView(Kokkos::View<const offset_t *, device_t>& offsets,
+                                  Kokkos::View<const gno_t *, device_t>& adjIds) const = 0;
+
+  /*! \brief Gets adjacency lists for all vertices in a compressed
+             sparse row (CSR) format.
+      \param offsets is host Kokkos::View of size getLocalNumVertices() + 1.
+         The neighboring vertices for vertexId[i]
+         begin at adjIds[offsets[i]].
+         The last element of offsets is the size of the adjIds array.
+      \param adjIds Host Kokkos::View of adjacent vertices for for each vertex.
+   */
+  virtual void getEdgesHostView(Kokkos::View<const offset_t *, host_t>& offsets,
+                                  Kokkos::View<const gno_t *, host_t>& adjIds) const = 0;
 
   /*! \brief Returns the number (0 or greater) of weights per vertex
    */
@@ -176,6 +211,16 @@ public:
   {
     weights = NULL;
     stride = 0;
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  virtual void getVertexWeightsDeviceView(Kokkos::View<const scalar_t *, device_t>& weights, int /* idx */ = 0) const
+  {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  virtual void getVertexWeightsHostView(Kokkos::View<const scalar_t *, host_t>& weights, int /* idx */ = 0) const
+  {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
@@ -203,6 +248,16 @@ public:
   {
     weights = NULL;
     stride = 0;
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  virtual void getEdgeWeightsDeviceView(Kokkos::View<const scalar_t *, device_t>& weights, int /* idx */ = 0) const
+  {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  virtual void getEdgeWeightsHostView(Kokkos::View<const scalar_t *, host_t>& weights, int /* idx */ = 0) const
+  {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
@@ -249,7 +304,7 @@ public:
    *  Also sets to adjacencyEntityType_ to something reasonable:  opposite of
    *  primaryEntityType_.
    */
-  void setPrimaryEntityType(std::string typestr) {
+  void setPrimaryEntityType(const std::string& typestr) {
     if (typestr == "vertex") {
       this->primaryEntityType_ = GRAPH_VERTEX;
       this->adjacencyEntityType_ = GRAPH_EDGE;
@@ -280,7 +335,7 @@ public:
    *  Also sets to primaryEntityType_ to something reasonable:  opposite of
    *  adjacencyEntityType_.
    */
-  void setAdjacencyEntityType(std::string typestr) {
+  void setAdjacencyEntityType(const std::string& typestr) {
     if (typestr == "vertex") {
       this->adjacencyEntityType_ = GRAPH_VERTEX;
       this->primaryEntityType_ = GRAPH_EDGE;
@@ -307,6 +362,34 @@ public:
    }
 
   void getIDsView(const gno_t *&Ids) const override {
+    if (getPrimaryEntityType() == GRAPH_VERTEX)
+      getVertexIDsView(Ids);
+    else {
+      // TODO:  Need getEdgeIDsView?  What is an Edge ID?
+      // TODO:  std::pair<gno_t, gno_t>?
+      std::ostringstream emsg;
+      emsg << __FILE__ << "," << __LINE__
+           << " error:  getIDsView not yet supported for graph edges."
+           << std::endl;
+      throw std::runtime_error(emsg.str());
+    }
+  }
+
+  void getIDsDeviceView(Kokkos::View<const gno_t*, device_t>& Ids) const {
+    if (getPrimaryEntityType() == GRAPH_VERTEX)
+      getVertexIDsView(Ids);
+    else {
+      // TODO:  Need getEdgeIDsView?  What is an Edge ID?
+      // TODO:  std::pair<gno_t, gno_t>?
+      std::ostringstream emsg;
+      emsg << __FILE__ << "," << __LINE__
+           << " error:  getIDsView not yet supported for graph edges."
+           << std::endl;
+      throw std::runtime_error(emsg.str());
+    }
+  }
+
+  void getIDsHostView(Kokkos::View<const gno_t*, host_t>& Ids) const {
     if (getPrimaryEntityType() == GRAPH_VERTEX)
       getVertexIDsView(Ids);
     else {

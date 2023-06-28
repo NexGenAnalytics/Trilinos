@@ -84,14 +84,17 @@ template <typename User, typename UserCoord=User>
 public:
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  typedef typename InputTraits<User>::scalar_t    scalar_t;
-  typedef typename InputTraits<User>::offset_t    offset_t;
-  typedef typename InputTraits<User>::lno_t    lno_t;
-  typedef typename InputTraits<User>::gno_t    gno_t;
-  typedef typename InputTraits<User>::part_t   part_t;
-  typedef typename InputTraits<User>::node_t   node_t;
-  typedef User user_t;
-  typedef UserCoord userCoord_t;
+  using scalar_t = typename InputTraits<User>::scalar_t;
+  using offset_t = typename InputTraits<User>::offset_t;
+  using lno_t = typename InputTraits<User>::lno_t;
+  using gno_t = typename InputTraits<User>::gno_t;
+  using part_t = typename InputTraits<User>::part_t;
+  using node_t = typename InputTraits<User>::node_t;
+  using user_t = User;
+  using userCoord_t = UserCoord;
+
+  using device_t = typename node_t::device_type;
+  using host_t = typename Kokkos::HostSpace::memory_space;
 #endif
 
   /*! \brief Constructor for graph with no weights or coordinates.
@@ -217,6 +220,16 @@ public:
 
     size_t length;
     vertexWeights_[idx].getStridedList(length, weights, stride);
+  }
+
+  void getVertexWeightsDeviceView(Kokkos::View<const scalar_t *, device_t>& weights, int /* idx */ = 0) const override
+  {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  void getVertexWeightsHostView(Kokkos::View<const scalar_t *, host_t>& weights, int /* idx */ = 0) const override
+  {
+    Z2_THROW_NOT_IMPLEMENTED
   }
 
   bool useDegreeAsVertexWeight(int idx) const {return vertexDegreeWeight_[idx];}
