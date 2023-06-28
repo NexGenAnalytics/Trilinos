@@ -50,8 +50,11 @@
 #ifndef _ZOLTAN2_BASICIDENTIFIERADAPTER_HPP_
 #define _ZOLTAN2_BASICIDENTIFIERADAPTER_HPP_
 
+#include <Kokkos_Core.hpp>
 #include <Zoltan2_IdentifierAdapter.hpp>
 #include <Zoltan2_StridedData.hpp>
+
+using Kokkos::ALL;
 
 namespace Zoltan2 {
 
@@ -59,7 +62,7 @@ namespace Zoltan2 {
  *           and their associated weights, if any.
  *
  *  The user supplies the identifiers and weights by way of pointers
- *    to arrays.  
+ *    to arrays.
  *
  *  The template parameter (\c User) is a C++ class type which provides the
  *  actual data types with which the Zoltan2 library will be compiled, through
@@ -87,6 +90,7 @@ public:
   typedef typename InputTraits<User>::gno_t    gno_t;
   typedef typename InputTraits<User>::part_t   part_t;
   typedef typename InputTraits<User>::node_t   node_t;
+  typedef typename node_t::device_type         device_t;
   typedef User user_t;
 
   /*! \brief Constructor
@@ -103,7 +107,7 @@ public:
    *  The values pointed to the arguments must remain valid for the
    *  lifetime of this Adapter.
    */
-  BasicIdentifierAdapter(lno_t numIds, const gno_t *idPtr, 
+  BasicIdentifierAdapter(lno_t numIds, const gno_t *idPtr,
     std::vector<const scalar_t *> &weights, std::vector<int> &weightStrides);
 
   /*! \brief Constructor
@@ -116,31 +120,90 @@ public:
   BasicIdentifierAdapter(lno_t numIds, const gno_t *idPtr):
       numIds_(numIds), idList_(idPtr), weights_() {}
 
+  /*! \brief Constructor
+   *  \param ids should point to a View of identifiers.
+   *  \param weights  a list of pointers to arrays of weights.
+   *      The number of weights per identifier is assumed to be
+   *      \c weights.extent(0).
+   *  \param weightStrides  a list of strides for the \c weights.
+   *     The weight for weight index \c n for \c ids[k] should be
+   *     found at <tt>weights[n][weightStrides[n] * k]</tt>.
+   *     If \c weightStrides.size() is zero, it is assumed all strides are one.
+   *
+   *  The values pointed to the arguments must remain valid for the
+   *  lifetime of this Adapter.
+   */
+  BasicIdentifierAdapter(
+    Kokkos::View<gno_t*, device_t> &ids,
+    Kokkos::View<scalar_t**, device_t> &weights);
+
   ////////////////////////////////////////////////////////////////
   // The Adapter interface.
   ////////////////////////////////////////////////////////////////
 
-  size_t getLocalNumIDs() const { return numIds_; }
-
-  void getIDsView(const gno_t *&Ids) const { Ids = idList_; }
-
-  int getNumWeightsPerID() const { return weights_.size(); }
-
-  void getWeightsView(const scalar_t *&weights, int &stride, int idx) const {
-    if (idx < 0 || idx >= weights_.size()) {
-      std::ostringstream emsg;
-      emsg << __FILE__ << ":" << __LINE__
-           << "  Invalid weight index " << idx << std::endl;
-      throw std::runtime_error(emsg.str());
+  size_t getLocalNumIDs() const {
+    if (using_kokkos) {
+      return idsView_.extent(0);
+    } else {
+      return numIds_;
     }
-    size_t length;
-    weights_[idx].getStridedList(length, weights, stride);
+  }
+
+  void getIDsView(const gno_t *&ids) const {
+    if (using_kokkos) {
+      auto kokkosIds = idsView_;
+      ids = kokkosIds.data();
+    } else {
+      ids = idList_;
+    }
+  }
+
+ // used to be getIDsKokkosView
+  void getIDsView(Kokkos::View<const gno_t *, device_t> &ids) const /*override*/ {
+    ids = idsView_;
+  }
+
+  int getNumWeightsPerID() const {
+    if (using_kokkos) {
+    return weightsView_.extent(1);
+    } else {
+      return weights_.size();
+    }
+  }
+
+  void getWeightsView(const scalar_t *&wgt, int &stride,
+                      int idx = 0) const
+  {
+    if (using_kokkos) {
+      auto h_wgts_2d = weightsView_;
+
+      wgt = Kokkos::subview(h_wgts_2d, Kokkos::ALL, idx).data();
+      stride = 1;
+    } else {
+      if (idx < 0 || idx >= weights_.size()) {
+        std::ostringstream emsg;
+        emsg << __FILE__ << ":" << __LINE__
+            << "  Invalid weight index " << idx << std::endl;
+        throw std::runtime_error(emsg.str());
+      }
+      size_t length;
+      weights_[idx].getStridedList(length, wgt, stride);
+    }
+  }
+
+  // used to be getWeightsKokkosView
+  void getWeightsView(Kokkos::View<scalar_t **, device_t> &wgts) const /*override*/ {
+    wgts = weightsView_;
   }
 
 private:
   lno_t numIds_;
   const gno_t *idList_;
   ArrayRCP<StridedData<lno_t, scalar_t> > weights_;
+  bool using_kokkos = false;
+
+  Kokkos::View<gno_t *, device_t> idsView_;
+  Kokkos::View<scalar_t **, device_t> weightsView_;
 };
 
 ////////////////////////////////////////////////////////////////
@@ -168,7 +231,22 @@ template <typename User>
     }
   }
 }
-  
+
+template <typename User>
+BasicIdentifierAdapter<User>::BasicIdentifierAdapter(
+    Kokkos::View<gno_t *, device_t> &ids,
+    Kokkos::View<scalar_t **, device_t> &weights)
+{
+  using_kokkos = true;
+  idsView_ = Kokkos::View<gno_t *, device_t>("idsView_", ids.extent(0));
+  Kokkos::deep_copy(idsView_, ids);
+
+  weightsView_ = Kokkos::View<scalar_t **, device_t>("weightsView_",
+                                                         weights.extent(0),
+                                                         weights.extent(1));
+  Kokkos::deep_copy(weightsView_, weights);
+}
+
 }  //namespace Zoltan2
-  
+
 #endif

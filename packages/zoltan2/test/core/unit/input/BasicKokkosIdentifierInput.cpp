@@ -43,12 +43,13 @@
 //
 // @HEADER
 //
-// Basic testing of Zoltan2::BasicKokkosIdentifierAdapter 
+// Basic testing of Zoltan2::BasicKokkosIdentifierAdapter
 
 #include <Kokkos_Core.hpp>
 #include <Teuchos_DefaultComm.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_CommHelpers.hpp>
+#include <Zoltan2_BasicIdentifierAdapter.hpp>
 #include <Zoltan2_BasicKokkosIdentifierAdapter.hpp>
 #include <Zoltan2_TestHelpers.hpp>
 
@@ -82,7 +83,8 @@ int main(int narg, char *arg[]) {
     weights(i, 1) = (nprocs - rank) / (i + 1);
   });
 
-  Zoltan2::BasicKokkosIdentifierAdapter<userTypes_t> ia(myIds, weights);
+  Zoltan2::BasicIdentifierAdapter<userTypes_t> ia(myIds, weights);
+  // Zoltan2::BasicKokkosIdentifierAdapter<userTypes_t> ia(myIds, weights);
 
   if (!fail && ia.getLocalNumIDs() != size_t(numLocalIds)) {
     fail = 4;
@@ -94,9 +96,9 @@ int main(int narg, char *arg[]) {
   Kokkos::View<const zgno_t *, typename znode_t::device_type> globalIdsIn;
   Kokkos::View<zscalar_t **, typename znode_t::device_type> weightsIn;
 
-  ia.getIDsKokkosView(globalIdsIn);
+  ia.getIDsView(globalIdsIn);
 
-  ia.getWeightsKokkosView(weightsIn);
+  ia.getWeightsView(weightsIn);
 
   auto host_globalIdsIn = Kokkos::create_mirror_view(globalIdsIn);
   Kokkos::deep_copy(host_globalIdsIn, globalIdsIn);
