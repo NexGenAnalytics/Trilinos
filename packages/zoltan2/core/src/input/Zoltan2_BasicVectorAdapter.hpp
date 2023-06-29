@@ -289,10 +289,23 @@ public:
 
   void getEntriesKokkosView(
     // coordinates in MJ are LayoutLeft since Tpetra Multivector gives LayoutLeft
-    Kokkos::View<scalar_t **, Kokkos::LayoutLeft,
-    typename node_t::device_type> & entries) const
+    typename AdapterWithCoords<User>::CoordsDeviceView& entries) const
   {
-    entries = kokkos_entries_;
+    entries = kEntries_;
+  }
+
+  void getEntriesHostView(
+    typename AdapterWithCoords<User>::CoordsHostView& entries) const
+  {
+    auto hostEntries = Kokkos::create_mirror_view(kEntries_);
+    Kokkos::deep_copy(hostEntries, kEntries_);
+    entries = kEntries_;
+  }
+
+  void getEntriesDeviceView(
+    typename AdapterWithCoords<User>::CoordsDeviceView& entries) const
+  {
+    entries = kEntries_;
   }
 
 private:
@@ -306,7 +319,7 @@ private:
 
   // coordinates in MJ are LayoutLeft since Tpetra Multivector gives LayoutLeft
   Kokkos::View<scalar_t **, Kokkos::LayoutLeft,
-    typename node_t::device_type> kokkos_entries_;
+    typename node_t::device_type> kEntries_;
 
   int numWeights_;
   ArrayRCP<StridedData<lno_t, scalar_t> > weights_;
@@ -340,7 +353,7 @@ private:
 
       // setup kokkos entries
       // coordinates in MJ are LayoutLeft since Tpetra Multivector gives LayoutLeft
-      kokkos_entries_ = Kokkos::View<scalar_t **, Kokkos::LayoutLeft,
+      kEntries_ = Kokkos::View<scalar_t **, Kokkos::LayoutLeft,
         typename node_t::device_type>(
         Kokkos::ViewAllocateWithoutInitializing("entries"),
         numIds_, numEntriesPerID_);
@@ -349,7 +362,7 @@ private:
       const scalar_t * entriesPtr;
 
       auto host_kokkos_entries =
-        Kokkos::create_mirror_view(this->kokkos_entries_);
+        Kokkos::create_mirror_view(this->kEntries_);
 
       for (int idx=0; idx < numEntriesPerID_; idx++) {
         entries_[idx].getStridedList(length, entriesPtr, stride);
@@ -358,7 +371,7 @@ private:
           host_kokkos_entries(fill_index++,idx) = entriesPtr[n*stride];
         }
       }
-      Kokkos::deep_copy(this->kokkos_entries_, host_kokkos_entries);
+      Kokkos::deep_copy(this->kEntries_, host_kokkos_entries);
     }
 
     if (numWeights_) {
