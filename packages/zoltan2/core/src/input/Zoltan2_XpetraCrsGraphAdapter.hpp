@@ -95,6 +95,8 @@ public:
   typedef Xpetra::CrsGraph<lno_t, gno_t, node_t> xgraph_t;
   typedef User user_t;
   typedef UserCoord userCoord_t;
+
+  using Base = GraphAdapter<User,UserCoord>;
 #endif
 
   /*! \brief Constructor for graph with no weights or coordinates.
@@ -123,6 +125,9 @@ public:
 
   void setWeights(const scalar_t *val, int stride, int idx);
 
+  void setWeightsDevice(typename Base::ConstWeightsDeviceView& val, int idx) {}
+  void setWeightsHost(typename Base::ConstWeightsHostView& val, int idx) {}
+
   /*! \brief Provide a pointer to vertex weights.
    *    \param val A pointer to the weights for index \c idx.
    *    \param stride    A stride for the \c val array.  If \stride is
@@ -139,6 +144,8 @@ public:
    */
 
   void setVertexWeights(const scalar_t *val, int stride, int idx);
+  void setVertexWeightsDevice(typename Base::ConstWeightsDeviceView& val, int idx);
+  void setVertexWeightsHost(typename Base::ConstWeightsHostView& val, int idx);
 
   /*! \brief Specify an index for which the weight should be
               the degree of the entity
@@ -177,6 +184,8 @@ public:
    */
 
   void setEdgeWeights(const scalar_t *val, int stride, int idx);
+  void setEdgeWeightsDevice(typename Base::ConstWeightsDeviceView& val, int idx);
+  void setEdgeWeightsHost(typename Base::ConstWeightsHostView& val, int idx);
 
   /*! \brief Access to Xpetra-wrapped user's graph.
    */
@@ -205,6 +214,15 @@ public:
       ids = graph_->getRowMap()->getLocalElementList().getRawPtr();
   }
 
+  void getVertexIDsDeviceView(typename Base::ConstIdsDeviceView& ids) const {
+
+  }
+
+  void getVertexIDsHostView(typename Base::ConstIdsHostView& ids) const {
+
+
+  }
+
   size_t getLocalNumEdges() const { return graph_->getLocalNumEntries(); }
 
   void getEdgesView(const offset_t *&offsets, const gno_t *&adjIds) const
@@ -212,6 +230,14 @@ public:
     offsets = offs_.getRawPtr();
     adjIds = (getLocalNumEdges() ? adjids_.getRawPtr() : NULL);
   }
+
+    void getEdgesDeviceView(typename Base::ConstOffsetsDeviceView &offsets,
+                          typename Base::ConstIdsDeviceView &adjIds) const {
+
+  }
+
+  void getEdgesHostView(typename Base::ConstOffsetsHostView &offsets,
+                        typename Base::ConstIdsHostView &adjIds) const {}
 
   int getNumWeightsPerVertex() const { return nWeightsPerVertex_;}
 
@@ -229,6 +255,17 @@ public:
 
     size_t length;
     vertexWeights_[idx].getStridedList(length, weights, stride);
+  }
+
+    void
+  getVertexWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+                             int /* idx */ = 0) const override {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  void getVertexWeightsHostView(typename Base::ConstWeightsHostView &weights,
+                                int /* idx */ = 0) const override {
+    Z2_THROW_NOT_IMPLEMENTED
   }
 
   bool useDegreeAsVertexWeight(int idx) const {return vertexDegreeWeight_[idx];}
@@ -249,6 +286,18 @@ public:
     size_t length;
     edgeWeights_[idx].getStridedList(length, weights, stride);
   }
+
+    void
+  getEdgeWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+                           int /* idx */ = 0) const override {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  void getEdgeWeightsHostView(typename Base::ConstWeightsHostView &weights,
+                              int /* idx */ = 0) const override {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
 
 
   template <typename Adapter>

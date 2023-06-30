@@ -134,6 +134,9 @@ public:
   using scalarsDeviceView = Kokkos::View<scalar_t *, device_t>;
   using scalarsHostView = typename scalarsDeviceView::HostMirror;
 
+  using ConstWeightsDeviceView = Kokkos::View<const scalar_t **, device_t>;
+  using ConstWeightsHostView = typename ConstWeightsDeviceView::HostMirror;
+
   using WeightsDeviceView = Kokkos::View<scalar_t **, device_t>;
   using WeightsHostView = typename WeightsDeviceView::HostMirror;
 

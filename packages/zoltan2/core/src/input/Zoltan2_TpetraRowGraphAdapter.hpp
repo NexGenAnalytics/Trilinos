@@ -50,10 +50,11 @@
 #ifndef _ZOLTAN2_TPETRAROWGRAPHADAPTER_HPP_
 #define _ZOLTAN2_TPETRAROWGRAPHADAPTER_HPP_
 
-#include <Zoltan2_GraphAdapter.hpp>
-#include <Zoltan2_StridedData.hpp>
-#include <Zoltan2_PartitioningHelpers.hpp>
 #include <Tpetra_RowGraph.hpp>
+#include <Zoltan2_GraphAdapter.hpp>
+#include <Zoltan2_PartitioningHelpers.hpp>
+#include <Zoltan2_StridedData.hpp>
+#include <string>
 
 namespace Zoltan2 {
 
@@ -78,11 +79,10 @@ namespace Zoltan2 {
     the second template parameter to \c double.
 */
 
-template <typename User, typename UserCoord=User>
-  class TpetraRowGraphAdapter : public GraphAdapter<User,UserCoord> {
+template <typename User, typename UserCoord = User>
+class TpetraRowGraphAdapter : public GraphAdapter<User, UserCoord> {
 
 public:
-
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   using scalar_t = typename InputTraits<User>::scalar_t;
   using offset_t = typename InputTraits<User>::offset_t;
@@ -93,8 +93,7 @@ public:
   using user_t = User;
   using userCoord_t = UserCoord;
 
-  using device_t = typename node_t::device_type;
-  using host_t = typename Kokkos::HostSpace::memory_space;
+  using Base = GraphAdapter<User, UserCoord>;
 #endif
 
   /*! \brief Constructor for graph with no weights or coordinates.
@@ -106,8 +105,8 @@ public:
    * one does because the user is obviously a Trilinos user.
    */
 
-  TpetraRowGraphAdapter(const RCP<const User> &ingraph,
-                        int nVtxWeights=0, int nEdgeWeights=0);
+  TpetraRowGraphAdapter(const RCP<const User> &ingraph, int nVtxWeights = 0,
+                        int nEdgeWeights = 0);
 
   /*! \brief Provide a pointer to weights for the primary entity type.
    *    \param val A pointer to the weights for index \c idx.
@@ -122,6 +121,9 @@ public:
    */
 
   void setWeights(const scalar_t *val, int stride, int idx);
+
+  void setWeightsDevice(typename Base::ConstWeightsDeviceView &val, int idx);
+  void setWeightsHost(typename Base::ConstWeightsHostView &val, int idx);
 
   /*! \brief Provide a pointer to vertex weights.
    *    \param val A pointer to the weights for index \c idx.
@@ -139,6 +141,10 @@ public:
    */
 
   void setVertexWeights(const scalar_t *val, int stride, int idx);
+
+  void setVertexWeightsDevice(typename Base::ConstWeightsDeviceView &val,
+                              int idx);
+  void setVertexWeightsHost(typename Base::ConstWeightsHostView &val, int idx);
 
   /*! \brief Specify an index for which the weight should be
               the degree of the entity
@@ -177,10 +183,9 @@ public:
    */
 
   void setEdgeWeights(const scalar_t *val, int stride, int idx);
-
-  ////////////////////////////////////////////////////
-  // The Adapter interface.
-  ////////////////////////////////////////////////////
+  void setEdgeWeightsDevice(typename Base::ConstWeightsDeviceView &val,
+                            int idx);
+  void setEdgeWeightsHost(typename Base::ConstWeightsHostView &val, int idx);
 
   ////////////////////////////////////////////////////
   // The GraphAdapter interface.
@@ -188,93 +193,115 @@ public:
 
   // TODO:  Assuming rows == objects;
   // TODO:  Need to add option for columns or nonzeros?
-  size_t getLocalNumVertices() const { return graph_->getLocalNumRows(); }
+  size_t getLocalNumVertices() const override {
+    return graph_->getLocalNumRows();
+  }
 
-  void getVertexIDsView(const gno_t *&ids) const
-  {
+  void getVertexIDsView(const gno_t *&ids) const override {
     ids = NULL;
     if (getLocalNumVertices())
       ids = graph_->getRowMap()->getLocalElementList().getRawPtr();
   }
 
-  size_t getLocalNumEdges() const { return graph_->getLocalNumEntries(); }
+  void getVertexIDsDeviceView(
+      typename Base::ConstIdsDeviceView &ids) const override {}
 
-  void getEdgesView(const offset_t *&offsets, const gno_t *&adjIds) const
-  {
-    offsets = offs_.getRawPtr();
-    adjIds = (getLocalNumEdges() ? adjids_.getRawPtr() : NULL);
+  void
+  getVertexIDsHostView(typename Base::ConstIdsHostView &ids) const override {}
+
+  size_t getLocalNumEdges() const override {
+    return graph_->getLocalNumEntries();
   }
 
-  int getNumWeightsPerVertex() const { return nWeightsPerVertex_;}
+  void getEdgesView(const offset_t *&offsets,
+                    const gno_t *&adjIds) const override {
+    offsets = offsHost_.data();
+    adjIds = (getLocalNumEdges() ? adjIdsHost_.data() : NULL);
+  }
+
+  void
+  getEdgesDeviceView(typename Base::ConstOffsetsDeviceView &offsets,
+                     typename Base::ConstIdsDeviceView &adjIds) const override {
+
+  }
+
+  void
+  getEdgesHostView(typename Base::ConstOffsetsHostView &offsets,
+                   typename Base::ConstIdsHostView &adjIds) const override {}
+
+  int getNumWeightsPerVertex() const override { return nWeightsPerVertex_; }
 
   void getVertexWeightsView(const scalar_t *&weights, int &stride,
-                            int idx) const
-  {
-    if(idx<0 || idx >= nWeightsPerVertex_)
-    {
-      std::ostringstream emsg;
-      emsg << __FILE__ << ":" << __LINE__
-           << "  Invalid vertex weight index " << idx << std::endl;
-      throw std::runtime_error(emsg.str());
-    }
+                            int idx) const override {
+
+    AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+                    "Invalid vertex weight index.");
 
     size_t length;
     vertexWeights_[idx].getStridedList(length, weights, stride);
   }
 
-  void getVertexWeightsDeviceView(Kokkos::View<const scalar_t *, device_t>& weights, int /* idx */ = 0) const override
-  {
+  void
+  getVertexWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+                             int /* idx */ = 0) const override {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  void getVertexWeightsHostView(Kokkos::View<const scalar_t *, host_t>& weights, int /* idx */ = 0) const override
-  {
+  void getVertexWeightsHostView(typename Base::ConstWeightsHostView &weights,
+                                int /* idx */ = 0) const override {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  bool useDegreeAsVertexWeight(int idx) const {return vertexDegreeWeight_[idx];}
+  bool useDegreeAsVertexWeight(int idx) const override {
+    return vertexDegreeWeight_[idx];
+  }
 
-  int getNumWeightsPerEdge() const { return nWeightsPerEdge_;}
+  int getNumWeightsPerEdge() const override { return nWeightsPerEdge_; }
 
-  void getEdgeWeightsView(const scalar_t *&weights, int &stride, int idx) const
-  {
-    if(idx<0 || idx >= nWeightsPerEdge_)
-    {
-      std::ostringstream emsg;
-      emsg << __FILE__ << ":" << __LINE__
-           << "  Invalid edge weight index " << idx << std::endl;
-      throw std::runtime_error(emsg.str());
-    }
+  void getEdgeWeightsView(const scalar_t *&weights, int &stride,
+                          int idx) const override {
+    AssertCondition(idx >= 0 and idx < nWeightsPerEdge_,
+                    "Invalid edge weight index.");
 
     size_t length;
     edgeWeights_[idx].getStridedList(length, weights, stride);
   }
 
+  void getEdgeWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+                                int /* idx */ = 0) const override {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  void getEdgeWeightsHostView(typename Base::ConstWeightsHostView &weights,
+                              int /* idx */ = 0) const override {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
 
   template <typename Adapter>
-    void applyPartitioningSolution(const User &in, User *&out,
+  void applyPartitioningSolution(
+      const User &in, User *&out,
       const PartitioningSolution<Adapter> &solution) const;
 
   template <typename Adapter>
-    void applyPartitioningSolution(const User &in, RCP<User> &out,
+  void applyPartitioningSolution(
+      const User &in, RCP<User> &out,
       const PartitioningSolution<Adapter> &solution) const;
 
 private:
-
   RCP<const User> graph_;
 
-  ArrayRCP<const offset_t> offs_;
-  ArrayRCP<const gno_t> adjids_;
+  typename Base::ConstOffsetsHostView offsHost_;
+  typename Base::ConstIdsHostView adjIdsHost_;
 
   int nWeightsPerVertex_;
-  ArrayRCP<StridedData<lno_t, scalar_t> > vertexWeights_;
+  ArrayRCP<StridedData<lno_t, scalar_t>> vertexWeights_;
   ArrayRCP<bool> vertexDegreeWeight_;
 
   int nWeightsPerEdge_;
-  ArrayRCP<StridedData<lno_t, scalar_t> > edgeWeights_;
+  ArrayRCP<StridedData<lno_t, scalar_t>> edgeWeights_;
 
   int coordinateDim_;
-  ArrayRCP<StridedData<lno_t, scalar_t> > coords_;
+  ArrayRCP<StridedData<lno_t, scalar_t>> coords_;
 
   RCP<User> doMigration(const User &from, size_t numLocalRows,
                         const gno_t *myNewRows) const;
@@ -285,170 +312,145 @@ private:
 /////////////////////////////////////////////////////////////////
 
 template <typename User, typename UserCoord>
-  TpetraRowGraphAdapter<User,UserCoord>::TpetraRowGraphAdapter(
-    const RCP<const User> &ingraph, int nVtxWgts, int nEdgeWgts):
-      graph_(ingraph), offs_(),
-      adjids_(),
-      nWeightsPerVertex_(nVtxWgts), vertexWeights_(), vertexDegreeWeight_(),
-      nWeightsPerEdge_(nEdgeWgts), edgeWeights_(),
-      coordinateDim_(0), coords_()
-{
-  typedef StridedData<lno_t,scalar_t> input_t;
+TpetraRowGraphAdapter<User, UserCoord>::TpetraRowGraphAdapter(
+    const RCP<const User> &ingraph, int nVtxWgts, int nEdgeWgts)
+    : graph_(ingraph), nWeightsPerVertex_(nVtxWgts),
+      vertexWeights_(), vertexDegreeWeight_(), nWeightsPerEdge_(nEdgeWgts),
+      edgeWeights_(), coordinateDim_(0), coords_() {
+  using strided_t = StridedData<lno_t, scalar_t>;
+  using localInds_t = typename User::nonconst_local_inds_host_view_type;
 
-  size_t nvtx = graph_->getLocalNumRows();
-  size_t nedges = graph_->getLocalNumEntries();
-  size_t maxnumentries =
-         graph_->getLocalMaxNumRowEntries(); // Diff from CrsMatrix
+  const auto nvtx = graph_->getLocalNumRows();
+  const auto nedges = graph_->getLocalNumEntries();
+  // Diff from CrsMatrix
+  const auto maxNumEntries = graph_->getLocalMaxNumRowEntries();
 
   // Unfortunately we have to copy the offsets and edge Ids
   // because edge Ids are not usually stored in vertex id order.
 
-  size_t n = nvtx + 1;
-  offset_t *offs = new offset_t [n];
+  adjIdsHost_ = typename Base::ConstIdsHostView("adjIdsHost_", nedges);
+  offsHost_ = typename Base::ConstOffsetsHostView("offsHost_", nvtx + 1);
 
-  if (!offs)
-  {
-    std::cerr << "Error: " << __FILE__ << ", " << __LINE__<< std::endl;
-    std::cerr << n << " objects" << std::endl;
-    throw std::bad_alloc();
-  }
+  localInds_t nbors("nbors", maxNumEntries);
 
-  gno_t *adjids = NULL;
-  if (nedges)
-  {
-    adjids = new gno_t [nedges];
-
-    if (!adjids)
-    {
-      std::cerr << "Error: " << __FILE__ << ", " << __LINE__<< std::endl;
-      std::cerr << nedges << " objects" << std::endl;
-      throw std::bad_alloc();
+  for (size_t v = 0; v < nvtx; v++) {
+    size_t numColInds = 0;
+    graph_->getLocalRowCopy(v, nbors, numColInds); // Diff from CrsGraph
+    offsHost_(v + 1) = offsHost_[v] + numColInds;
+    for (offset_t e = offsHost_(v), i = 0; e < offsHost_(v + 1); e++) {
+      adjIdsHost_(e) = graph_->getColMap()->getGlobalElement(nbors[i++]);
     }
   }
-
-  typename User::nonconst_local_inds_host_view_type  nbors("nbors", maxnumentries);
-
-  offs[0] = 0;
-  for (size_t v=0; v < nvtx; v++){
-    graph_->getLocalRowCopy(v, nbors, nedges);  // Diff from CrsGraph
-    offs[v+1] = offs[v] + nedges;
-    for (offset_t e=offs[v], i=0; e < offs[v+1]; e++) {
-        adjids[e] = graph_->getColMap()->getGlobalElement(nbors[i++]);
-    }
-  }
-
-  offs_ = arcp(offs, 0, n, true);
-  adjids_ = arcp(adjids, 0, nedges, true);
 
   if (nWeightsPerVertex_ > 0) {
     vertexWeights_ =
-          arcp(new input_t[nWeightsPerVertex_], 0, nWeightsPerVertex_, true);
+        arcp(new strided_t[nWeightsPerVertex_], 0, nWeightsPerVertex_, true);
     vertexDegreeWeight_ =
-          arcp(new bool[nWeightsPerVertex_], 0, nWeightsPerVertex_, true);
-    for (int i=0; i < nWeightsPerVertex_; i++)
+        arcp(new bool[nWeightsPerVertex_], 0, nWeightsPerVertex_, true);
+    for (int i = 0; i < nWeightsPerVertex_; i++)
       vertexDegreeWeight_[i] = false;
   }
 
   if (nWeightsPerEdge_ > 0)
-    edgeWeights_ = arcp(new input_t[nWeightsPerEdge_], 0, nWeightsPerEdge_, true);
+    edgeWeights_ =
+        arcp(new strided_t[nWeightsPerEdge_], 0, nWeightsPerEdge_, true);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-  void TpetraRowGraphAdapter<User,UserCoord>::setWeights(
-    const scalar_t *weightVal, int stride, int idx)
-{
+void TpetraRowGraphAdapter<User, UserCoord>::setWeights(
+    const scalar_t *weightVal, int stride, int idx) {
   if (this->getPrimaryEntityType() == GRAPH_VERTEX)
     setVertexWeights(weightVal, stride, idx);
   else
     setEdgeWeights(weightVal, stride, idx);
 }
 
+template <typename User, typename UserCoord>
+void TpetraRowGraphAdapter<User, UserCoord>::setWeightsDevice(
+    typename Base::ConstWeightsDeviceView &val, int idx) {
+  if (this->getPrimaryEntityType() == GRAPH_VERTEX)
+    setVertexWeightsDevice(val, idx);
+  else
+    setEdgeWeightsDevice(val, idx);
+}
+
+template <typename User, typename UserCoord>
+void TpetraRowGraphAdapter<User, UserCoord>::setWeightsHost(
+    typename Base::ConstWeightsHostView &val, int idx) {
+  if (this->getPrimaryEntityType() == GRAPH_VERTEX)
+    setVertexWeightsHost(val, idx);
+  else
+    setEdgeWeightsHost(val, idx);
+}
+
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-  void TpetraRowGraphAdapter<User,UserCoord>::setVertexWeights(
-    const scalar_t *weightVal, int stride, int idx)
-{
-  typedef StridedData<lno_t,scalar_t> input_t;
-  if(idx<0 || idx >= nWeightsPerVertex_)
-  {
-      std::ostringstream emsg;
-      emsg << __FILE__ << ":" << __LINE__
-           << "  Invalid vertex weight index " << idx << std::endl;
-      throw std::runtime_error(emsg.str());
-  }
+void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeights(
+    const scalar_t *weightVal, int stride, int idx) {
+  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+                  "Invalid vertex weight index.");
 
   size_t nvtx = getLocalNumVertices();
-  ArrayRCP<const scalar_t> weightV(weightVal, 0, nvtx*stride, false);
+  ArrayRCP<const scalar_t> weightV(weightVal, 0, nvtx * stride, false);
   vertexWeights_[idx] = input_t(weightV, stride);
 }
 
+template <typename User, typename UserCoord>
+void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsDevice(
+    typename Base::ConstWeightsDeviceView &val, int idx) {
+
+  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+                  "Invalid vertex weight index.");
+}
+
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-  void TpetraRowGraphAdapter<User,UserCoord>::setWeightIsDegree(
-    int idx)
-{
+void TpetraRowGraphAdapter<User, UserCoord>::setWeightIsDegree(int idx) {
   if (this->getPrimaryEntityType() == GRAPH_VERTEX)
     setVertexWeightIsDegree(idx);
   else {
-    std::ostringstream emsg;
-    emsg << __FILE__ << "," << __LINE__
-         << " error:  setWeightIsNumberOfNonZeros is supported only for"
-         << " vertices" << std::endl;
-    throw std::runtime_error(emsg.str());
+    AssertCondition(
+        true, "setWeightIsNumberOfNonZeros is supported only for vertices");
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-  void TpetraRowGraphAdapter<User,UserCoord>::setVertexWeightIsDegree(
-    int idx)
-{
-  if(idx<0 || idx >= nWeightsPerVertex_)
-  {
-      std::ostringstream emsg;
-      emsg << __FILE__ << ":" << __LINE__
-           << "  Invalid vertex weight index " << idx << std::endl;
-      throw std::runtime_error(emsg.str());
-  }
+void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightIsDegree(int idx) {
+  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+                  "Invalid vertex weight index.");
 
   vertexDegreeWeight_[idx] = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-  void TpetraRowGraphAdapter<User,UserCoord>::setEdgeWeights(
-    const scalar_t *weightVal, int stride, int idx)
-{
-  typedef StridedData<lno_t,scalar_t> input_t;
+void TpetraRowGraphAdapter<User, UserCoord>::setEdgeWeights(
+    const scalar_t *weightVal, int stride, int idx) {
+  typedef StridedData<lno_t, scalar_t> input_t;
 
-  if(idx<0 || idx >= nWeightsPerEdge_)
-  {
-      std::ostringstream emsg;
-      emsg << __FILE__ << ":" << __LINE__
-           << "  Invalid edge weight index " << idx << std::endl;
-      throw std::runtime_error(emsg.str());
-  }
+  AssertCondition(idx >= 0 and idx < nWeightsPerEdge_,
+                  "Invalid edge weight index" + std::to_string(idx));
 
   size_t nedges = getLocalNumEdges();
-  ArrayRCP<const scalar_t> weightV(weightVal, 0, nedges*stride, false);
+  ArrayRCP<const scalar_t> weightV(weightVal, 0, nedges * stride, false);
   edgeWeights_[idx] = input_t(weightV, stride);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-  template<typename Adapter>
-    void TpetraRowGraphAdapter<User,UserCoord>::applyPartitioningSolution(
-      const User &in, User *&out,
-      const PartitioningSolution<Adapter> &solution) const
-{
+template <typename Adapter>
+void TpetraRowGraphAdapter<User, UserCoord>::applyPartitioningSolution(
+    const User &in, User *&out,
+    const PartitioningSolution<Adapter> &solution) const {
   // Get an import list (rows to be received)
   size_t numNewVtx;
   ArrayRCP<gno_t> importList;
-  try{
-    numNewVtx = Zoltan2::getImportList<Adapter,
-                                       TpetraRowGraphAdapter<User,UserCoord> >
-                                      (solution, this, importList);
+  try {
+    numNewVtx =
+        Zoltan2::getImportList<Adapter, TpetraRowGraphAdapter<User, UserCoord>>(
+            solution, this, importList);
   }
   Z2_FORWARD_EXCEPTIONS;
 
@@ -460,18 +462,17 @@ template <typename User, typename UserCoord>
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-  template<typename Adapter>
-    void TpetraRowGraphAdapter<User,UserCoord>::applyPartitioningSolution(
-      const User &in, RCP<User> &out,
-      const PartitioningSolution<Adapter> &solution) const
-{
+template <typename Adapter>
+void TpetraRowGraphAdapter<User, UserCoord>::applyPartitioningSolution(
+    const User &in, RCP<User> &out,
+    const PartitioningSolution<Adapter> &solution) const {
   // Get an import list (rows to be received)
   size_t numNewVtx;
   ArrayRCP<gno_t> importList;
-  try{
-    numNewVtx = Zoltan2::getImportList<Adapter,
-                                       TpetraRowGraphAdapter<User,UserCoord> >
-                                      (solution, this, importList);
+  try {
+    numNewVtx =
+        Zoltan2::getImportList<Adapter, TpetraRowGraphAdapter<User, UserCoord>>(
+            solution, this, importList);
   }
   Z2_FORWARD_EXCEPTIONS;
 
@@ -479,15 +480,10 @@ template <typename User, typename UserCoord>
   out = doMigration(in, numNewVtx, importList.getRawPtr());
 }
 
-
 ////////////////////////////////////////////////////////////////////////////
-template < typename User, typename UserCoord>
-RCP<User> TpetraRowGraphAdapter<User,UserCoord>::doMigration(
-  const User &from,
-  size_t numLocalRows,
-  const gno_t *myNewRows
-) const
-{
+template <typename User, typename UserCoord>
+RCP<User> TpetraRowGraphAdapter<User, UserCoord>::doMigration(
+    const User &from, size_t numLocalRows, const gno_t *myNewRows) const {
   typedef Tpetra::Map<lno_t, gno_t, node_t> map_t;
   typedef Tpetra::CrsGraph<lno_t, gno_t, node_t> tcrsgraph_t;
 
@@ -502,7 +498,7 @@ RCP<User> TpetraRowGraphAdapter<User,UserCoord>::doMigration(
   // approach it might be clearer what's going on here
   const tcrsgraph_t *pCrsGraphSrc = dynamic_cast<const tcrsgraph_t *>(&from);
 
-  if(!pCrsGraphSrc) {
+  if (!pCrsGraphSrc) {
     throw std::logic_error("TpetraRowGraphAdapter cannot migrate data for "
                            "your RowGraph; it can migrate data only for "
                            "Tpetra::CrsGraph.  "
@@ -518,7 +514,7 @@ RCP<User> TpetraRowGraphAdapter<User,UserCoord>::doMigration(
 
   // target map
   ArrayView<const gno_t> rowList(myNewRows, numLocalRows);
-  const RCP<const Teuchos::Comm<int> > &comm = from.getComm();
+  const RCP<const Teuchos::Comm<int>> &comm = from.getComm();
   RCP<const map_t> tmap = rcp(new map_t(numGlobalRows, rowList, base, comm));
 
   // importer
@@ -528,39 +524,37 @@ RCP<User> TpetraRowGraphAdapter<User,UserCoord>::doMigration(
   typedef Tpetra::Vector<gno_t, lno_t, gno_t, node_t> vector_t;
   vector_t numOld(smap);
   vector_t numNew(tmap);
-  for (int lid=0; lid < oldNumElts; lid++){
+  for (int lid = 0; lid < oldNumElts; lid++) {
     numOld.replaceGlobalValue(smap->getGlobalElement(lid),
-      from.getNumEntriesInLocalRow(lid));
+                              from.getNumEntriesInLocalRow(lid));
   }
   numNew.doImport(numOld, importer, Tpetra::INSERT);
 
   size_t numElts = tmap->getLocalNumElements();
   ArrayRCP<const gno_t> nnz;
   if (numElts > 0)
-    nnz = numNew.getData(0);    // hangs if vector len == 0
+    nnz = numNew.getData(0); // hangs if vector len == 0
 
   ArrayRCP<const size_t> nnz_size_t;
 
-  if (numElts && sizeof(gno_t) != sizeof(size_t)){
-    size_t *vals = new size_t [numElts];
+  if (numElts && sizeof(gno_t) != sizeof(size_t)) {
+    size_t *vals = new size_t[numElts];
     nnz_size_t = arcp(vals, 0, numElts, true);
-    for (size_t i=0; i < numElts; i++){
+    for (size_t i = 0; i < numElts; i++) {
       vals[i] = static_cast<size_t>(nnz[i]);
     }
-  }
-  else{
+  } else {
     nnz_size_t = arcp_reinterpret_cast<const size_t>(nnz);
   }
 
   // target graph
-  RCP<tcrsgraph_t> G =
-    rcp(new tcrsgraph_t(tmap, nnz_size_t()));
+  RCP<tcrsgraph_t> G = rcp(new tcrsgraph_t(tmap, nnz_size_t()));
 
   G->doImport(*pCrsGraphSrc, importer, Tpetra::INSERT);
   G->fillComplete();
   return Teuchos::rcp_dynamic_cast<User>(G);
 }
 
-}  //namespace Zoltan2
+} // namespace Zoltan2
 
 #endif

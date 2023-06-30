@@ -47,7 +47,6 @@
     \brief Defines the GraphAdapter interface.
 */
 
-
 #ifndef _ZOLTAN2_GRAPHADAPTER_HPP_
 #define _ZOLTAN2_GRAPHADAPTER_HPP_
 
@@ -58,10 +57,7 @@ namespace Zoltan2 {
 
 /*!  \brief Enumerated entity type for graphs:  Vertices or Edges
  */
-enum GraphEntityType {
-  GRAPH_VERTEX,
-  GRAPH_EDGE
-};
+enum GraphEntityType { GRAPH_VERTEX, GRAPH_EDGE };
 
 /*!  \brief GraphAdapter defines the interface for graph-based user data.
 
@@ -95,25 +91,24 @@ enum GraphEntityType {
 
 */
 
-template <typename User, typename UserCoord=User>
-  class GraphAdapter : public AdapterWithCoordsWrapper<User, UserCoord> {
+template <typename User, typename UserCoord = User>
+class GraphAdapter : public AdapterWithCoordsWrapper<User, UserCoord> {
 private:
-  enum GraphEntityType primaryEntityType_; // Entity (vertex or edge) to
-                                          // be partitioned, ordered,
-                                          // colored, matched, etc.
-  enum GraphEntityType adjacencyEntityType_; // Entity (edge or vertex)
-                                            // describing adjacencies;
-                                            // typically opposite of
-                                            // primaryEntityType_.
-  VectorAdapter<UserCoord> *coordinateInput_;  // A VectorAdapter containing
-                                               // coordinates of the objects
-                                               // with primaryEntityType_;
-                                               // optional.
-  bool haveCoordinateInput_;                   // Flag indicating whether
-                                               // coordinateInput_ is provided.
+  enum GraphEntityType primaryEntityType_;    // Entity (vertex or edge) to
+                                              // be partitioned, ordered,
+                                              // colored, matched, etc.
+  enum GraphEntityType adjacencyEntityType_;  // Entity (edge or vertex)
+                                              // describing adjacencies;
+                                              // typically opposite of
+                                              // primaryEntityType_.
+  VectorAdapter<UserCoord> *coordinateInput_; // A VectorAdapter containing
+                                              // coordinates of the objects
+                                              // with primaryEntityType_;
+                                              // optional.
+  bool haveCoordinateInput_;                  // Flag indicating whether
+                                              // coordinateInput_ is provided.
 
 public:
-
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   using scalar_t = typename InputTraits<User>::scalar_t;
   using lno_t = typename InputTraits<User>::lno_t;
@@ -123,18 +118,15 @@ public:
   using user_t = User;
   using userCoord_t = UserCoord;
   using base_adapter_t = GraphAdapter<User, UserCoord>;
-
-  using device_t = typename node_t::device_type;
-  using host_t = typename Kokkos::HostSpace::memory_space;
+  using Base = AdapterWithCoordsWrapper<User, UserCoord>;
 #endif
 
-  enum BaseAdapterType adapterType() const override {return GraphAdapterType;}
+  enum BaseAdapterType adapterType() const override { return GraphAdapterType; }
 
   // Default GraphEntityType is GRAPH_VERTEX.
-  GraphAdapter() : primaryEntityType_(GRAPH_VERTEX),
-                   adjacencyEntityType_(GRAPH_EDGE),
-                   coordinateInput_(),
-                   haveCoordinateInput_(false) {}
+  GraphAdapter()
+      : primaryEntityType_(GRAPH_VERTEX), adjacencyEntityType_(GRAPH_EDGE),
+        coordinateInput_(), haveCoordinateInput_(false) {}
 
   ////////////////////////////////////////////////////////////////////////////
   // Methods to be defined in derived classes.
@@ -153,14 +145,21 @@ public:
   virtual void getVertexIDsView(const gno_t *&vertexIds) const = 0;
 
   /*! \brief Sets pointers to this process' graph entries.
-      \param vertexIds will on return a device Kokkos::View with vertex global Ids
+      \param vertexIds will on return a device Kokkos::View with vertex global
+     Ids
    */
-  virtual void getVertexIDsDeviceView(Kokkos::View<const gno_t*, device_t> &vertexIds) const = 0;
+  virtual void
+  getVertexIDsDeviceView(typename Base::ConstIdsDeviceView &vertexIds) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
 
   /*! \brief Sets pointers to this process' graph entries.
       \param vertexIds will on return a host Kokkos::View with vertex global Ids
    */
-  virtual void getVertexIDsHostView(Kokkos::View<const gno_t*, host_t> &vertexIds) const = 0;
+  virtual void
+  getVertexIDsHostView(typename Base::ConstIdsHostView &vertexIds) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
 
   /*! \brief Gets adjacency lists for all vertices in a compressed
              sparse row (CSR) format.
@@ -180,10 +179,14 @@ public:
          The neighboring vertices for vertexId[i]
          begin at adjIds[offsets[i]].
          The last element of offsets is the size of the adjIds array.
-      \param adjIds Device Kokkos::View of adjacent vertices for for each vertex.
+      \param adjIds Device Kokkos::View of adjacent vertices for for each
+     vertex.
    */
-  virtual void getEdgesDeviceView(Kokkos::View<const offset_t *, device_t>& offsets,
-                                  Kokkos::View<const gno_t *, device_t>& adjIds) const = 0;
+  virtual void
+  getEdgesDeviceView(typename Base::ConstOffsetsDeviceView &offsets,
+                     typename Base::ConstIdsDeviceView &adjIds) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
 
   /*! \brief Gets adjacency lists for all vertices in a compressed
              sparse row (CSR) format.
@@ -193,8 +196,10 @@ public:
          The last element of offsets is the size of the adjIds array.
       \param adjIds Host Kokkos::View of adjacent vertices for for each vertex.
    */
-  virtual void getEdgesHostView(Kokkos::View<const offset_t *, host_t>& offsets,
-                                  Kokkos::View<const gno_t *, host_t>& adjIds) const = 0;
+  virtual void getEdgesHostView(typename Base::ConstOffsetsHostView &offsets,
+                                typename Base::ConstIdsHostView &adjIds) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
 
   /*! \brief Returns the number (0 or greater) of weights per vertex
    */
@@ -207,31 +212,28 @@ public:
       \param idx ranges from zero to one less than getNumWeightsPerVertex().
    */
   virtual void getVertexWeightsView(const scalar_t *&weights, int &stride,
-                                    int /* idx */ = 0) const
-  {
+                                    int /* idx */ = 0) const {
     weights = NULL;
     stride = 0;
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getVertexWeightsDeviceView(Kokkos::View<const scalar_t *, device_t>& weights, int /* idx */ = 0) const
-  {
+  virtual void
+  getVertexWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+                             int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getVertexWeightsHostView(Kokkos::View<const scalar_t *, host_t>& weights, int /* idx */ = 0) const
-  {
+  virtual void
+  getVertexWeightsHostView(typename Base::ConstWeightsHostView &weights,
+                           int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
-
 
   /*! \brief Indicate whether vertex weight with index idx should be the
    *         global degree of the vertex
    */
-  virtual bool useDegreeAsVertexWeight(int /* idx */) const
-  {
-    return false;
-  }
+  virtual bool useDegreeAsVertexWeight(int /* idx */) const { return false; }
 
   /*! \brief Returns the number (0 or greater) of edge weights.
    */
@@ -244,23 +246,23 @@ public:
       \param idx ranges from zero to one less than getNumWeightsPerEdge().
    */
   virtual void getEdgeWeightsView(const scalar_t *&weights, int &stride,
-                                  int /* idx */ = 0) const
-  {
+                                  int /* idx */ = 0) const {
     weights = NULL;
     stride = 0;
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getEdgeWeightsDeviceView(Kokkos::View<const scalar_t *, device_t>& weights, int /* idx */ = 0) const
-  {
+  virtual void
+  getEdgeWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+                           int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getEdgeWeightsHostView(Kokkos::View<const scalar_t *, host_t>& weights, int /* idx */ = 0) const
-  {
+  virtual void
+  getEdgeWeightsHostView(typename Base::ConstWeightsHostView &weights,
+                         int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
-
 
   /*! \brief Allow user to provide additional data that contains coordinate
    *         info associated with the MatrixAdapter's primaryEntityType_.
@@ -270,8 +272,7 @@ public:
    *  \param coordData is a pointer to a VectorAdapter with the user's
    *         coordinate data.
    */
-  void setCoordinateInput(VectorAdapter<UserCoord> *coordData) override
-  {
+  void setCoordinateInput(VectorAdapter<UserCoord> *coordData) override {
     coordinateInput_ = coordData;
     haveCoordinateInput_ = true;
   }
@@ -284,8 +285,7 @@ public:
   /*! \brief Obtain the coordinate data registered by the user.
    *  \return pointer a VectorAdapter with the user's coordinate data.
    */
-  VectorAdapter<UserCoord> *getCoordinateInput() const override
-  {
+  VectorAdapter<UserCoord> *getCoordinateInput() const override {
     return coordinateInput_;
   }
 
@@ -304,21 +304,16 @@ public:
    *  Also sets to adjacencyEntityType_ to something reasonable:  opposite of
    *  primaryEntityType_.
    */
-  void setPrimaryEntityType(const std::string& typestr) {
+  void setPrimaryEntityType(const std::string &typestr) {
     if (typestr == "vertex") {
       this->primaryEntityType_ = GRAPH_VERTEX;
       this->adjacencyEntityType_ = GRAPH_EDGE;
-    }
-    else if (typestr == "edge") {
+    } else if (typestr == "edge") {
       this->primaryEntityType_ = GRAPH_EDGE;
       this->adjacencyEntityType_ = GRAPH_VERTEX;
-    }
-    else {
-      std::ostringstream emsg;
-      emsg << __FILE__ << "," << __LINE__
-           << " error:  Invalid GraphEntityType " << typestr << std::endl;
-      emsg << "Valid values are 'vertex' and 'edge'" << std::endl;
-      throw std::runtime_error(emsg.str());
+    } else {
+      AssertCondition(true, "Invalid GraphEntityType (" + typestr +
+                                "). Valid values are 'vertex' and 'edge'");
     }
   }
 
@@ -335,21 +330,16 @@ public:
    *  Also sets to primaryEntityType_ to something reasonable:  opposite of
    *  adjacencyEntityType_.
    */
-  void setAdjacencyEntityType(const std::string& typestr) {
+  void setAdjacencyEntityType(const std::string &typestr) {
     if (typestr == "vertex") {
       this->adjacencyEntityType_ = GRAPH_VERTEX;
       this->primaryEntityType_ = GRAPH_EDGE;
-    }
-    else if (typestr == "edge") {
+    } else if (typestr == "edge") {
       this->adjacencyEntityType_ = GRAPH_EDGE;
       this->primaryEntityType_ = GRAPH_VERTEX;
-    }
-    else {
-      std::ostringstream emsg;
-      emsg << __FILE__ << "," << __LINE__
-           << " error:  Invalid GraphEntityType " << typestr << std::endl;
-      emsg << "Valid values are 'vertex' and 'edge'" << std::endl;
-      throw std::runtime_error(emsg.str());
+    } else {
+      AssertCondition(true, "Invalid GraphEntityType (" + typestr +
+                                "). Valid values are 'vertex' and 'edge'");
     }
   }
 
@@ -359,7 +349,7 @@ public:
       return getLocalNumVertices();
     else
       return getLocalNumEdges();
-   }
+  }
 
   void getIDsView(const gno_t *&Ids) const override {
     if (getPrimaryEntityType() == GRAPH_VERTEX)
@@ -367,39 +357,29 @@ public:
     else {
       // TODO:  Need getEdgeIDsView?  What is an Edge ID?
       // TODO:  std::pair<gno_t, gno_t>?
-      std::ostringstream emsg;
-      emsg << __FILE__ << "," << __LINE__
-           << " error:  getIDsView not yet supported for graph edges."
-           << std::endl;
-      throw std::runtime_error(emsg.str());
+      AssertCondition(true, "getIDsView not yet supported for graph edges.");
     }
   }
 
-  void getIDsDeviceView(Kokkos::View<const gno_t*, device_t>& Ids) const {
+  void getIDsDeviceView(typename Base::ConstIdsDeviceView &Ids) const override {
     if (getPrimaryEntityType() == GRAPH_VERTEX)
-      getVertexIDsView(Ids);
+      getVertexIDsDeviceView(Ids);
     else {
       // TODO:  Need getEdgeIDsView?  What is an Edge ID?
       // TODO:  std::pair<gno_t, gno_t>?
-      std::ostringstream emsg;
-      emsg << __FILE__ << "," << __LINE__
-           << " error:  getIDsView not yet supported for graph edges."
-           << std::endl;
-      throw std::runtime_error(emsg.str());
+      AssertCondition(true,
+                      "getIDsDeviceView not yet supported for graph edges.");
     }
   }
 
-  void getIDsHostView(Kokkos::View<const gno_t*, host_t>& Ids) const {
+  void getIDsHostView(typename Base::ConstIdsHostView &Ids) const override {
     if (getPrimaryEntityType() == GRAPH_VERTEX)
-      getVertexIDsView(Ids);
+      getVertexIDsHostView(Ids);
     else {
       // TODO:  Need getEdgeIDsView?  What is an Edge ID?
       // TODO:  std::pair<gno_t, gno_t>?
-      std::ostringstream emsg;
-      emsg << __FILE__ << "," << __LINE__
-           << " error:  getIDsView not yet supported for graph edges."
-           << std::endl;
-      throw std::runtime_error(emsg.str());
+      AssertCondition(true,
+                      "getIDsHostView not yet supported for graph edges.");
     }
   }
 
@@ -410,34 +390,35 @@ public:
       return getNumWeightsPerEdge();
   }
 
-  void getWeightsView(const scalar_t *&wgt, int &stride, int idx = 0) const override {
+  void getWeightsView(const scalar_t *&wgt, int &stride,
+                      int idx = 0) const override {
     if (getPrimaryEntityType() == GRAPH_VERTEX)
       getVertexWeightsView(wgt, stride, idx);
     else {
       // TODO:  Need getEdgeWeightsView that lets Edges be primary object?
       // TODO:  That is, get edge weights based on some Edge ID.
-      std::ostringstream emsg;
-      emsg << __FILE__ << "," << __LINE__
-           << " error:  getWeightsView not yet supported for graph edges."
-           << std::endl;
-      throw std::runtime_error(emsg.str());
+      AssertCondition(true,
+                      "getWeightsView not yet supported for graph edges.");
     }
   }
 
-  bool useDegreeAsWeight(int idx) const
-  {
-    if (this->getPrimaryEntityType() == GRAPH_VERTEX)
+  void getWeightsHostView(typename Base::WeightsHostView& hostWgts) const override {
+
+  }
+
+  void getWeightsDeviceView(typename Base::WeightsDeviceView& deviceWgts) const  override {
+                      }
+
+
+
+  bool useDegreeAsWeight(int idx) const {
+    AssertCondition(this->getPrimaryEntityType() == GRAPH_VERTEX,
+                      "useDegreeAsWeight not yet supported for graph edges.");
+
       return useDegreeAsVertexWeight(idx);
-    else {
-      std::ostringstream emsg;
-      emsg << __FILE__ << "," << __LINE__
-           << " error:  useDegreeAsWeight is supported only for vertices"
-           << std::endl;
-      throw std::runtime_error(emsg.str());
-    }
   }
 };
 
-}  //namespace Zoltan2
+} // namespace Zoltan2
 
 #endif
