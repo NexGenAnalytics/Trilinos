@@ -94,19 +94,24 @@ enum GraphEntityType { GRAPH_VERTEX, GRAPH_EDGE };
 template <typename User, typename UserCoord = User>
 class GraphAdapter : public AdapterWithCoordsWrapper<User, UserCoord> {
 private:
-  enum GraphEntityType primaryEntityType_;    // Entity (vertex or edge) to
-                                              // be partitioned, ordered,
-                                              // colored, matched, etc.
-  enum GraphEntityType adjacencyEntityType_;  // Entity (edge or vertex)
-                                              // describing adjacencies;
-                                              // typically opposite of
-                                              // primaryEntityType_.
-  VectorAdapter<UserCoord> *coordinateInput_; // A VectorAdapter containing
-                                              // coordinates of the objects
-                                              // with primaryEntityType_;
-                                              // optional.
-  bool haveCoordinateInput_;                  // Flag indicating whether
-                                              // coordinateInput_ is provided.
+  /// Enum to represent the primary entity type in the graph (vertex or edge).
+  /// This is the entity that will be partitioned, ordered, colored, matched,
+  /// etc.
+  enum GraphEntityType primaryEntityType_ = GRAPH_VERTEX;
+
+  /// Enum to represent the adjacency entity type in the graph (edge or vertex).
+  /// This typically refers to an entity type opposite to the
+  /// primaryEntityType_.
+  enum GraphEntityType adjacencyEntityType_ = GRAPH_EDGE;
+
+  /// Pointer to a VectorAdapter containing coordinates of objects of type
+  /// primaryEntityType_. This is an optional attribute. \sa
+  /// haveCoordinateInput_
+  VectorAdapter<UserCoord> *coordinateInput_ = nullptr;
+
+  /// Flag indicating whether the coordinate input is provided.
+  /// When this flag is set to true, coordinateInput_ should not be null.
+  bool haveCoordinateInput_ = false;
 
 public:
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -119,14 +124,10 @@ public:
   using userCoord_t = UserCoord;
   using base_adapter_t = GraphAdapter<User, UserCoord>;
   using Base = AdapterWithCoordsWrapper<User, UserCoord>;
+  using ConstVtxDegreeHostView = Kokkos::View<bool*, Kokkos::HostSpace>;
 #endif
 
   enum BaseAdapterType adapterType() const override { return GraphAdapterType; }
-
-  // Default GraphEntityType is GRAPH_VERTEX.
-  GraphAdapter()
-      : primaryEntityType_(GRAPH_VERTEX), adjacencyEntityType_(GRAPH_EDGE),
-        coordinateInput_(), haveCoordinateInput_(false) {}
 
   ////////////////////////////////////////////////////////////////////////////
   // Methods to be defined in derived classes.
@@ -402,20 +403,17 @@ public:
     }
   }
 
-  void getWeightsHostView(typename Base::WeightsHostView& hostWgts) const override {
+  void
+  getWeightsHostView(typename Base::WeightsHostView &hostWgts) const override {}
 
-  }
-
-  void getWeightsDeviceView(typename Base::WeightsDeviceView& deviceWgts) const  override {
-                      }
-
-
+  void getWeightsDeviceView(
+      typename Base::WeightsDeviceView &deviceWgts) const override {}
 
   bool useDegreeAsWeight(int idx) const {
     AssertCondition(this->getPrimaryEntityType() == GRAPH_VERTEX,
-                      "useDegreeAsWeight not yet supported for graph edges.");
+                    "useDegreeAsWeight not yet supported for graph edges.");
 
-      return useDegreeAsVertexWeight(idx);
+    return useDegreeAsVertexWeight(idx);
   }
 };
 

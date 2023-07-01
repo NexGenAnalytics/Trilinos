@@ -238,7 +238,7 @@ public:
                     "Invalid vertex weight index.");
 
     size_t length;
-    vertexWeights_[idx].getStridedList(length, weights, stride);
+    vertexWeightsHost_[idx].getStridedList(length, weights, stride);
   }
 
   void
@@ -253,7 +253,7 @@ public:
   }
 
   bool useDegreeAsVertexWeight(int idx) const override {
-    return vertexDegreeWeight_[idx];
+    return vertexDegreeWeightsHost_(idx);
   }
 
   int getNumWeightsPerEdge() const override { return nWeightsPerEdge_; }
@@ -294,8 +294,8 @@ private:
   typename Base::ConstIdsHostView adjIdsHost_;
 
   int nWeightsPerVertex_;
-  ArrayRCP<StridedData<lno_t, scalar_t>> vertexWeights_;
-  ArrayRCP<bool> vertexDegreeWeight_;
+  typename Base::ConstWeightsHostView vertexWeightsHost_;
+  typename Base::ConstVtxDegreeHostView vertexDegreeWeightsHost_;
 
   int nWeightsPerEdge_;
   ArrayRCP<StridedData<lno_t, scalar_t>> edgeWeights_;
@@ -315,8 +315,8 @@ template <typename User, typename UserCoord>
 TpetraRowGraphAdapter<User, UserCoord>::TpetraRowGraphAdapter(
     const RCP<const User> &ingraph, int nVtxWgts, int nEdgeWgts)
     : graph_(ingraph), nWeightsPerVertex_(nVtxWgts),
-      vertexWeights_(), vertexDegreeWeight_(), nWeightsPerEdge_(nEdgeWgts),
-      edgeWeights_(), coordinateDim_(0), coords_() {
+      nWeightsPerEdge_(nEdgeWgts), edgeWeights_(), coordinateDim_(0),
+      coords_() {
   using strided_t = StridedData<lno_t, scalar_t>;
   using localInds_t = typename User::nonconst_local_inds_host_view_type;
 
@@ -336,19 +336,20 @@ TpetraRowGraphAdapter<User, UserCoord>::TpetraRowGraphAdapter(
   for (size_t v = 0; v < nvtx; v++) {
     size_t numColInds = 0;
     graph_->getLocalRowCopy(v, nbors, numColInds); // Diff from CrsGraph
-    offsHost_(v + 1) = offsHost_[v] + numColInds;
+    offsHost_(v + 1) = offsHost_(v) + numColInds;
     for (offset_t e = offsHost_(v), i = 0; e < offsHost_(v + 1); e++) {
       adjIdsHost_(e) = graph_->getColMap()->getGlobalElement(nbors[i++]);
     }
   }
 
   if (nWeightsPerVertex_ > 0) {
-    vertexWeights_ =
-        arcp(new strided_t[nWeightsPerVertex_], 0, nWeightsPerVertex_, true);
-    vertexDegreeWeight_ =
-        arcp(new bool[nWeightsPerVertex_], 0, nWeightsPerVertex_, true);
-    for (int i = 0; i < nWeightsPerVertex_; i++)
-      vertexDegreeWeight_[i] = false;
+    vertexWeightsHost_ = typename Base::ConstWeightsHostView(
+        "vertexWeightsHost_", nvtx, nWeightsPerVertex_);
+    vertexDegreeWeightsHost_ = typename Base::ConstVtxDegreeHostView(
+        "vertexDegreeWeightsHost_", nWeightsPerVertex_);
+    Kokkos::parallel_for(
+        nWeightsPerVertex_,
+        KOKKOS_LAMBDA(int i) { vertexDegreeWeightsHost_(i) = false; });
   }
 
   if (nWeightsPerEdge_ > 0)
@@ -393,7 +394,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeights(
 
   size_t nvtx = getLocalNumVertices();
   ArrayRCP<const scalar_t> weightV(weightVal, 0, nvtx * stride, false);
-  vertexWeights_[idx] = input_t(weightV, stride);
+  vertexWeightsHost_(idx) = input_t(weightV, stride);
 }
 
 template <typename User, typename UserCoord>
@@ -421,7 +422,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightIsDegree(int idx) {
   AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
                   "Invalid vertex weight index.");
 
-  vertexDegreeWeight_[idx] = true;
+  vertexDegreeWeightsHost_(idx) = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////
