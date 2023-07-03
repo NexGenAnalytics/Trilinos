@@ -125,6 +125,7 @@ public:
   using base_adapter_t = GraphAdapter<User, UserCoord>;
   using Base = AdapterWithCoordsWrapper<User, UserCoord>;
   using ConstVtxDegreeHostView = Kokkos::View<bool*, Kokkos::HostSpace>;
+  using device_t = typename node_t::device_type;
 #endif
 
   enum BaseAdapterType adapterType() const override { return GraphAdapterType; }

@@ -122,7 +122,24 @@ public:
 
   void setWeights(const scalar_t *val, int stride, int idx);
 
+  /*! \brief Provide a device view of weights for the primary entity type.
+   *    \param val A view to the weights for index \c idx.
+   *    \param idx A number from 0 to one less than
+   *          weight idx specified in the constructor.
+   *
+   *  The order of the weights should match the order that
+   *  entities appear in the input data structure.
+   */
   void setWeightsDevice(typename Base::ConstWeightsDeviceView &val, int idx);
+
+  /*! \brief Provide a host view of weights for the primary entity type.
+   *    \param val A view to the weights for index \c idx.
+   *    \param idx A number from 0 to one less than
+   *          weight idx specified in the constructor.
+   *
+   *  The order of the weights should match the order that
+   *  entities appear in the input data structure.
+   */
   void setWeightsHost(typename Base::ConstWeightsHostView &val, int idx);
 
   /*! \brief Provide a pointer to vertex weights.
@@ -142,8 +159,31 @@ public:
 
   void setVertexWeights(const scalar_t *val, int stride, int idx);
 
+  /*! \brief Provide a device view to vertex weights.
+   *    \param val A pointer to the weights for index \c idx.
+   *    \param idx A number from 0 to one less than
+   *          number of vertex weights specified in the constructor.
+   *
+   *  The order of the vertex weights should match the order that
+   *  vertices appear in the input data structure.
+   *     \code
+   *       TheGraph->getRowMap()->getLocalElementList()
+   *     \endcode
+   */
   void setVertexWeightsDevice(typename Base::ConstWeightsDeviceView &val,
                               int idx);
+
+  /*! \brief Provide a host view to vertex weights.
+   *    \param val A pointer to the weights for index \c idx.
+   *    \param idx A number from 0 to one less than
+   *          number of vertex weights specified in the constructor.
+   *
+   *  The order of the vertex weights should match the order that
+   *  vertices appear in the input data structure.
+   *     \code
+   *       TheGraph->getRowMap()->getLocalElementList()
+   *     \endcode
+   */
   void setVertexWeightsHost(typename Base::ConstWeightsHostView &val, int idx);
 
   /*! \brief Specify an index for which the weight should be
@@ -183,8 +223,21 @@ public:
    */
 
   void setEdgeWeights(const scalar_t *val, int stride, int idx);
-  void setEdgeWeightsDevice(typename Base::ConstWeightsDeviceView &val,
-                            int idx);
+
+  /*! \brief Provide a device view to edge weights.
+   *    \param val A pointer to the weights for index \c idx.
+   *    \param dim A number from 0 to one less than the number
+   *          of edge weights specified in the constructor.
+   */
+  void
+  setEdgeWeightsDevice(typename Base::ConstWeightsDeviceView &val,
+
+                       /*! \brief Provide a host view to edge weights.
+                        *    \param val A pointer to the weights for index \c
+                        * idx. \param dim A number from 0 to one less than the
+                        * number of edge weights specified in the constructor.
+                        */
+                       int idx);
   void setEdgeWeightsHost(typename Base::ConstWeightsHostView &val, int idx);
 
   ////////////////////////////////////////////////////
@@ -203,11 +256,29 @@ public:
       ids = graph_->getRowMap()->getLocalElementList().getRawPtr();
   }
 
-  void getVertexIDsDeviceView(
-      typename Base::ConstIdsDeviceView &ids) const override {}
+  void getVertexIDsDeviceView(typename Base::ConstIdsDeviceView &ids) const override {
+
+    // TODO: Making a  ConstIdsDeviceView LayoutLeft would proably remove the need
+    //       of creating tmpIds
+    auto idsDevice = graph_->getRowMap()->getMyGlobalIndices();
+    auto tmpIds = typename Base::IdsDeviceView("", idsDevice.extent(0));
+
+    Kokkos::deep_copy(tmpIds, idsDevice);
+
+    ids = tmpIds;
+  }
 
   void
-  getVertexIDsHostView(typename Base::ConstIdsHostView &ids) const override {}
+  getVertexIDsHostView(typename Base::ConstIdsHostView &ids) const override {
+    // TODO: Making a  ConstIdsDeviceView LayoutLeft would proably remove the need
+    //       of creating tmpIds
+    auto idsDevice = graph_->getRowMap()->getMyGlobalIndices();
+    auto tmpIds = typename Base::IdsHostView("", idsDevice.extent(0));
+
+    Kokkos::deep_copy(tmpIds, idsDevice);
+
+    ids = tmpIds;
+  }
 
   size_t getLocalNumEdges() const override {
     return graph_->getLocalNumEntries();
@@ -238,7 +309,7 @@ public:
                     "Invalid vertex weight index.");
 
     size_t length;
-    vertexWeightsHost_[idx].getStridedList(length, weights, stride);
+    vertexWeights_[idx].getStridedList(length, weights, stride);
   }
 
   void
@@ -294,6 +365,7 @@ private:
   typename Base::ConstIdsHostView adjIdsHost_;
 
   int nWeightsPerVertex_;
+  ArrayRCP<StridedData<lno_t, scalar_t>> vertexWeights_;
   typename Base::ConstWeightsHostView vertexWeightsHost_;
   typename Base::ConstVtxDegreeHostView vertexDegreeWeightsHost_;
 
@@ -343,8 +415,8 @@ TpetraRowGraphAdapter<User, UserCoord>::TpetraRowGraphAdapter(
   }
 
   if (nWeightsPerVertex_ > 0) {
-    vertexWeightsHost_ = typename Base::ConstWeightsHostView(
-        "vertexWeightsHost_", nvtx, nWeightsPerVertex_);
+    vertexWeights_ =
+        arcp(new strided_t[nWeightsPerVertex_], 0, nWeightsPerVertex_, true);
     vertexDegreeWeightsHost_ = typename Base::ConstVtxDegreeHostView(
         "vertexDegreeWeightsHost_", nWeightsPerVertex_);
     Kokkos::parallel_for(
@@ -394,7 +466,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeights(
 
   size_t nvtx = getLocalNumVertices();
   ArrayRCP<const scalar_t> weightV(weightVal, 0, nvtx * stride, false);
-  vertexWeightsHost_(idx) = input_t(weightV, stride);
+  vertexWeights_[idx] = input_t(weightV, stride);
 }
 
 template <typename User, typename UserCoord>
@@ -405,15 +477,20 @@ void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsDevice(
                   "Invalid vertex weight index.");
 }
 
+template <typename User, typename UserCoord>
+void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsHost(
+    typename Base::ConstWeightsHostView &val, int idx) {
+  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+                  "Invalid vertex weight index.");
+}
+
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setWeightIsDegree(int idx) {
-  if (this->getPrimaryEntityType() == GRAPH_VERTEX)
-    setVertexWeightIsDegree(idx);
-  else {
-    AssertCondition(
-        true, "setWeightIsNumberOfNonZeros is supported only for vertices");
-  }
+  AssertCondition(this->getPrimaryEntityType() == GRAPH_VERTEX,
+                  "setWeightIsNumberOfNonZeros is supported only for vertices");
+
+  setVertexWeightIsDegree(idx);
 }
 
 ////////////////////////////////////////////////////////////////////////////
