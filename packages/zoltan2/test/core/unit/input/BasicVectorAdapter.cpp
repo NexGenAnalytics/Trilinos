@@ -224,38 +224,39 @@ int main(int narg, char *arg[])
     }
 
     TEST_FAIL_AND_RETURN_VALUE(*comm, fail==0, "constructor 4", fail);
-    delete ia;
 
+    Zoltan2::AdapterWithCoords<userTypes_t>::CoordsHostView kHostCoords;
+    Zoltan2::AdapterWithCoords<userTypes_t>::CoordsDeviceView kDeviceCoords;
+    ia->getCoordinatesHostView(kHostCoords);
+    ia->getCoordinatesDeviceView(kDeviceCoords);
+    auto kHostCoordsMV = Kokkos::create_mirror_view(kHostCoords);
+    Kokkos::deep_copy(kHostCoordsMV, kHostCoords);
+
+    auto kDeviceCoordsMV = Kokkos::create_mirror_view(kDeviceCoords);
+    Kokkos::deep_copy(kDeviceCoordsMV, kDeviceCoords);
     // Test entries
     for (int v=0; !fail && v < mvdim; v++){
         const zscalar_t *coords;
         int correctStride = valueStrides[v];
         int stride;
 
-        Zoltan2::AdapterWithCoords<userTypes_t>::CoordsHostView kHostCoords;
-        Zoltan2::AdapterWithCoords<userTypes_t>::CoordsDeviceView kDeviceCoords;
-
         ia->getCoordinatesView(coords, stride, v);
-        ia->getCoordinatesHostView(kHostCoords);
-        ia->getCoordinatesDeviceView(kDeviceCoords);
-        auto kHostCoordsMV = Kokkos::create_mirror_view(kHostCoords);
-        Kokkos::deep_copy(kHostCoordsMV, kHostCoords);
-
-        auto kDeviceCoordsMV = Kokkos::create_mirror_view(kDeviceCoords);
-        Kokkos::deep_copy(kDeviceCoordsMV, kDeviceCoords);
 
         bool success = true;
         for (size_t i = 0; i < ia->getLocalNumIDs(); ++i) {
-          TEUCHOS_TEST_EQUALITY(coords[i], kHostCoordsMV(i, v), std::cout, success);
-          TEUCHOS_TEST_EQUALITY(coords[i], kDeviceCoordsMV(i, v), std::cout, success);
+          TEUCHOS_TEST_EQUALITY(coords[i*stride], kHostCoordsMV(i, v), std::cout, success);
+          TEUCHOS_TEST_EQUALITY(coords[i*stride], kDeviceCoordsMV(i, v), std::cout, success);
         }
         TEST_FAIL_AND_EXIT(*comm, success, "ids != kHostCoordsMV != kDeviceCoordsMV", 1)
     }
+
+
   }
 
   if (rank == 0)
     std::cout << "PASS" << std::endl;
 
+  delete ia;
   delete [] myIds;
   delete [] weights;
   delete [] weightStrides;

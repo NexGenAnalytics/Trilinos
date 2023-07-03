@@ -299,7 +299,7 @@ public:
   {
     auto hostEntries = Kokkos::create_mirror_view(kEntries_);
     Kokkos::deep_copy(hostEntries, kEntries_);
-    entries = kEntries_;
+    entries = hostEntries;
   }
 
   void getEntriesDeviceView(
