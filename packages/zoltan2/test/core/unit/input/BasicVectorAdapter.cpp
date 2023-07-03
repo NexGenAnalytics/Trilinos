@@ -217,7 +217,6 @@ int main(int narg, char *arg[])
     try{
      ia = new Zoltan2::BasicVectorAdapter<userTypes_t>(
         numLocalIds, myIds, values, vstrides, weightValues, wstrides);
-
     }
     catch (std::exception &e){
       fail = 1;
@@ -225,6 +224,49 @@ int main(int narg, char *arg[])
 
     TEST_FAIL_AND_RETURN_VALUE(*comm, fail==0, "constructor 4", fail);
 
+    // Ids
+    const zgno_t *ids;
+    Zoltan2::BaseAdapter<userTypes_t>::ConstIdsHostView kHostIds;
+    Zoltan2::BaseAdapter<userTypes_t>::ConstIdsDeviceView kDeviceIds;
+
+    ia->getIDsView(ids);
+    ia->getIDsHostView(kHostIds);
+    ia->getIDsDeviceView(kDeviceIds);
+
+    auto kDeviceIdsHost = Kokkos::create_mirror_view(kDeviceIds);
+    Kokkos::deep_copy(kDeviceIdsHost, kDeviceIds);
+
+    bool success = true;
+    for (size_t i = 0; i < ia->getLocalNumIDs(); ++i) {
+      TEUCHOS_TEST_EQUALITY(ids[i], kHostIds(i), std::cout, success);
+      TEUCHOS_TEST_EQUALITY(kHostIds(i), kDeviceIdsHost(i), std::cout, success);
+    }
+    TEST_FAIL_AND_EXIT(*comm, success, "ids != hostIds != deviceIds", 1)
+
+    // Weights
+    Zoltan2::BaseAdapter<userTypes_t>::WeightsHostView kHostWgts;
+    Zoltan2::BaseAdapter<userTypes_t>::WeightsDeviceView kDeviceWgts;
+    ia->getWeightsHostView(kHostWgts);
+    ia->getWeightsDeviceView(kDeviceWgts);
+    auto kDeviceWgtsHost = Kokkos::create_mirror_view(kDeviceWgts);
+    Kokkos::deep_copy(kDeviceWgtsHost, kDeviceWgts);
+
+    for (int w = 0; success && w < wdim; w++) {
+      const zscalar_t *wgts;
+
+      Kokkos::View<zscalar_t **, typename znode_t::device_type> wkgts;
+      int stride;
+      ia->getWeightsView(wgts, stride, w);
+      for (zlno_t i = 0; success && i < ia->getNumWeightsPerID(); ++i) {
+        TEUCHOS_TEST_EQUALITY(wgts[stride * i], kHostWgts(i, w), std::cout,
+                              success);
+        TEUCHOS_TEST_EQUALITY(wgts[stride * i], kDeviceWgtsHost(i, w), std::cout,
+                              success);
+      }
+    }
+    TEST_FAIL_AND_EXIT(*comm, success, "wgts != vwgts != wkgts", 1)
+
+    // Coords
     Zoltan2::AdapterWithCoords<userTypes_t>::CoordsHostView kHostCoords;
     Zoltan2::AdapterWithCoords<userTypes_t>::CoordsDeviceView kDeviceCoords;
     ia->getCoordinatesHostView(kHostCoords);
@@ -234,7 +276,6 @@ int main(int narg, char *arg[])
 
     auto kDeviceCoordsMV = Kokkos::create_mirror_view(kDeviceCoords);
     Kokkos::deep_copy(kDeviceCoordsMV, kDeviceCoords);
-    // Test entries
     for (int v=0; !fail && v < mvdim; v++){
         const zscalar_t *coords;
         int correctStride = valueStrides[v];
