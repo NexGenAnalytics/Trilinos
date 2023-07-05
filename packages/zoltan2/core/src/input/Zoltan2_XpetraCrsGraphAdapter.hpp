@@ -196,10 +196,6 @@ public:
   RCP<const User> getUserGraph() const { return ingraph_; }
 
   ////////////////////////////////////////////////////
-  // The Adapter interface.
-  ////////////////////////////////////////////////////
-
-  ////////////////////////////////////////////////////
   // The GraphAdapter interface.
   ////////////////////////////////////////////////////
 
@@ -214,15 +210,6 @@ public:
       ids = graph_->getRowMap()->getLocalElementList().getRawPtr();
   }
 
-  void getVertexIDsDeviceView(typename Base::ConstIdsDeviceView& ids) const override {
-
-  }
-
-  void getVertexIDsHostView(typename Base::ConstIdsHostView& ids) const override {
-
-
-  }
-
   size_t getLocalNumEdges() const override { return graph_->getLocalNumEntries(); }
 
   void getEdgesView(const offset_t *&offsets, const gno_t *&adjIds) const override
@@ -231,15 +218,7 @@ public:
     adjIds = (getLocalNumEdges() ? adjids_.getRawPtr() : NULL);
   }
 
-    void getEdgesDeviceView(typename Base::ConstOffsetsDeviceView &offsets,
-                          typename Base::ConstIdsDeviceView &adjIds) const override {
-
-  }
-
-  void getEdgesHostView(typename Base::ConstOffsetsHostView &offsets,
-                        typename Base::ConstIdsHostView &adjIds) const override {}
-
-  int getNumWeightsPerVertex() const { return nWeightsPerVertex_;}
+  int getNumWeightsPerVertex() const override { return nWeightsPerVertex_;}
 
   void getVertexWeightsView(const scalar_t *&weights, int &stride,
                             int idx) const override
@@ -255,17 +234,6 @@ public:
 
     size_t length;
     vertexWeights_[idx].getStridedList(length, weights, stride);
-  }
-
-    void
-  getVertexWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
-                             int /* idx */ = 0) const override {
-    Z2_THROW_NOT_IMPLEMENTED
-  }
-
-  void getVertexWeightsHostView(typename Base::ConstWeightsHostView &weights,
-                                int /* idx */ = 0) const override {
-    Z2_THROW_NOT_IMPLEMENTED
   }
 
   bool useDegreeAsVertexWeight(int idx) const override {return vertexDegreeWeight_[idx];}
@@ -286,19 +254,6 @@ public:
     size_t length;
     edgeWeights_[idx].getStridedList(length, weights, stride);
   }
-
-    void
-  getEdgeWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
-                           int /* idx */ = 0) const override {
-    Z2_THROW_NOT_IMPLEMENTED
-  }
-
-  void getEdgeWeightsHostView(typename Base::ConstWeightsHostView &weights,
-                              int /* idx */ = 0) const override {
-    Z2_THROW_NOT_IMPLEMENTED
-  }
-
-
 
   template <typename Adapter>
     void applyPartitioningSolution(const User &in, User *&out,

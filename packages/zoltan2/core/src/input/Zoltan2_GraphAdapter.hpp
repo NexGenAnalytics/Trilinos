@@ -124,7 +124,7 @@ public:
   using userCoord_t = UserCoord;
   using base_adapter_t = GraphAdapter<User, UserCoord>;
   using Base = AdapterWithCoordsWrapper<User, UserCoord>;
-  using ConstVtxDegreeHostView = Kokkos::View<bool*, Kokkos::HostSpace>;
+  using VtxDegreeHostView = Kokkos::View<bool *, Kokkos::HostSpace>;
   using device_t = typename node_t::device_type;
 #endif
 
@@ -220,14 +220,24 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
+  /*! \brief  Provide a device view of the vertex weights, if any.
+      \param weights is the list of weights of the given index for
+           the vertices returned in getVertexIDsView().
+      \param idx ranges from zero to one less than getNumWeightsPerVertex().
+   */
   virtual void
-  getVertexWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+  getVertexWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &weights,
                              int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
+  /*! \brief  Provide a host view of the vertex weights, if any.
+      \param weights is the list of weights of the given index for
+           the vertices returned in getVertexIDsView().
+      \param idx ranges from zero to one less than getNumWeightsPerVertex().
+   */
   virtual void
-  getVertexWeightsHostView(typename Base::ConstWeightsHostView &weights,
+  getVertexWeightsHostView(typename Base::ConstWeightsHostView1D &weights,
                            int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
@@ -254,14 +264,24 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
+  /*! \brief  Provide a device view of the edge weights, if any.
+      \param weights is the list of weights of the given index for
+           the edges returned in getEdgeView().
+      \param idx ranges from zero to one less than getNumWeightsPerEdge().
+   */
   virtual void
-  getEdgeWeightsDeviceView(typename Base::ConstWeightsDeviceView &weights,
+  getEdgeWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &weights,
                            int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
+  /*! \brief  Provide a host view of the edge weights, if any.
+      \param weights is the list of weights of the given index for
+           the edges returned in getEdgeView().
+      \param idx ranges from zero to one less than getNumWeightsPerEdge().
+   */
   virtual void
-  getEdgeWeightsHostView(typename Base::ConstWeightsHostView &weights,
+  getEdgeWeightsHostView(typename Base::ConstWeightsHostView1D &weights,
                          int /* idx */ = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
@@ -354,35 +374,24 @@ public:
   }
 
   void getIDsView(const gno_t *&Ids) const override {
-    if (getPrimaryEntityType() == GRAPH_VERTEX)
-      getVertexIDsView(Ids);
-    else {
-      // TODO:  Need getEdgeIDsView?  What is an Edge ID?
-      // TODO:  std::pair<gno_t, gno_t>?
-      AssertCondition(true, "getIDsView not yet supported for graph edges.");
-    }
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getIDsView not yet supported for graph edges.");
+
+    getVertexIDsView(Ids);
   }
 
   void getIDsDeviceView(typename Base::ConstIdsDeviceView &Ids) const override {
-    if (getPrimaryEntityType() == GRAPH_VERTEX)
-      getVertexIDsDeviceView(Ids);
-    else {
-      // TODO:  Need getEdgeIDsView?  What is an Edge ID?
-      // TODO:  std::pair<gno_t, gno_t>?
-      AssertCondition(true,
-                      "getIDsDeviceView not yet supported for graph edges.");
-    }
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getIDsDeviceView not yet supported for graph edges.");
+
+    getVertexIDsDeviceView(Ids);
   }
 
   void getIDsHostView(typename Base::ConstIdsHostView &Ids) const override {
-    if (getPrimaryEntityType() == GRAPH_VERTEX)
-      getVertexIDsHostView(Ids);
-    else {
-      // TODO:  Need getEdgeIDsView?  What is an Edge ID?
-      // TODO:  std::pair<gno_t, gno_t>?
-      AssertCondition(true,
-                      "getIDsHostView not yet supported for graph edges.");
-    }
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getIDsHostView not yet supported for graph edges.");
+
+    getVertexIDsHostView(Ids);
   }
 
   int getNumWeightsPerID() const override {
@@ -394,14 +403,11 @@ public:
 
   void getWeightsView(const scalar_t *&wgt, int &stride,
                       int idx = 0) const override {
-    if (getPrimaryEntityType() == GRAPH_VERTEX)
-      getVertexWeightsView(wgt, stride, idx);
-    else {
-      // TODO:  Need getEdgeWeightsView that lets Edges be primary object?
-      // TODO:  That is, get edge weights based on some Edge ID.
-      AssertCondition(true,
-                      "getWeightsView not yet supported for graph edges.");
-    }
+
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getWeightsView not yet supported for graph edges.");
+
+    getVertexWeightsView(wgt, stride, idx);
   }
 
   void

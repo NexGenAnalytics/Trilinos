@@ -58,6 +58,7 @@
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
+#include <Teuchos_TestingHelpers.hpp>
 #include <Teuchos_RCP.hpp>
 
 using Teuchos::Comm;

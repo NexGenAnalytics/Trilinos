@@ -117,7 +117,6 @@ public:
 
   using ConstIdsDeviceView = Kokkos::View<const gno_t *, device_t>;
   using ConstIdsHostView = typename ConstIdsDeviceView::HostMirror;
-//  using ConstIdsHostView = typename Kokkos::View<const gno_t *, Kokkos::HostSpace>;
 
   using IdsDeviceView = Kokkos::View<gno_t *, device_t>;
   using IdsHostView = typename IdsDeviceView::HostMirror;
@@ -133,6 +132,9 @@ public:
 
   using scalarsDeviceView = Kokkos::View<scalar_t *, device_t>;
   using scalarsHostView = typename scalarsDeviceView::HostMirror;
+
+  using ConstWeightsDeviceView1D = Kokkos::View<const scalar_t *, device_t>;
+  using ConstWeightsHostView1D = typename ConstWeightsDeviceView1D::HostMirror;
 
   using ConstWeightsDeviceView = Kokkos::View<const scalar_t **, device_t>;
   using ConstWeightsHostView = typename ConstWeightsDeviceView::HostMirror;
