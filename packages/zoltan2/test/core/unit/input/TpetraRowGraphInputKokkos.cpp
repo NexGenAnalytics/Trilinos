@@ -137,7 +137,7 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
   /////////////////////////////////
   //// setVertexWeightsDevice
   /////////////////////////////////
-  TEST_THROW(ia.setVertexWeightsDevice(
+  Z2_TEST_THROW(ia.setVertexWeightsDevice(
                  typename adapter_t::ConstWeightsDeviceView1D{}, 50),
              std::runtime_error);
 
@@ -145,27 +145,27 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
   Kokkos::parallel_for(
       nVtx, KOKKOS_LAMBDA(const int idx) { wgts(idx) = idx * 2; });
 
-  TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 0));
+  Z2_TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 0));
 
   Kokkos::parallel_for(
       nVtx, KOKKOS_LAMBDA(const int idx) { wgts(idx) = idx * 3; });
 
-  TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 1));
+  Z2_TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 1));
   {
     typename adapter_t::ConstWeightsDeviceView1D weightsDevice;
-    TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 0));
+    Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 0));
 
     typename adapter_t::ConstWeightsHostView1D weightsHost;
-    TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 0));
+    Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 0));
 
     TestDeviceHostView(weightsDevice, weightsHost);
   }
   {
     typename adapter_t::ConstWeightsDeviceView1D weightsDevice;
-    TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 1));
+    Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 1));
 
     typename adapter_t::ConstWeightsHostView1D weightsHost;
-    TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 1));
+    Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 1));
 
     TestDeviceHostView(weightsDevice, weightsHost);
   }
