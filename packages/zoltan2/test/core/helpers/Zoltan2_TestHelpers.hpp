@@ -51,6 +51,7 @@
 
 #include <Teuchos_UnitTestHarness.hpp>
 #include <Zoltan2_Util.hpp>
+#include <Teuchos_UnitTestHarness.hpp>
 #include <iostream>
 
 #include <Tpetra_Map.hpp>

@@ -49,8 +49,6 @@
  *  \todo add weights and coordinates
  */
 
-#include <string>
-
 #include <Zoltan2_InputTraits.hpp>
 #include <Zoltan2_TestHelpers.hpp>
 #include <Zoltan2_TpetraRowGraphAdapter.hpp>
@@ -58,8 +56,8 @@
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
-#include <Teuchos_TestingHelpers.hpp>
 #include <Teuchos_RCP.hpp>
+#include <Teuchos_UnitTestHarness.hpp>
 
 using Teuchos::Comm;
 using Teuchos::RCP;
@@ -97,158 +95,142 @@ void printGraph(RCP<const Comm<int>> &comm, zlno_t nvtx, const zgno_t *vtxIds,
 }
 
 template <typename User>
-int verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
-                       ztrowgraph_t &graph) {
+void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
+                        ztrowgraph_t &graph) {
   const auto comm = graph.getComm();
   int fail = 0, gfail = 0;
+  const auto nVtx = ia.getLocalNumIDs();
 
-  if (!fail && ia.getLocalNumVertices() != graph.getLocalNumRows())
-    fail = 4;
+  auto &out = std::cout;
+  bool success = true;
 
-  if (!fail && ia.getLocalNumEdges() != graph.getLocalNumEntries())
-    fail = 6;
+  TEST_EQUALITY(ia.getLocalNumVertices(), graph.getLocalNumRows());
+  TEST_EQUALITY(ia.getLocalNumEdges(), graph.getLocalNumEntries());
 
-  gfail = globalFail(*comm, fail);
+  /////////////////////////////////
+  //// getVertexIdsView
+  /////////////////////////////////
 
-  typename adapter_t::ConstIdsDeviceView vtxIds;
-  typename adapter_t::ConstIdsDeviceView edgeIds;
-  typename adapter_t::ConstIdsDeviceView adjIds;
-  typename adapter_t::ConstOffsetsDeviceView offsets;
-  size_t nvtx = 0;
+  typename adapter_t::ConstIdsDeviceView vtxIdsDevice;
+  ia.getVertexIDsDeviceView(vtxIdsDevice);
+  typename adapter_t::ConstIdsHostView vtxIdsHost;
+  ia.getVertexIDsHostView(vtxIdsHost);
 
-  if (!gfail) {
+  TestDeviceHostView(vtxIdsDevice, vtxIdsHost);
 
-    nvtx = ia.getLocalNumVertices();
-    ia.getVertexIDsDeviceView(vtxIds);
-    ia.getEdgesDeviceView(offsets, adjIds);
+  /////////////////////////////////
+  //// getEdgesView
+  /////////////////////////////////
 
-    if (nvtx != graph.getLocalNumRows())
-      fail = 8;
+  typename adapter_t::ConstIdsDeviceView adjIdsDevice;
+  typename adapter_t::ConstOffsetsDeviceView offsetsDevice;
 
-    gfail = globalFail(*comm, fail);
+  ia.getEdgesDeviceView(offsetsDevice, adjIdsDevice);
 
-    if (gfail == 0) {
-      // printGraph<offset_t>(comm, nvtx, vtxIds, offsets, edgeIds);
-    } else {
-      if (!fail)
-        fail = 10;
-    }
+  typename adapter_t::ConstIdsHostView adjIdsHost;
+  typename adapter_t::ConstOffsetsHostView offsetsHost;
+  ia.getEdgesHostView(offsetsHost, adjIdsHost);
+
+  TestDeviceHostView(adjIdsDevice, adjIdsHost);
+  TestDeviceHostView(offsetsDevice, offsetsHost);
+
+  /////////////////////////////////
+  //// setVertexWeightsDevice
+  /////////////////////////////////
+  TEST_THROW(ia.setVertexWeightsDevice(
+                 typename adapter_t::ConstWeightsDeviceView1D{}, 50),
+             std::runtime_error);
+
+  typename adapter_t::WeightsDeviceView1D wgts("wgts", nVtx);
+  Kokkos::parallel_for(
+      nVtx, KOKKOS_LAMBDA(const int idx) { wgts(idx) = idx * 2; });
+
+  TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 0));
+
+  Kokkos::parallel_for(
+      nVtx, KOKKOS_LAMBDA(const int idx) { wgts(idx) = idx * 3; });
+
+  TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 1));
+  {
+    typename adapter_t::ConstWeightsDeviceView1D weightsDevice;
+    TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 0));
+
+    typename adapter_t::ConstWeightsHostView1D weightsHost;
+    TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 0));
+
+    TestDeviceHostView(weightsDevice, weightsHost);
   }
-  return fail;
+  {
+    typename adapter_t::ConstWeightsDeviceView1D weightsDevice;
+    TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 1));
+
+    typename adapter_t::ConstWeightsHostView1D weightsHost;
+    TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 1));
+
+    TestDeviceHostView(weightsDevice, weightsHost);
+  }
 }
 
 int main(int narg, char *arg[]) {
+  using soln_t = Zoltan2::PartitioningSolution<adapter_t>;
+  using part_t = adapter_t::part_t;
+
   Tpetra::ScopeGuard tscope(&narg, &arg);
   const auto comm = Tpetra::getDefaultComm();
 
   auto rank = comm->getRank();
-  int fail = 0, gfail = 0;
-  bool aok = true;
-
-  // Create an object that can give us test Tpetra graphs for testing
-
-  RCP<UserInputForTests> uinput;
-  Teuchos::ParameterList params;
-  params.set("input file", "simple");
-  params.set("file type", "Chaco");
 
   try {
-    uinput = rcp(new UserInputForTests(params, comm));
+    Teuchos::ParameterList params;
+    params.set("input file", "simple");
+    params.set("file type", "Chaco");
+
+    auto uinput = rcp(new UserInputForTests(params, comm));
+
+    // Input crs graph and row graph cast from it.
+    const auto crsGraph = uinput->getUITpetraCrsGraph();
+    const auto rowGraph = rcp_dynamic_cast<ztrowgraph_t>(crsGraph);
+
+    const auto nvtx = rowGraph->getLocalNumRows();
+
+    // To test migration in the input adapter we need a Solution object.
+    const auto env = rcp(new Zoltan2::Environment(comm));
+
+    const int nWeights = 2;
+
+    part_t *p = new part_t[nvtx];
+    memset(p, 0, sizeof(part_t) * nvtx);
+    ArrayRCP<part_t> solnParts(p, 0, nvtx, true);
+
+    soln_t solution(env, comm, nWeights);
+    solution.setParts(solnParts);
+
+    /////////////////////////////////////////////////////////////
+    // User object is Tpetra::RowGraph
+    /////////////////////////////////////////////////////////////
+
+    PrintFromRoot("Input adapter for Tpetra::RowGraph");
+
+    auto tpetraRowGraphInput = rcp(new adapter_t(rowGraph, nWeights));
+
+    verifyInputAdapter<ztrowgraph_t>(*tpetraRowGraphInput, *crsGraph);
+
+    ztrowgraph_t *mMigrate = NULL;
+    tpetraRowGraphInput->applyPartitioningSolution(*crsGraph, mMigrate,
+                                                   solution);
+    const auto newG = rcp(mMigrate);
+
+    auto cnewG = rcp_const_cast<const ztrowgraph_t>(newG);
+    auto newInput = rcp(new adapter_t(cnewG, nWeights));
+
+    PrintFromRoot("Input adapter for Tpetra::RowGraph migrated to proc 0");
+
+    verifyInputAdapter<ztrowgraph_t>(*newInput, *newG);
+
   } catch (std::exception &e) {
-    aok = false;
     std::cout << e.what() << std::endl;
-  }
-  TEST_FAIL_AND_EXIT(*comm, aok, "input ", 1);
-
-  // Input crs graph and row graph cast from it.
-  RCP<ztcrsgraph_t> tG = uinput->getUITpetraCrsGraph();
-  RCP<ztrowgraph_t> trG = rcp_dynamic_cast<ztrowgraph_t>(tG);
-
-  RCP<ztrowgraph_t> newG; // migrated graph
-
-  size_t nvtx = tG->getLocalNumRows();
-
-  // To test migration in the input adapter we need a Solution object.
-
-  RCP<const Zoltan2::Environment> env = rcp(new Zoltan2::Environment(comm));
-
-  int nWeights = 1;
-
-  typedef Zoltan2::TpetraRowGraphAdapter<ztrowgraph_t> adapter_t;
-  typedef Zoltan2::PartitioningSolution<adapter_t> soln_t;
-  typedef adapter_t::part_t part_t;
-
-  part_t *p = new part_t[nvtx];
-  memset(p, 0, sizeof(part_t) * nvtx);
-  ArrayRCP<part_t> solnParts(p, 0, nvtx, true);
-
-  soln_t solution(env, comm, nWeights);
-  solution.setParts(solnParts);
-
-  /////////////////////////////////////////////////////////////
-  // User object is Tpetra::RowGraph
-  if (!gfail) {
-    if (rank == 0)
-      std::cout << "Input adapter for Tpetra::RowGraph" << std::endl;
-
-    RCP<const ztrowgraph_t> ctrG =
-        rcp_const_cast<const ztrowgraph_t>(rcp_dynamic_cast<ztrowgraph_t>(tG));
-
-    RCP<adapter_t> trGInput;
-
-    try {
-      trGInput = rcp(new adapter_t(ctrG));
-    } catch (std::exception &e) {
-      aok = false;
-      std::cout << e.what() << std::endl;
-    }
-    TEST_FAIL_AND_EXIT(*comm, aok, "TpetraRowGraphAdapter ", 1);
-
-    fail = verifyInputAdapter<ztrowgraph_t>(*trGInput, *trG);
-
-    gfail = globalFail(*comm, fail);
-
-    if (!gfail) {
-      ztrowgraph_t *mMigrate = NULL;
-      try {
-        trGInput->applyPartitioningSolution(*trG, mMigrate, solution);
-        newG = rcp(mMigrate);
-      } catch (std::exception &e) {
-        fail = 11;
-      }
-
-      gfail = globalFail(*comm, fail);
-
-      if (!gfail) {
-        RCP<const ztrowgraph_t> cnewG =
-            rcp_const_cast<const ztrowgraph_t>(newG);
-        RCP<adapter_t> newInput;
-        try {
-          newInput = rcp(new adapter_t(cnewG));
-        } catch (std::exception &e) {
-          aok = false;
-          std::cout << e.what() << std::endl;
-        }
-        TEST_FAIL_AND_EXIT(*comm, aok, "TpetraRowGraphAdapter 2 ", 1);
-
-        if (rank == 0) {
-          std::cout << "Input adapter for Tpetra::RowGraph migrated to proc 0"
-                    << std::endl;
-        }
-        fail = verifyInputAdapter<ztrowgraph_t>(*newInput, *newG);
-        if (fail)
-          fail += 100;
-        gfail = globalFail(*comm, fail);
-      }
-    }
-    if (gfail) {
-      printFailureCode(*comm, fail);
-    }
+    PrintFromRoot("FAIL");
   }
 
-  /////////////////////////////////////////////////////////////
-  // DONE
-
-  if (rank == 0)
-    std::cout << "PASS" << std::endl;
+  PrintFromRoot("PASS");
 }

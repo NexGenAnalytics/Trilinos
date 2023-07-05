@@ -424,7 +424,7 @@ template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeights(
     const scalar_t *weightVal, int stride, int idx) {
   AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
-                  "Invalid vertex weight index.");
+                  "Invalid vertex weight index: " + std::to_string(idx));
 
   size_t nvtx = getLocalNumVertices();
   ArrayRCP<const scalar_t> weightV(weightVal, 0, nvtx * stride, false);
@@ -437,7 +437,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsDevice(
     typename Base::ConstWeightsDeviceView1D weights, int idx) {
 
   AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
-                  "Invalid vertex weight index.");
+                  "Invalid vertex weight index: " + std::to_string(idx));
 
   vertexWeightsDevice_[idx] = weights;
 }
@@ -446,8 +446,8 @@ void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsDevice(
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsHost(
     typename Base::ConstWeightsHostView1D &weightsHost, int idx) {
-  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
-                  "Invalid vertex weight index.");
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
+                  "Invalid vertex weight index: " + std::to_string(idx));
 
   auto weightsDevice = Kokkos::create_mirror_view_and_copy(
       typename Base::device_t(), weightsHost);
