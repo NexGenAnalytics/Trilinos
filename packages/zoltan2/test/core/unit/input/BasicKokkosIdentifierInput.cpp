@@ -56,38 +56,15 @@
 #include <Teuchos_CommHelpers.hpp>
 
 
-///////////////////////////////////////////////////////////////////////
-int main(int narg, char *arg[]) {
+template <typename T>
+void test_ia(T &ia,
+            zlno_t numLocalIds,
+            int nWeights,
+            zgno_t myFirstId,
+            int &fail,
+            Teuchos::RCP<const Teuchos::Comm<int> > &comm) {
 
-  Tpetra::ScopeGuard tscope(&narg, &arg);
-  Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
-
-  typedef Zoltan2::BasicUserTypes<zscalar_t, zlno_t, zgno_t> userTypes_t;
-
-  int rank = comm->getRank();
-  int nprocs = comm->getSize();
-  int fail = 0, gfail = 0;
-
-  // Create global identifiers with weights
-  zlno_t numLocalIds = 10;
-  const int nWeights = 2;
-
-  Kokkos::View<zgno_t *, typename znode_t::device_type>
-    myIds(Kokkos::ViewAllocateWithoutInitializing("myIds"), numLocalIds);
-  zgno_t myFirstId = rank * numLocalIds * numLocalIds;
-  Kokkos::View<zscalar_t **, typename znode_t::device_type>
-    weights(Kokkos::ViewAllocateWithoutInitializing("weights"),
-    numLocalIds, nWeights);
-
-  Kokkos::parallel_for(
-    Kokkos::RangePolicy<typename znode_t::execution_space,
-    zlno_t> (0, numLocalIds), KOKKOS_LAMBDA (zlno_t i) {
-    myIds(i) = zgno_t(myFirstId + i);
-    weights(i, 0) = 1.0;
-    weights(i, 1) = (nprocs - rank) / (i + 1);
-  });
-
-  Zoltan2::BasicIdentifierAdapter<userTypes_t> ia(myIds, weights);
+  int gfail = 0;
 
   if (!fail && ia.getLocalNumIDs() != size_t(numLocalIds)) {
     fail = 4;
@@ -157,9 +134,48 @@ int main(int narg, char *arg[]) {
   }
 
   gfail = globalFail(*comm, fail);
+
   if (gfail) {
-    printFailureCode(*comm, fail); // will exit(1)
+    printFailureCode(*comm, fail);
   }
+}
+
+int main(int narg, char *arg[]) {
+
+  Tpetra::ScopeGuard tscope(&narg, &arg);
+  Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
+
+  typedef Zoltan2::BasicUserTypes<zscalar_t, zlno_t, zgno_t> userTypes_t;
+
+  int rank = comm->getRank();
+  int nprocs = comm->getSize();
+  int fail = 0/*, gfail = 0*/;
+
+  // Create global identifiers with weights
+  zlno_t numLocalIds = 10;
+  const int nWeights = 2;
+
+  Kokkos::View<zgno_t *, typename znode_t::device_type>
+    myIds(Kokkos::ViewAllocateWithoutInitializing("myIds"), numLocalIds);
+  zgno_t myFirstId = rank * numLocalIds * numLocalIds;
+  Kokkos::View<zscalar_t **, typename znode_t::device_type>
+    weights(Kokkos::ViewAllocateWithoutInitializing("weights"),
+    numLocalIds, nWeights);
+
+  Kokkos::parallel_for(
+    Kokkos::RangePolicy<typename znode_t::execution_space,
+    zlno_t> (0, numLocalIds), KOKKOS_LAMBDA (zlno_t i) {
+    myIds(i) = zgno_t(myFirstId + i);
+    weights(i, 0) = 1.0;
+    weights(i, 1) = (nprocs - rank) / (i + 1);
+  });
+
+  Zoltan2::BasicIdentifierAdapter<userTypes_t> ia(myIds, weights);
+  Zoltan2::BasicKokkosIdentifierAdapter<userTypes_t> k_ia(myIds, weights);
+
+  test_ia(ia,   numLocalIds, nWeights, myFirstId, fail, comm);
+  test_ia(k_ia, numLocalIds, nWeights, myFirstId, fail, comm);
+
   if (rank == 0) {
     std::cout << "PASS" << std::endl;
   }
