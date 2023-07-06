@@ -171,7 +171,7 @@ public:
 
   void getIDsDeviceView(
       typename Base::ConstIdsDeviceView &ids) const {
-    ids = idsView_; // because idsView_ is already on device
+    ids = idsView_;
   }
 
   void getIDsHostView(

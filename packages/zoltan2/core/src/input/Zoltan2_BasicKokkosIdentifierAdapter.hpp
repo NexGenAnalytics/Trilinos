@@ -84,13 +84,17 @@ template <typename User>
   class BasicKokkosIdentifierAdapter: public IdentifierAdapter<User> {
 
 public:
-  typedef typename InputTraits<User>::scalar_t scalar_t;
-  typedef typename InputTraits<User>::lno_t    lno_t;
-  typedef typename InputTraits<User>::gno_t    gno_t;
-  typedef typename InputTraits<User>::part_t   part_t;
-  typedef typename InputTraits<User>::node_t   node_t;
-  typedef typename node_t::device_type         device_t;
-  typedef User user_t;
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+  using scalar_t = typename InputTraits<User>::scalar_t;
+  using lno_t    = typename InputTraits<User>::lno_t;
+  using gno_t    = typename InputTraits<User>::gno_t;
+  using part_t   = typename InputTraits<User>::part_t;
+  using node_t   = typename InputTraits<User>::node_t;
+  using device_t = typename node_t::device_type;
+  using user_t   = User;
+
+  using Base = IdentifierAdapter<User>;
+#endif
 
   /*! \brief Constructor
    *  \param ids should point to a View of identifiers.
@@ -126,6 +130,18 @@ public:
     ids = idsView_;
   }
 
+  void getIDsDeviceView(
+      typename Base::ConstIdsDeviceView &ids) const {
+    ids = idsView_;
+  }
+
+  void getIDsHostView(
+      typename Base::ConstIdsHostView &ids) const {
+    auto hostIds = Kokkos::create_mirror_view(idsView_);
+    Kokkos::deep_copy(hostIds, idsView_);
+    ids = hostIds;
+  }
+
   int getNumWeightsPerID() const override {
     return weightsView_.extent(1); // check that this should still be 1
   }
@@ -141,6 +157,16 @@ public:
 
   void getWeightsKokkosView(Kokkos::View<scalar_t **, device_t> &wgts) const override {
     wgts = weightsView_;
+  }
+
+  void getWeightsDeviceView(typename Base::WeightsDeviceView &wgts) const override {
+    wgts = weightsView_;
+  }
+
+  void getWeightsHostView(typename Base::WeightsHostView &wgts) const override {
+    auto hostWgts = Kokkos::create_mirror_view(weightsView_);
+    Kokkos::deep_copy(hostWgts, weightsView_);
+    wgts = hostWgts;
   }
 
 private:
