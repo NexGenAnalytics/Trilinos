@@ -333,17 +333,17 @@ private:
   const gno_t *idList_;
 
   int numEntriesPerID_;
-  ArrayRCP<StridedData<lno_t, scalar_t> > entries_ ;
-
-  Kokkos::View<gno_t *, typename node_t::device_type> kIds_;
-
-  // coordinates in MJ are LayoutLeft since Tpetra Multivector gives LayoutLeft
-  Kokkos::View<scalar_t **, Kokkos::LayoutLeft,
-    typename node_t::device_type> kEntries_;
-
   int numWeights_;
+
+  // Old API  variable members
+  ArrayRCP<StridedData<lno_t, scalar_t> > entries_ ;
   ArrayRCP<StridedData<lno_t, scalar_t> > weights_;
 
+  // New API  variable members
+  // coordinates in MJ are LayoutLeft since Tpetra Multivector gives LayoutLeft
+  Kokkos::View<gno_t *, typename node_t::device_type> kIds_;
+  Kokkos::View<scalar_t **, Kokkos::LayoutLeft,
+    typename node_t::device_type> kEntries_;
   Kokkos::View<scalar_t**, typename node_t::device_type> kWeights_;
 
   void createBasicVector(
