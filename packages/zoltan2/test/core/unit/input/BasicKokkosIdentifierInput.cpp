@@ -100,7 +100,7 @@ void test_ia(T &ia,
     }
   }
 
-  // TEST DEVICE VIEWS //
+  // TEST DEVICE VIEWS
   Zoltan2::BaseAdapter<userTypes_t>::ConstIdsDeviceView device_globalIdsIn;
   Zoltan2::BaseAdapter<userTypes_t>::WeightsDeviceView device_weightsIn;
   Zoltan2::BaseAdapter<userTypes_t>::WeightsDeviceView device_weights;

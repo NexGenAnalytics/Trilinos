@@ -81,7 +81,6 @@ namespace Zoltan2 {
  *  the second template parameter to \c double.
  */
 
-#include <iostream>
 template <typename User>
   class BasicIdentifierAdapter: public IdentifierAdapter<User> {
 
@@ -146,8 +145,6 @@ public:
   // The Adapter interface.
   ////////////////////////////////////////////////////////////////
 
-// TODO: add documentation
-
   size_t getLocalNumIDs() const {
     if (using_kokkos) {
       return idsView_.extent(0);
@@ -209,7 +206,6 @@ public:
     }
   }
 
-  // overload getWeightsView?
   void getWeightsKokkosView(Kokkos::View<scalar_t **, device_t> &wgts) const override {
     wgts = weightsView_;
   }
