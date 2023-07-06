@@ -57,6 +57,8 @@
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
 #include <Teuchos_RCP.hpp>
+#include <cstdlib>
+#include <stdexcept>
 
 using Teuchos::Comm;
 using Teuchos::RCP;
@@ -69,6 +71,7 @@ using ztrowgraph_t = Tpetra::RowGraph<zlno_t, zgno_t, znode_t>;
 using node_t = typename Zoltan2::InputTraits<ztrowgraph_t>::node_t;
 using device_t = typename node_t::device_type;
 using adapter_t = Zoltan2::TpetraRowGraphAdapter<ztrowgraph_t>;
+using execspace_t = typename adapter_t::ConstWeightsHostView1D::execution_space;
 
 template <typename offset_t>
 void printGraph(RCP<const Comm<int>> &comm, zlno_t nvtx, const zgno_t *vtxIds,
@@ -96,23 +99,27 @@ void printGraph(RCP<const Comm<int>> &comm, zlno_t nvtx, const zgno_t *vtxIds,
 template <typename User>
 void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
                         ztrowgraph_t &graph) {
-  const auto comm = graph.getComm();
-  int fail = 0, gfail = 0;
+  using idsDevice_t = typename adapter_t::ConstIdsDeviceView;
+  using idsHost_t = typename adapter_t::ConstIdsHostView;
+  using offsetsDevice_t = typename adapter_t::ConstOffsetsDeviceView;
+  using offsetsHost_t = typename adapter_t::ConstOffsetsHostView;
+  using weightsDevice_t = typename adapter_t::WeightsDeviceView1D;
+  using weightsHost_t = typename adapter_t::WeightsHostView1D;
+  using constWeightsDevice_t = typename adapter_t::ConstWeightsDeviceView1D;
+  using constWeightsHost_t = typename adapter_t::ConstWeightsHostView1D;
+
   const auto nVtx = ia.getLocalNumIDs();
 
-  auto &out = std::cout;
-  bool success = true;
-
-  TEST_EQUALITY(ia.getLocalNumVertices(), graph.getLocalNumRows());
-  TEST_EQUALITY(ia.getLocalNumEdges(), graph.getLocalNumEntries());
+  Z2_TEST_EQUALITY(ia.getLocalNumVertices(), graph.getLocalNumRows());
+  Z2_TEST_EQUALITY(ia.getLocalNumEdges(), graph.getLocalNumEntries());
 
   /////////////////////////////////
   //// getVertexIdsView
   /////////////////////////////////
 
-  typename adapter_t::ConstIdsDeviceView vtxIdsDevice;
+  idsDevice_t vtxIdsDevice;
   ia.getVertexIDsDeviceView(vtxIdsDevice);
-  typename adapter_t::ConstIdsHostView vtxIdsHost;
+  idsHost_t vtxIdsHost;
   ia.getVertexIDsHostView(vtxIdsHost);
 
   TestDeviceHostView(vtxIdsDevice, vtxIdsHost);
@@ -121,13 +128,13 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
   //// getEdgesView
   /////////////////////////////////
 
-  typename adapter_t::ConstIdsDeviceView adjIdsDevice;
-  typename adapter_t::ConstOffsetsDeviceView offsetsDevice;
+  idsDevice_t adjIdsDevice;
+  offsetsDevice_t offsetsDevice;
 
   ia.getEdgesDeviceView(offsetsDevice, adjIdsDevice);
 
-  typename adapter_t::ConstIdsHostView adjIdsHost;
-  typename adapter_t::ConstOffsetsHostView offsetsHost;
+  idsHost_t adjIdsHost;
+  offsetsHost_t offsetsHost;
   ia.getEdgesHostView(offsetsHost, adjIdsHost);
 
   TestDeviceHostView(adjIdsDevice, adjIdsHost);
@@ -140,37 +147,52 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
                     typename adapter_t::ConstWeightsDeviceView1D{}, 50),
                 std::runtime_error);
 
-  typename adapter_t::WeightsDeviceView1D wgts("wgts", nVtx);
+  weightsDevice_t wgts0("wgts0", nVtx);
   Kokkos::parallel_for(
-      nVtx, KOKKOS_LAMBDA(const int idx) { wgts(idx) = idx * 2; });
+      nVtx, KOKKOS_LAMBDA(const int idx) { wgts0(idx) = idx * 2; });
 
-  Z2_TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 0));
+  Z2_TEST_NOTHROW(ia.setVertexWeightsDevice(wgts0, 0));
 
+  // Don't reuse the same View, since we don't copy the values,
+  // we just assign the View (increase use count)
+  weightsDevice_t wgts1("wgts1", nVtx);
   Kokkos::parallel_for(
-      nVtx, KOKKOS_LAMBDA(const int idx) { wgts(idx) = idx * 3; });
+      nVtx, KOKKOS_LAMBDA(const int idx) { wgts1(idx) = idx * 3; });
 
-  Z2_TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 1));
+  Z2_TEST_NOTHROW(ia.setVertexWeightsDevice(wgts1, 1));
 
   /////////////////////////////////
   //// getVertexWeightsDevice
   /////////////////////////////////
   {
-    typename adapter_t::ConstWeightsDeviceView1D weightsDevice;
+    constWeightsDevice_t weightsDevice;
     Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 0));
 
-    typename adapter_t::ConstWeightsHostView1D weightsHost;
+    constWeightsHost_t weightsHost;
     Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 0));
 
     TestDeviceHostView(weightsDevice, weightsHost);
+
+    Z2_TEST_COMPARE_ARRAYS(wgts0, weightsHost);
   }
   {
-    typename adapter_t::ConstWeightsDeviceView1D weightsDevice;
+    constWeightsDevice_t weightsDevice;
     Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 1));
 
-    typename adapter_t::ConstWeightsHostView1D weightsHost;
-    Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 2));
+    constWeightsHost_t weightsHost;
+    Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 1));
 
     TestDeviceHostView(weightsDevice, weightsHost);
+
+    Z2_TEST_COMPARE_ARRAYS(wgts1, weightsHost);
+  }
+  {
+    constWeightsDevice_t wgtsDevice;
+    Z2_TEST_THROW(ia.getVertexWeightsDeviceView(wgtsDevice, 2),
+                  std::runtime_error);
+
+    constWeightsHost_t wgtsHost;
+    Z2_TEST_THROW(ia.getVertexWeightsHostView(wgtsHost, 2), std::runtime_error);
   }
 }
 
@@ -232,7 +254,7 @@ int main(int narg, char *arg[]) {
 
   } catch (std::exception &e) {
     std::cout << e.what() << std::endl;
-    PrintFromRoot("FAIL");
+    return EXIT_FAILURE;
   }
 
   PrintFromRoot("PASS");

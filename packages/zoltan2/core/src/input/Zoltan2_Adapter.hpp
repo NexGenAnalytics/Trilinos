@@ -250,15 +250,17 @@ public:
 
   /*! \brief Provide a Kokkos view (Host side) of the weights.
       \param hostWgts on return a Kokkos view of the weights for this idx
+      \param idx  the weight index, zero or greater
    */
-  virtual void getWeightsHostView(WeightsHostView& hostWgts) const {
+  virtual void getWeightsHostView(ConstWeightsHostView1D& hostWgts, int idx = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
   /*! \brief Provide a Kokkos view (Device side) of the weights.
       \param deviceWgts on return a Kokkos view of the weights for this idx
+      \param idx  the weight index, zero or greater
    */
-  virtual void getWeightsDeviceView(WeightsDeviceView& deviceWgts) const {
+  virtual void getWeightsDeviceView(ConstWeightsDeviceView1D& deviceWgts, int idx = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 

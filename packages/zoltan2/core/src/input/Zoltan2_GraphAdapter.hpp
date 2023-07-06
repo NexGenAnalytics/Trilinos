@@ -410,11 +410,21 @@ public:
     getVertexWeightsView(wgt, stride, idx);
   }
 
-  void
-  getWeightsHostView(typename Base::WeightsHostView &hostWgts) const override {}
+  void getWeightsHostView(typename Base::ConstWeightsHostView1D &hostWgts,
+                          int idx = 0) const override {
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getWeightsHostView not yet supported for graph edges.");
 
-  void getWeightsDeviceView(
-      typename Base::WeightsDeviceView &deviceWgts) const override {}
+    getVertexWeightsHostView(hostWgts, idx);
+  }
+
+  void getWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &deviceWgts,
+                            int idx = 0) const override {
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getWeightsDeviceView not yet supported for graph edges.");
+
+    getVertexWeightsDeviceView(deviceWgts, idx);
+  }
 
   bool useDegreeAsWeight(int idx) const {
     AssertCondition(this->getPrimaryEntityType() == GRAPH_VERTEX,

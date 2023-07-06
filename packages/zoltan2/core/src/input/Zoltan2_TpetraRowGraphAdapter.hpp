@@ -130,7 +130,7 @@ public:
    *  The order of the weights should match the order that
    *  entities appear in the input data structure.
    */
-  void setWeightsDevice(typename Base::ConstWeightsDeviceView1D &val, int idx);
+  void setWeightsDevice(typename Base::ConstWeightsDeviceView1D val, int idx);
 
   /*! \brief Provide a host view of weights for the primary entity type.
    *    \param val A view to the weights for index \c idx.
@@ -140,7 +140,7 @@ public:
    *  The order of the weights should match the order that
    *  entities appear in the input data structure.
    */
-  void setWeightsHost(typename Base::ConstWeightsHostView1D &val, int idx);
+  void setWeightsHost(typename Base::ConstWeightsHostView1D val, int idx);
 
   /*! \brief Provide a pointer to vertex weights.
    *    \param val A pointer to the weights for index \c idx.
@@ -402,7 +402,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setWeights(
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setWeightsDevice(
-    typename Base::ConstWeightsDeviceView1D &val, int idx) {
+    typename Base::ConstWeightsDeviceView1D val, int idx) {
   if (this->getPrimaryEntityType() == GRAPH_VERTEX)
     setVertexWeightsDevice(val, idx);
   else
@@ -412,7 +412,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setWeightsDevice(
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setWeightsHost(
-    typename Base::ConstWeightsHostView1D &val, int idx) {
+    typename Base::ConstWeightsHostView1D val, int idx) {
   if (this->getPrimaryEntityType() == GRAPH_VERTEX)
     setVertexWeightsHost(val, idx);
   else
@@ -423,7 +423,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setWeightsHost(
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeights(
     const scalar_t *weightVal, int stride, int idx) {
-  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
                   "Invalid vertex weight index: " + std::to_string(idx));
 
   size_t nvtx = getLocalNumVertices();
@@ -436,7 +436,7 @@ template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsDevice(
     typename Base::ConstWeightsDeviceView1D weights, int idx) {
 
-  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
                   "Invalid vertex weight index: " + std::to_string(idx));
 
   vertexWeightsDevice_[idx] = weights;
@@ -596,7 +596,7 @@ template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::getVertexWeightsView(
     const scalar_t *&weights, int &stride, int idx) const {
 
-  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
                   "Invalid vertex weight index.");
 
   size_t length;
@@ -607,6 +607,8 @@ void TpetraRowGraphAdapter<User, UserCoord>::getVertexWeightsView(
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::getVertexWeightsDeviceView(
     typename Base::ConstWeightsDeviceView1D &weights, int idx) const {
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
+                  "Invalid vertex weight index.");
   weights = vertexWeightsDevice_.at(idx);
 }
 
@@ -614,6 +616,8 @@ void TpetraRowGraphAdapter<User, UserCoord>::getVertexWeightsDeviceView(
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::getVertexWeightsHostView(
     typename Base::ConstWeightsHostView1D &weights, int idx) const {
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
+                  "Invalid vertex weight index.");
   const auto weightsDevice = vertexWeightsDevice_.at(idx);
   weights = Kokkos::create_mirror_view(weightsDevice);
   Kokkos::deep_copy(weights, weightsDevice);
