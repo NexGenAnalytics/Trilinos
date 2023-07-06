@@ -121,7 +121,7 @@ public:
     return idsView_.extent(0);
   }
 
-  void getIDsView(const gno_t *&ids) const override {     // why have getIds AND getIdsKokkos?
+  void getIDsView(const gno_t *&ids) const override {
     auto kokkosIds = idsView_;
     ids = kokkosIds.data();
   }
@@ -143,10 +143,10 @@ public:
   }
 
   int getNumWeightsPerID() const override {
-    return weightsView_.extent(1); // check that this should still be 1
+    return weightsView_.extent(1);
   }
 
-  void getWeightsView(const scalar_t *&wgt, int &stride,  // why have getWeights AND getWeightsKokkos?
+  void getWeightsView(const scalar_t *&wgt, int &stride,
                       int idx = 0) const override
   {
     auto h_wgts_2d = weightsView_;
