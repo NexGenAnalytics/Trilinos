@@ -57,7 +57,6 @@
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
 #include <Teuchos_RCP.hpp>
-#include <Teuchos_UnitTestHarness.hpp>
 
 using Teuchos::Comm;
 using Teuchos::RCP;
@@ -138,8 +137,8 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
   //// setVertexWeightsDevice
   /////////////////////////////////
   Z2_TEST_THROW(ia.setVertexWeightsDevice(
-                 typename adapter_t::ConstWeightsDeviceView1D{}, 50),
-             std::runtime_error);
+                    typename adapter_t::ConstWeightsDeviceView1D{}, 50),
+                std::runtime_error);
 
   typename adapter_t::WeightsDeviceView1D wgts("wgts", nVtx);
   Kokkos::parallel_for(
@@ -151,6 +150,10 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
       nVtx, KOKKOS_LAMBDA(const int idx) { wgts(idx) = idx * 3; });
 
   Z2_TEST_NOTHROW(ia.setVertexWeightsDevice(wgts, 1));
+
+  /////////////////////////////////
+  //// getVertexWeightsDevice
+  /////////////////////////////////
   {
     typename adapter_t::ConstWeightsDeviceView1D weightsDevice;
     Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 0));
@@ -165,7 +168,7 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
     Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 1));
 
     typename adapter_t::ConstWeightsHostView1D weightsHost;
-    Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 1));
+    Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 2));
 
     TestDeviceHostView(weightsDevice, weightsHost);
   }
