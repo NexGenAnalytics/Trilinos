@@ -376,9 +376,10 @@ TpetraRowGraphAdapter<User, UserCoord>::TpetraRowGraphAdapter(
 
     vertexDegreeWeightsHost_ = typename Base::VtxDegreeHostView(
         "vertexDegreeWeightsHost_", nWeightsPerVertex_);
-    Kokkos::parallel_for(
-        nWeightsPerVertex_,
-        KOKKOS_LAMBDA(int i) { vertexDegreeWeightsHost_(i) = false; });
+
+    for (int i = 0; i < nWeightsPerVertex_; ++i) {
+      vertexDegreeWeightsHost_(i) = false;
+    }
   }
 
   if (nWeightsPerEdge_ > 0) {

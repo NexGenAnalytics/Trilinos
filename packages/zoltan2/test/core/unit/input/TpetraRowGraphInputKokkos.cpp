@@ -173,7 +173,7 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
 
     TestDeviceHostView(weightsDevice, weightsHost);
 
-    Z2_TEST_COMPARE_ARRAYS(wgts0, weightsHost);
+    TestDeviceHostView(wgts0, weightsHost);
   }
   {
     constWeightsDevice_t weightsDevice;
@@ -184,7 +184,7 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
 
     TestDeviceHostView(weightsDevice, weightsHost);
 
-    Z2_TEST_COMPARE_ARRAYS(wgts1, weightsHost);
+    TestDeviceHostView(wgts1, weightsHost);
   }
   {
     constWeightsDevice_t wgtsDevice;
