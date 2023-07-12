@@ -124,7 +124,6 @@ public:
    */
 
   void setWeights(const scalar_t *val, int stride, int idx);
-
   void setWeightsDevice(typename Base::ConstWeightsDeviceView& val, int idx) {}
   void setWeightsHost(typename Base::ConstWeightsHostView& val, int idx) {}
 

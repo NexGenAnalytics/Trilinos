@@ -51,6 +51,7 @@
 
 #include <Zoltan2_InputTraits.hpp>
 #include <Zoltan2_TestHelpers.hpp>
+#include <Zoltan2_TpetraCrsGraphAdapter.hpp>
 #include <Zoltan2_TpetraRowGraphAdapter.hpp>
 
 #include <Teuchos_Comm.hpp>
@@ -70,8 +71,10 @@ using ztcrsgraph_t = Tpetra::CrsGraph<zlno_t, zgno_t, znode_t>;
 using ztrowgraph_t = Tpetra::RowGraph<zlno_t, zgno_t, znode_t>;
 using node_t = typename Zoltan2::InputTraits<ztrowgraph_t>::node_t;
 using device_t = typename node_t::device_type;
-using adapter_t = Zoltan2::TpetraRowGraphAdapter<ztrowgraph_t>;
-using execspace_t = typename adapter_t::ConstWeightsHostView1D::execution_space;
+using rowAdapter_t = Zoltan2::TpetraRowGraphAdapter<ztrowgraph_t>;
+using crsAdapter_t = Zoltan2::TpetraCrsGraphAdapter<ztcrsgraph_t>;
+using execspace_t =
+    typename rowAdapter_t::ConstWeightsHostView1D::execution_space;
 
 template <typename offset_t>
 void printGraph(RCP<const Comm<int>> &comm, zlno_t nvtx, const zgno_t *vtxIds,
@@ -96,9 +99,51 @@ void printGraph(RCP<const Comm<int>> &comm, zlno_t nvtx, const zgno_t *vtxIds,
   comm->barrier();
 }
 
-template <typename User>
-void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
-                        ztrowgraph_t &graph) {
+template <typename adapter_t, typename graph_t>
+void TestGraphIds(adapter_t &ia, graph_t &graph) {
+
+  using idsHost_t = typename adapter_t::ConstIdsHostView;
+  using offsetsHost_t = typename adapter_t::ConstOffsetsHostView;
+  using localInds_t =
+      typename adapter_t::user_t::nonconst_local_inds_host_view_type;
+
+  const auto nvtx = graph.getLocalNumRows();
+  const auto nedges = graph.getLocalNumEntries();
+  const auto maxNumEntries = graph.getLocalMaxNumRowEntries();
+
+  typename adapter_t::Base::ConstIdsHostView adjIdsHost_("adjIdsHost_", nedges);
+  typename adapter_t::Base::ConstOffsetsHostView offsHost_("offsHost_",
+                                                           nvtx + 1);
+
+  localInds_t nbors("nbors", maxNumEntries);
+
+  for (size_t v = 0; v < nvtx; v++) {
+    size_t numColInds = 0;
+    graph.getLocalRowCopy(v, nbors, numColInds);
+
+    offsHost_(v + 1) = offsHost_(v) + numColInds;
+    for (int e = offsHost_(v), i = 0; e < offsHost_(v + 1); e++) {
+      adjIdsHost_(e) = graph.getColMap()->getGlobalElement(nbors(i++));
+    }
+  }
+
+  idsHost_t vtxIdsHost;
+  ia.getVertexIDsHostView(vtxIdsHost);
+
+  const auto graphIDS = graph.getRowMap()->getLocalElementList();
+
+  Z2_TEST_COMPARE_ARRAYS(graphIDS, vtxIdsHost);
+
+  idsHost_t adjIdsHost;
+  offsetsHost_t offsetsHost;
+  ia.getEdgesHostView(offsetsHost, adjIdsHost);
+
+  Z2_TEST_COMPARE_ARRAYS(adjIdsHost_, adjIdsHost);
+  Z2_TEST_COMPARE_ARRAYS(offsHost_, offsetsHost);
+}
+
+template <typename adapter_t, typename graph_t>
+void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
   using idsDevice_t = typename adapter_t::ConstIdsDeviceView;
   using idsHost_t = typename adapter_t::ConstIdsHostView;
   using offsetsDevice_t = typename adapter_t::ConstOffsetsDeviceView;
@@ -194,11 +239,16 @@ void verifyInputAdapter(Zoltan2::TpetraRowGraphAdapter<User> &ia,
     constWeightsHost_t wgtsHost;
     Z2_TEST_THROW(ia.getVertexWeightsHostView(wgtsHost, 2), std::runtime_error);
   }
+
+  //   TestGraphIds(ia, graph);
 }
 
 int main(int narg, char *arg[]) {
-  using soln_t = Zoltan2::PartitioningSolution<adapter_t>;
-  using part_t = adapter_t::part_t;
+  using rowSoln_t = Zoltan2::PartitioningSolution<rowAdapter_t>;
+  using rowPart_t = rowAdapter_t::part_t;
+
+  using crsSoln_t = Zoltan2::PartitioningSolution<crsAdapter_t>;
+  using crsPart_t = crsAdapter_t::part_t;
 
   Tpetra::ScopeGuard tscope(&narg, &arg);
   const auto comm = Tpetra::getDefaultComm();
@@ -223,35 +273,63 @@ int main(int narg, char *arg[]) {
 
     const int nWeights = 2;
 
-    part_t *p = new part_t[nvtx];
-    memset(p, 0, sizeof(part_t) * nvtx);
-    ArrayRCP<part_t> solnParts(p, 0, nvtx, true);
+    /////////////////////////////////////////////////////////////
+    // User object is Tpetra::CrsGraph
+    /////////////////////////////////////////////////////////////
+    {
+      PrintFromRoot("Input adapter for Tpetra::CrsGraph");
 
-    soln_t solution(env, comm, nWeights);
-    solution.setParts(solnParts);
+      auto tpetraCrsGraphInput = rcp(new crsAdapter_t(crsGraph, nWeights));
 
+      verifyInputAdapter(*tpetraCrsGraphInput, *crsGraph);
+
+      ztcrsgraph_t *mMigrate = NULL;
+      crsPart_t *p = new crsPart_t[nvtx];
+      memset(p, 0, sizeof(crsPart_t) * nvtx);
+      ArrayRCP<crsPart_t> solnParts(p, 0, nvtx, true);
+
+      crsSoln_t solution(env, comm, nWeights);
+      solution.setParts(solnParts);
+      tpetraCrsGraphInput->applyPartitioningSolution(*crsGraph, mMigrate,
+                                                     solution);
+      const auto newG = rcp(mMigrate);
+
+      auto cnewG = rcp_const_cast<const ztcrsgraph_t>(newG);
+      auto newInput = rcp(new crsAdapter_t(cnewG, nWeights));
+
+      PrintFromRoot("Input adapter for Tpetra::RowGraph migrated to proc 0");
+
+      verifyInputAdapter(*newInput, *newG);
+    }
     /////////////////////////////////////////////////////////////
     // User object is Tpetra::RowGraph
     /////////////////////////////////////////////////////////////
+    {
+      PrintFromRoot("Input adapter for Tpetra::RowGraph");
 
-    PrintFromRoot("Input adapter for Tpetra::RowGraph");
+      auto tpetraRowGraphInput = rcp(new rowAdapter_t(rowGraph, nWeights));
 
-    auto tpetraRowGraphInput = rcp(new adapter_t(rowGraph, nWeights));
+      verifyInputAdapter(*tpetraRowGraphInput, *crsGraph);
 
-    verifyInputAdapter<ztrowgraph_t>(*tpetraRowGraphInput, *crsGraph);
+      rowPart_t *p = new rowPart_t[nvtx];
+      memset(p, 0, sizeof(rowPart_t) * nvtx);
+      ArrayRCP<rowPart_t> solnParts(p, 0, nvtx, true);
 
-    ztrowgraph_t *mMigrate = NULL;
-    tpetraRowGraphInput->applyPartitioningSolution(*crsGraph, mMigrate,
-                                                   solution);
-    const auto newG = rcp(mMigrate);
+      rowSoln_t solution(env, comm, nWeights);
+      solution.setParts(solnParts);
 
-    auto cnewG = rcp_const_cast<const ztrowgraph_t>(newG);
-    auto newInput = rcp(new adapter_t(cnewG, nWeights));
+      ztrowgraph_t *mMigrate = NULL;
+      tpetraRowGraphInput->applyPartitioningSolution(*crsGraph, mMigrate,
+                                                     solution);
+      const auto newG = rcp(mMigrate);
 
-    PrintFromRoot("Input adapter for Tpetra::RowGraph migrated to proc 0");
+      auto cnewG = rcp_const_cast<const ztrowgraph_t>(newG);
+      auto newInput = rcp(new rowAdapter_t(cnewG, nWeights));
 
-    verifyInputAdapter<ztrowgraph_t>(*newInput, *newG);
+      PrintFromRoot("Input adapter for Tpetra::RowGraph migrated to proc 0");
 
+      verifyInputAdapter(*newInput, *newG);
+    }
   } catch (std::exception &e) {
     std::cout << e.what() << std::endl;
     return EXIT_FAILURE;

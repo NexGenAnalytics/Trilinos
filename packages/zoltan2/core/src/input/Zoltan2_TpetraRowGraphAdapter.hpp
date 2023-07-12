@@ -184,8 +184,7 @@ public:
    *       TheGraph->getRowMap()->getLocalElementList()
    *     \endcode
    */
-  void setVertexWeightsHost(typename Base::ConstWeightsHostView1D &val,
-                            int idx);
+  void setVertexWeightsHost(typename Base::ConstWeightsHostView1D val, int idx);
 
   /*! \brief Specify an index for which the weight should be
               the degree of the entity
@@ -227,7 +226,7 @@ public:
 
   /*! \brief Provide a device view to edge weights.
    *  \param val A pointer to the weights for index \c idx.
-   *  \param dim A number from 0 to one less than the number
+   *  \param idx A number from 0 to one less than the number
    *             of edge weights specified in the constructor.
    */
   void setEdgeWeightsDevice(typename Base::ConstWeightsDeviceView1D val,
@@ -235,7 +234,7 @@ public:
 
   /*! \brief Provide a host view to edge weights.
    *  \param val A pointer to the weights for index \c idx.
-   *  \param dim A number from 0 to one less than the
+   *  \param idx A number from 0 to one less than the
    *             number of edge weights specified in the constructor.
    */
   void setEdgeWeightsHost(typename Base::ConstWeightsHostView1D val, int idx);
@@ -446,7 +445,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsDevice(
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightsHost(
-    typename Base::ConstWeightsHostView1D &weightsHost, int idx) {
+    typename Base::ConstWeightsHostView1D weightsHost, int idx) {
   AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
                   "Invalid vertex weight index: " + std::to_string(idx));
 
@@ -467,7 +466,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setWeightIsDegree(int idx) {
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setVertexWeightIsDegree(int idx) {
-  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
                   "Invalid vertex weight index.");
 
   vertexDegreeWeightsHost_(idx) = true;
@@ -479,7 +478,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setEdgeWeights(
     const scalar_t *weightVal, int stride, int idx) {
   typedef StridedData<lno_t, scalar_t> input_t;
 
-  AssertCondition(idx >= 0 and idx < nWeightsPerEdge_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerEdge_),
                   "Invalid edge weight index" + std::to_string(idx));
 
   size_t nedges = getLocalNumEdges();
@@ -491,7 +490,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setEdgeWeights(
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setEdgeWeightsDevice(
     typename Base::ConstWeightsDeviceView1D weights, int idx) {
-  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
                   "Invalid edge weight index.");
 
   edgeWeightsDevice_[idx] = weights;
@@ -501,7 +500,7 @@ void TpetraRowGraphAdapter<User, UserCoord>::setEdgeWeightsDevice(
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::setEdgeWeightsHost(
     typename Base::ConstWeightsHostView1D weightsHost, int idx) {
-  AssertCondition(idx >= 0 and idx < nWeightsPerVertex_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerVertex_),
                   "Invalid edge weight index.");
 
   auto weightsDevice = Kokkos::create_mirror_view_and_copy(
@@ -641,7 +640,7 @@ int TpetraRowGraphAdapter<User, UserCoord>::getNumWeightsPerEdge() const {
 template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::getEdgeWeightsView(
     const scalar_t *&weights, int &stride, int idx) const {
-  AssertCondition(idx >= 0 and idx < nWeightsPerEdge_,
+  AssertCondition((idx >= 0) and (idx < nWeightsPerEdge_),
                   "Invalid edge weight index.");
 
   size_t length;
