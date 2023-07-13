@@ -155,8 +155,9 @@ public:
 
   void getIDsView(const gno_t *&ids) const {
     if (using_kokkos) {
-      auto kokkosIds = idsView_;
-      ids = kokkosIds.data();
+      auto h_ids = Kokkos::create_mirror_view(idsView_);
+      Kokkos::deep_copy(h_ids, idsView_);
+      ids = h_ids.data();
     } else {
       ids = idList_;
     }
@@ -190,7 +191,8 @@ public:
                       int idx = 0) const
   {
     if (using_kokkos) {
-      auto h_wgts_2d = weightsView_;
+      auto h_wgts_2d = Kokkos::create_mirror_view(weightsView_);
+      Kokkos::deep_copy(h_wgts_2d,weightsView_);
 
       wgt = Kokkos::subview(h_wgts_2d, Kokkos::ALL, idx).data();
       stride = 1;

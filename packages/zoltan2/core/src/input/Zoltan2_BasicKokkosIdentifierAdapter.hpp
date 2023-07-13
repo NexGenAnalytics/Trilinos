@@ -122,8 +122,9 @@ public:
   }
 
   void getIDsView(const gno_t *&ids) const override {
-    auto kokkosIds = idsView_;
-    ids = kokkosIds.data();
+    auto h_ids = Kokkos::create_mirror_view(idsView_);
+    Kokkos::deep_copy(h_ids, idsView_);
+    ids = h_ids.data();
   }
 
   void getIDsKokkosView(Kokkos::View<const gno_t *, device_t> &ids) const override {
@@ -149,7 +150,8 @@ public:
   void getWeightsView(const scalar_t *&wgt, int &stride,
                       int idx = 0) const override
   {
-    auto h_wgts_2d = weightsView_;
+    auto h_wgts_2d = Kokkos::create_mirror_view(weightsView_);
+    Kokkos::deep_copy(h_wgts_2d,weightsView_);
 
     wgt = Kokkos::subview(h_wgts_2d, Kokkos::ALL, idx).data();
     stride = 1;
