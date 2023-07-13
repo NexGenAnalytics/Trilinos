@@ -59,6 +59,7 @@ APPEND_SET(HEADERS
   include/zoltan.h
   include/zoltan_types.h
   include/zoltan_comm.h
+  include/zoltan_comm_default.h
   include/zoltan_comm_cpp.h
   include/zoltan_timer_cpp.h
   include/zoltan_timer.h
@@ -69,6 +70,10 @@ APPEND_SET(HEADERS
   include/zoltan_mem.h
   include/zoltan_eval.h
   )
+
+APPEND_SET(SOURCES
+  include/zoltan_comm_default.c
+)
 
 #
 # src/all

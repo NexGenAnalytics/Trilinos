@@ -55,6 +55,7 @@
 #define ZOLTAN_CPP_H_
 
 #include "zoltan.h"
+#include "zoltan_comm_default.h"
 #include "zoltan_comm_cpp.h"
 #include "zoltan_dd_cpp.h"
 #include <cstdlib>
@@ -75,9 +76,13 @@ public:
 
   // Constructor
 
-  Zoltan (const MPI_Comm &communicator = MPI_COMM_WORLD) 
+  Zoltan (const MPI_Comm &communicator = 0) 
   {
-  this->ZZ_Ptr = Zoltan_Create(communicator);
+    if (communicator == 0) {
+      this->ZZ_Ptr = Zoltan_Create(Zoltan_Get_Default_Communicator());
+    } else {
+      this->ZZ_Ptr = Zoltan_Create(communicator);
+    }
 
   // int fail = (this->ZZ_Ptr == NULL);  should catch this exception
   }
