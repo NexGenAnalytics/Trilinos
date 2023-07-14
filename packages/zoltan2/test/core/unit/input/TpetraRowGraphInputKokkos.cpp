@@ -167,7 +167,7 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
   idsHost_t vtxIdsHost;
   ia.getVertexIDsHostView(vtxIdsHost);
 
-  Z2_TEST_VIEWS(vtxIdsDevice, vtxIdsHost);
+  Z2_TEST_DEVICE_HOST_VIEWS(vtxIdsDevice, vtxIdsHost);
 
   /////////////////////////////////
   //// getEdgesView
@@ -182,8 +182,8 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
   offsetsHost_t offsetsHost;
   ia.getEdgesHostView(offsetsHost, adjIdsHost);
 
-  Z2_TEST_VIEWS(adjIdsDevice, adjIdsHost);
-  Z2_TEST_VIEWS(offsetsDevice, offsetsHost);
+  Z2_TEST_DEVICE_HOST_VIEWS(adjIdsDevice, adjIdsHost);
+  Z2_TEST_DEVICE_HOST_VIEWS(offsetsDevice, offsetsHost);
 
   /////////////////////////////////
   //// setVertexWeightsDevice
@@ -216,9 +216,9 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
     constWeightsHost_t weightsHost;
     Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 0));
 
-    TestDeviceHostView(weightsDevice, weightsHost);
+    Z2_TEST_DEVICE_HOST_VIEWS(weightsDevice, weightsHost);
 
-    TestDeviceHostView(wgts0, weightsHost);
+    Z2_TEST_DEVICE_HOST_VIEWS(wgts0, weightsHost);
   }
   {
     constWeightsDevice_t weightsDevice;
@@ -227,9 +227,9 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
     constWeightsHost_t weightsHost;
     Z2_TEST_NOTHROW(ia.getVertexWeightsHostView(weightsHost, 1));
 
-    TestDeviceHostView(weightsDevice, weightsHost);
+    Z2_TEST_DEVICE_HOST_VIEWS(weightsDevice, weightsHost);
 
-    TestDeviceHostView(wgts1, weightsHost);
+    Z2_TEST_DEVICE_HOST_VIEWS(wgts1, weightsHost);
   }
   {
     constWeightsDevice_t wgtsDevice;
@@ -240,7 +240,7 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
     Z2_TEST_THROW(ia.getVertexWeightsHostView(wgtsHost, 2), std::runtime_error);
   }
 
-  //   TestGraphIds(ia, graph);
+  TestGraphIds(ia, graph);
 }
 
 int main(int narg, char *arg[]) {
@@ -301,6 +301,7 @@ int main(int narg, char *arg[]) {
 
       verifyInputAdapter(*newInput, *newG);
     }
+
     /////////////////////////////////////////////////////////////
     // User object is Tpetra::RowGraph
     /////////////////////////////////////////////////////////////

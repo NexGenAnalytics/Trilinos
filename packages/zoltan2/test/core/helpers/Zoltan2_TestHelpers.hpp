@@ -52,14 +52,14 @@
 <<<<<<< HEAD
 #include <Teuchos_UnitTestHarness.hpp>
 #include <Zoltan2_Util.hpp>
-=======
+    =======
 >>>>>>> d9b703dd0f8 (Zoltan2: Provide helper test macros)
 #include <Teuchos_UnitTestHarness.hpp>
 #include <Zoltan2_Util.hpp>
 #include <iostream>
 
 #include <Tpetra_Map.hpp>
-typedef Tpetra::Map<>::node_type znode_t;
+    typedef Tpetra::Map<>::node_type znode_t;
 
 // The path to the directory of test data
 
@@ -156,7 +156,7 @@ typedef float zscalar_t;
       out << "Test failed.";                                                   \
     }                                                                          \
     if (!success) {                                                            \
-      throw std::runtime_error(#TEST" FAIL");                                   \
+      throw std::runtime_error(#TEST " FAIL");                                 \
     }                                                                          \
   }
 
@@ -199,7 +199,7 @@ void TestDeviceHostView(const DeviceType &deviceView,
   Z2_TEST_COMPARE_ARRAYS(hostView, mirrorDevice);
 }
 
-#define Z2_TEST_VIEWS(deviceView, hostView)                                    \
+#define Z2_TEST_DEVICE_HOST_VIEWS(deviceView, hostView)                        \
                                                                                \
   {                                                                            \
     for (int dim = 0; dim <= 2; ++dim) {                                       \

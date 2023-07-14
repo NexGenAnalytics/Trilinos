@@ -50,6 +50,7 @@
 #ifndef _ZOLTAN2_TPETRAROWGRAPHADAPTER_HPP_
 #define _ZOLTAN2_TPETRAROWGRAPHADAPTER_HPP_
 
+#include "Kokkos_UnorderedMap.hpp"
 #include <Tpetra_RowGraph.hpp>
 #include <Zoltan2_GraphAdapter.hpp>
 #include <Zoltan2_PartitioningHelpers.hpp>
@@ -328,7 +329,7 @@ protected:
   std::vector<typename Base::ConstWeightsDeviceView1D> edgeWeightsDevice_;
 
   virtual RCP<User> doMigration(const User &from, size_t numLocalRows,
-                        const gno_t *myNewRows) const;
+                                const gno_t *myNewRows) const;
 };
 
 /////////////////////////////////////////////////////////////////
@@ -587,8 +588,14 @@ template <typename User, typename UserCoord>
 void TpetraRowGraphAdapter<User, UserCoord>::getEdgesHostView(
     typename Base::ConstOffsetsHostView &offsets,
     typename Base::ConstIdsHostView &adjIds) const {
-  adjIds = adjIdsHost_;
-  offsets = offsHost_;
+
+  auto hostIDs = Kokkos::create_mirror_view(adjIdsDevice_);
+  Kokkos::deep_copy(hostIDs, adjIdsDevice_);
+  adjIds = hostIDs;
+
+  auto hostOffsets = Kokkos::create_mirror_view(offsDevice_);
+  Kokkos::deep_copy(hostOffsets, offsDevice_);
+  offsets = hostOffsets;
 }
 
 ////////////////////////////////////////////////////////////////////////////

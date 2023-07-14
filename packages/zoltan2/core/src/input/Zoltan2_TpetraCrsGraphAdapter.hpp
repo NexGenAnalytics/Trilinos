@@ -118,51 +118,30 @@ template <typename User, typename UserCoord>
 TpetraCrsGraphAdapter<User, UserCoord>::TpetraCrsGraphAdapter(
     const RCP<const User> &graph, int nVtxWgts, int nEdgeWgts)
     : TpetraRowGraphAdapter<User>(nVtxWgts, nEdgeWgts, graph) {
+  auto adjIdsHost = graph->getLocalIndicesHost();
 
-  using localInds_t = typename User::nonconst_local_inds_host_view_type;
+  auto adjIdsGlobalHost =
+      typename Base::IdsHostView("adjIdsGlobalHost", adjIdsHost.extent(0));
+  auto colMap = graph->getColMap();
 
-  const auto nvtx = graph->getLocalNumRows();
-  const auto nedges = graph->getLocalNumEntries();
-  // Diff from CrsMatrix
-  const auto maxNumEntries = graph->getLocalMaxNumRowEntries();
+  // Convert to global IDs using Tpetra::Map
+  Kokkos::parallel_for("adjIdsGlobalHost",
+                       Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(
+                           0, adjIdsGlobalHost.extent(0)),
+                       [=](const int i) {
+                         adjIdsGlobalHost(i) =
+                             colMap->getGlobalElement(adjIdsHost(i));
+                       });
 
-  // Unfortunately we have to copy the offsets and edge Ids
-  // because edge Ids are not usually stored in vertex id order.
+  auto adjIdsDevice = Kokkos::create_mirror_view_and_copy(
+      typename Base::device_t(), adjIdsGlobalHost);
 
-  typename Base::ConstIdsHostView adjIdsHost("adjIdsHost_", nedges);
-  typename Base::ConstOffsetsHostView offsHost("offsHost_", nvtx + 1);
-
-  localInds_t nbors("nbors", maxNumEntries);
-
-  for (size_t v = 0; v < nvtx; v++) {
-    size_t numColInds = 0;
-    graph->getLocalRowCopy(v, nbors, numColInds); // Diff from CrsGraph
-
-    offsHost(v + 1) = offsHost(v) + numColInds;
-    for (offset_t e = offsHost(v), i = 0; e < offsHost(v + 1); e++) {
-      adjIdsHost(e) = graph->getColMap()->getGlobalElement(nbors(i++));
-    }
-  }
-
-  // local indices
-  const auto ajdIdsHost = graph->getLocalIndicesHost();
-  // // adjIdsDevice_ = typename Base::ConstIdsDeviceView("adjIdsDevice_",
-  // nvtx); auto adjIdsGlobalHost = typename
-  // Base::IdsHostView("adjIdsGlobalHost", nvtx); auto colMap =
-  // graph_->getColMap();
-
-  // for(int i = 0; i < ajdIdsHost.extent(0); ++i){
-  //   adjIdsGlobalHost(i) = colMap->getGlobalElement(ajdIdsHost(i));
-  // }
-
-  // Kokkos::deep_copy(adjIdsDevice_, adjIdsGlobalHost);
-  // auto tmpView = Kokkos::create_mirror_view_and_copy(typename
-  // Base::device_t(), adjIdsGlobalHost); adjIdsDevice_ = tmpView;
+  this->adjIdsDevice_ = adjIdsDevice;
   this->offsDevice_ = graph->getLocalRowPtrsDevice();
 
   if (this->nWeightsPerVertex_ > 0) {
 
-    // should we create unrealying Views aswell?
+    // should we create underlying Views aswell?
     this->vertexWeightsDevice_.resize(this->nWeightsPerVertex_);
 
     this->vertexDegreeWeightsHost_ = typename Base::VtxDegreeHostView(
@@ -193,8 +172,7 @@ void TpetraCrsGraphAdapter<User, UserCoord>::applyPartitioningSolution(
   Z2_FORWARD_EXCEPTIONS;
 
   // Move the rows, creating a new graph.
-  RCP<User> outPtr =
-      XpetraTraits<User>::doMigration(in, numNewVtx, importList.getRawPtr());
+  RCP<User> outPtr = this->doMigration(in, numNewVtx, importList.getRawPtr());
   out = outPtr.get();
   outPtr.release();
 }
@@ -216,7 +194,7 @@ void TpetraCrsGraphAdapter<User, UserCoord>::applyPartitioningSolution(
   Z2_FORWARD_EXCEPTIONS;
 
   // Move the rows, creating a new graph.
-  out = XpetraTraits<User>::doMigration(in, numNewVtx, importList.getRawPtr());
+  out = this->doMigration(in, numNewVtx, importList.getRawPtr());
 }
 
 } // namespace Zoltan2
