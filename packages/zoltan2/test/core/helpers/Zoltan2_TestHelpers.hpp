@@ -156,7 +156,7 @@ typedef float zscalar_t;
       out << "Test failed.";                                                   \
     }                                                                          \
     if (!success) {                                                            \
-      throw std::runtime_error("FAIL");                                        \
+      throw std::runtime_error(#TEST" FAIL");                                   \
     }                                                                          \
   }
 
@@ -198,6 +198,19 @@ void TestDeviceHostView(const DeviceType &deviceView,
   // Compare the values element-wise
   Z2_TEST_COMPARE_ARRAYS(hostView, mirrorDevice);
 }
+
+#define Z2_TEST_VIEWS(deviceView, hostView)                                    \
+                                                                               \
+  {                                                                            \
+    for (int dim = 0; dim <= 2; ++dim) {                                       \
+      Z2_TEST_EQUALITY(deviceView.extent(dim), hostView.extent(dim));          \
+    }                                                                          \
+                                                                               \
+    const auto mirrorDevice = Kokkos::create_mirror_view(deviceView);          \
+    Kokkos::deep_copy(mirrorDevice, deviceView);                               \
+                                                                               \
+    Z2_TEST_COMPARE_ARRAYS(hostView, mirrorDevice);                            \
+  }
 
 #include <ErrorHandlingForTests.hpp>
 #include <PrintData.hpp>

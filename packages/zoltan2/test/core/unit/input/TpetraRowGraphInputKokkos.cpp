@@ -167,7 +167,7 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
   idsHost_t vtxIdsHost;
   ia.getVertexIDsHostView(vtxIdsHost);
 
-  TestDeviceHostView(vtxIdsDevice, vtxIdsHost);
+  Z2_TEST_VIEWS(vtxIdsDevice, vtxIdsHost);
 
   /////////////////////////////////
   //// getEdgesView
@@ -182,8 +182,8 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
   offsetsHost_t offsetsHost;
   ia.getEdgesHostView(offsetsHost, adjIdsHost);
 
-  TestDeviceHostView(adjIdsDevice, adjIdsHost);
-  TestDeviceHostView(offsetsDevice, offsetsHost);
+  Z2_TEST_VIEWS(adjIdsDevice, adjIdsHost);
+  Z2_TEST_VIEWS(offsetsDevice, offsetsHost);
 
   /////////////////////////////////
   //// setVertexWeightsDevice

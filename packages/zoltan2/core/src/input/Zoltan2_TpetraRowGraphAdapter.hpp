@@ -303,7 +303,13 @@ public:
       const User &in, RCP<User> &out,
       const PartitioningSolution<Adapter> &solution) const;
 
-private:
+protected:
+  // Useb by TpetraCrsGraphAdapter
+  TpetraRowGraphAdapter(int nVtxWgts, int nEdgeWgts,
+                        const RCP<const User> &graph)
+      : graph_(graph), nWeightsPerVertex_(nVtxWgts),
+        nWeightsPerEdge_(nEdgeWgts) {}
+
   RCP<const User> graph_;
 
   typename Base::ConstOffsetsHostView offsHost_;
@@ -321,7 +327,7 @@ private:
   ArrayRCP<StridedData<lno_t, scalar_t>> edgeWeights_;
   std::vector<typename Base::ConstWeightsDeviceView1D> edgeWeightsDevice_;
 
-  RCP<User> doMigration(const User &from, size_t numLocalRows,
+  virtual RCP<User> doMigration(const User &from, size_t numLocalRows,
                         const gno_t *myNewRows) const;
 };
 
