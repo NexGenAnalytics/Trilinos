@@ -254,6 +254,39 @@ TRIBITS_ADD_TEST(
   FAIL_REGULAR_EXPRESSION "FAIL"
   )
 
+TRIBITS_ADD_EXECUTABLE(
+  TpetraMultiVectorInput
+  SOURCES input/TpetraMultiVectorInput.cpp
+  COMM serial mpi
+  )
+
+TRIBITS_ADD_TEST(
+  TpetraMultiVectorInput
+  NAME TpetraMultiVectorInput_noweights
+  ARGS "--file=simple"
+  COMM serial mpi
+  PASS_REGULAR_EXPRESSION "PASS"
+  FAIL_REGULAR_EXPRESSION "FAIL"
+  )
+
+TRIBITS_ADD_TEST(
+  TpetraMultiVectorInput
+  NAME TpetraMultiVectorInput_oneweight
+  ARGS "--file=vwgt"
+  COMM serial mpi
+  PASS_REGULAR_EXPRESSION "PASS"
+  FAIL_REGULAR_EXPRESSION "FAIL"
+  )
+
+TRIBITS_ADD_TEST(
+  TpetraMultiVectorInput
+  NAME TpetraMultiVectorInput_twoweights
+  ARGS "--file=vwgt2"
+  COMM serial mpi
+  PASS_REGULAR_EXPRESSION "PASS"
+  FAIL_REGULAR_EXPRESSION "FAIL"
+  )
+
 #
 # Tests for src/models
 #
