@@ -75,6 +75,7 @@ namespace Zoltan2 {
 template <typename User, typename UserCoord = User>
 class TpetraRowMatrixAdapter : public MatrixAdapter<User, UserCoord> {
 public:
+
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   using scalar_t = typename InputTraits<User>::scalar_t;
   using offset_t = typename InputTraits<User>::offset_t;
@@ -90,9 +91,8 @@ public:
 
   /*! \brief Constructor
    *    \param inmatrix The user's Tpetra RowMatrix object
-   *    \param nWeightsPerRow If row weights will be provided in
-   * setRowWeights(), the set \c nWeightsPerRow to the number of weights per
-   * row.
+   *    \param nWeightsPerRow If row weights will be provided in setRowWeights(),
+   *        then set \c nWeightsPerRow to the number of weights per row.
    */
   TpetraRowMatrixAdapter(const RCP<const User> &inmatrix,
                          int nWeightsPerRow = 0);
@@ -148,11 +148,17 @@ public:
   // The MatrixAdapter interface.
   ////////////////////////////////////////////////////
 
-  size_t getLocalNumRows() const { return matrix_->getLocalNumRows(); }
+  size_t getLocalNumRows() const {
+    return matrix_->getLocalNumRows();
+  }
 
-  size_t getLocalNumColumns() const { return matrix_->getLocalNumCols(); }
+  size_t getLocalNumColumns() const {
+    return matrix_->getLocalNumCols();
+  }
 
-  size_t getLocalNumEntries() const { return matrix_->getLocalNumEntries(); }
+  size_t getLocalNumEntries() const {
+    return matrix_->getLocalNumEntries();
+  }
 
   bool CRSViewAvailable() const { return true; }
 
@@ -164,16 +170,16 @@ public:
   void getRowIDsHostView(
       typename BaseAdapter<User>::ConstIdsHostView &rowIds) const override {
     auto kRowIds = rowMap_->getMyGlobalIndices();
-    auto hostRowIds = Kokkos::create_mirror_view(kRowIds);
-    Kokkos::deep_copy(hostRowIds, kRowIds);
-    rowIds = hostRowIds;
+    auto rowIdsHost = Kokkos::create_mirror_view(kRowIds);
+    Kokkos::deep_copy(rowIdsHost, kRowIds);
+    rowIds = rowIdsHost;
   }
 
   void getRowIDsDeviceView(
       typename BaseAdapter<User>::ConstIdsDeviceView &rowIds) const override {
-    using device_type = typename node_t::device_type;
+    auto kRowIds = rowMap_->getMyGlobalIndices();
     auto rowIdsDevice = Kokkos::create_mirror_view_and_copy(
-        device_type(), rowMap_->getMyGlobalIndices());
+        device_t(), kRowIds);
     rowIds = rowIdsDevice;
   }
 
@@ -305,8 +311,8 @@ private:
 
 template <typename User, typename UserCoord>
 TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
-    const RCP<const User> &inmatrix, int nWeightsPerRow)
-    : matrix_(inmatrix), rowMap_(), colMap_(), offset_(), columnIds_(),
+    const RCP<const User> &inmatrix, int nWeightsPerRow):
+      matrix_(inmatrix), rowMap_(), colMap_(), offset_(), columnIds_(),
       nWeightsPerRow_(nWeightsPerRow), rowWeights_(),
       mayHaveDiagonalEntries(true) {
   typedef StridedData<lno_t, scalar_t> input_t;

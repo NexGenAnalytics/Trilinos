@@ -153,7 +153,49 @@ typedef float zscalar_t;
     if (!success) {                                                            \
       throw std::runtime_error(#TEST " FAIL");                                 \
     }                                                                          \
+<<<<<<< Updated upstream
+=======
   }
+
+#define Z2_TEST_THROW(code, ExceptType) Z2_TEST(TEST_THROW(code, ExceptType))
+#define Z2_TEST_NOTHROW(code) Z2_TEST(TEST_NOTHROW(code))
+#define Z2_TEST_EQUALITY(val1, val2) Z2_TEST(TEST_EQUALITY(val1, val2))
+#define Z2_TEST_INEQUALITY(val1, val2) Z2_TEST(TEST_INEQUALITY(val1, val2))
+#define Z2_TEST_ASSERT(expr) Z2_TEST(TEST_ASSERT(expr))
+#define Z2_TEST_EQUALITY_CONST(val1, val2)                                     \
+  Z2_TEST(TEST_EQUALITY_CONST(val1, val2))
+#define Z2_TEST_INEQUALITY_CONST(val1, val2)                                   \
+  Z2_TEST(TEST_INEQUALITY_CONST(val1, val2))
+#define Z2_TEST_COMPARE(val1, comp, val2)                                      \
+  Z2_TEST(TEST_COMPARE(val1, comp, val2))
+#define Z2_TEST_COMPARE_ARRAYS(val1, val2)                                     \
+  Z2_TEST(TEST_COMPARE_ARRAYS(val1, val2))
+#define Z2_TEST_COMPARE_FLOATING_ARRAYS(val1, val2, tol)                       \
+  Z2_TEST(TEST_COMPARE_FLOATING_ARRAYS(val1, val2, tol))
+#define Z2_TEST_FLOATING_EQUALITY(val1, val2, tol)                             \
+  Z2_TEST(TEST_FLOATING_EQUALITY(val1, val2, tol))
+
+inline void PrintFromRoot(const std::string &message) {
+  if (Tpetra::getDefaultComm()->getRank() == 0) {
+    printf("%s \n", message.c_str());
+>>>>>>> Stashed changes
+  }
+}
+
+template <typename DeviceType, typename HostType>
+void TestDeviceHostView(const DeviceType &deviceView,
+                        const HostType &hostView) {
+  // Should we test for more dimensions?
+  for (int dim = 0; dim <= 2; ++dim) {
+    Z2_TEST_EQUALITY(deviceView.extent(dim), hostView.extent(dim));
+  }
+
+  const auto mirrorDevice = Kokkos::create_mirror_view(deviceView);
+  Kokkos::deep_copy(mirrorDevice, deviceView);
+
+  // Compare the values element-wise
+  Z2_TEST_COMPARE_ARRAYS(hostView, mirrorDevice);
+}
 
 #define Z2_TEST_THROW(code, ExceptType) Z2_TEST(TEST_THROW(code, ExceptType))
 #define Z2_TEST_NOTHROW(code) Z2_TEST(TEST_NOTHROW(code))
