@@ -59,7 +59,6 @@ APPEND_SET(HEADERS
   include/zoltan.h
   include/zoltan_types.h
   include/zoltan_comm.h
-  include/zoltan_comm_default.h
   include/zoltan_comm_cpp.h
   include/zoltan_timer_cpp.h
   include/zoltan_timer.h
@@ -70,10 +69,6 @@ APPEND_SET(HEADERS
   include/zoltan_mem.h
   include/zoltan_eval.h
   )
-
-APPEND_SET(SOURCES
-  include/zoltan_comm_default.c
-)
 
 #
 # src/all
@@ -487,6 +482,7 @@ APPEND_SET(SOURCES
   Utilities/Communication/comm_do_reverse.c
   Utilities/Communication/comm_info.c
   Utilities/Communication/comm_create.c
+  Utilities/Communication/comm_default.c
   Utilities/Communication/comm_resize.c
   Utilities/Communication/comm_sort_ints.c
   Utilities/Communication/comm_destroy.c

@@ -78,7 +78,7 @@
        fflush(stdout); \
        fprintf(stderr,"in file %s, line %d, failed to allocate %ld bytes",\
                __FILE__,__LINE__,size); \
-       MPI_Abort(MPI_COMM_WORLD,1); \
+       MPI_Abort(MPI_Comm_Default(),1); \
     } \
  }
 

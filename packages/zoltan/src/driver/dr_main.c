@@ -160,8 +160,8 @@ int main(int argc, char *argv[])
 #endif
 
   /* get some machine information */
-  MPI_Comm_rank(MPI_COMM_WORLD, &Proc);
-  MPI_Comm_size(MPI_COMM_WORLD, &Num_Proc);
+  MPI_Comm_rank(MPI_Comm_Default(), &Proc);
+  MPI_Comm_size(MPI_Comm_Default(), &Num_Proc);
 
   my_rank = Proc;
 
@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
     print_input_info(stdout, Num_Proc, &prob, &pio_info, version);
   }
 
-  MPI_Allreduce(&error, &gerror, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&error, &gerror, 1, MPI_INT, MPI_MAX, MPI_Comm_Default());
   if (gerror) goto End;
 
   /* broadcast the command info to all of the processor */
@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
   /*
    *  Create a Zoltan structure.
    */
-  if ((zz = Zoltan_Create(MPI_COMM_WORLD)) == NULL) {
+  if ((zz = Zoltan_Create(MPI_Comm_Default())) == NULL) {
     Gen_Error(0, "fatal:  NULL returned from Zoltan_Create()\n");
     return 0;
   }
@@ -376,7 +376,7 @@ int main(int argc, char *argv[])
           }
           fclose(fp);
         }
-        MPI_Bcast (CITESEER, 200, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast (CITESEER, 200, MPI_INT, 0, MPI_Comm_Default());
       }
     }
 
@@ -624,11 +624,11 @@ static int read_mesh(
       printf("Process %d:\n",i);
       print_mesh(Proc, mesh, &pins, &he, &verts);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_Comm_Default());
   }
-  MPI_Reduce(&pins, &tpins, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&he, &the, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&verts, &tverts, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&pins, &tpins, 1, MPI_INT, MPI_SUM, 0, MPI_Comm_Default());
+  MPI_Reduce(&he, &the, 1, MPI_INT, MPI_SUM, 0, MPI_Comm_Default());
+  MPI_Reduce(&verts, &tverts, 1, MPI_INT, MPI_SUM, 0, MPI_Comm_Default());
   if (Proc == 0){
     if (mesh->format == ZOLTAN_COMPRESSED_EDGE){
       printf("Total pins %d, total vertices %d, total rows %d\n",
@@ -831,11 +831,11 @@ ELEM_INFO *elem;
     }
   }
 
-  MPI_Allreduce(&mesh->blank_count, &mesh->global_blank_count, 1, ZOLTAN_ID_MPI_TYPE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&mesh->blank_count, &mesh->global_blank_count, 1, ZOLTAN_ID_MPI_TYPE, MPI_SUM, MPI_Comm_Default());
 
   tmp = (ZOLTAN_ID_TYPE)mesh->num_elems;
 
-  MPI_Reduce(&tmp, &total_vertices, 1, ZOLTAN_ID_MPI_TYPE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&tmp, &total_vertices, 1, ZOLTAN_ID_MPI_TYPE, MPI_SUM, 0, MPI_Comm_Default());
 
   if (mesh->proc == 0){
     printf("Dynamic graph factor %0.4f, " ZOLTAN_ID_SPEC " vertices, " ZOLTAN_ID_SPEC " blanked (%0.2f%%)\n",
@@ -844,7 +844,7 @@ ELEM_INFO *elem;
   }
   fflush(stdout);
   if (Debug_Driver > 1) {
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_Comm_Default());
     if (mesh->num_elems){
       printf("Proc %d: %d vertices, %d blanked (%0.2f%%)\n",
             mesh->proc, mesh->num_elems,  mesh->blank_count,
@@ -854,7 +854,7 @@ ELEM_INFO *elem;
       printf("Proc %d: 0 vertices\n", mesh->proc);
     }
     fflush(stdout);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_Comm_Default());
   }
 }
 
