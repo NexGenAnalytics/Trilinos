@@ -52,13 +52,10 @@
 
 #include <Zoltan2_MatrixAdapter.hpp>
 #include <Zoltan2_StridedData.hpp>
-#include <Zoltan2_XpetraTraits.hpp> // maybe delete
-#include <Zoltan2_InputTraits.hpp> // maybe
+#include <Zoltan2_InputTraits.hpp>
 #include <Zoltan2_PartitioningHelpers.hpp>
-#include <Zoltan2_TpetraRowMatrixAdapter.hpp> // maybe for doMigration
 
 #include <Tpetra_CrsMatrix.hpp>
-#include <Tpetra_RowMatrix.hpp> // maybe
 
 namespace Zoltan2 {
 
@@ -76,10 +73,9 @@ namespace Zoltan2 {
     used by Zoltan2 for weights, coordinates, part sizes and
     quality metrics.
     Some User types (like Tpetra::CrsMatrix) have an inherent scalar type,
-    and some
-    (like Tpetra::CrsGraph) do not.  For such objects, the scalar type is
-    set by Zoltan2 to \c float.  If you wish to change it to double, set
-    the second template parameter to \c double.
+    and some (like Tpetra::CrsGraph) do not.  For such objects, the scalar
+    type is set by Zoltan2 to \c float.  If you wish to change it to double,
+    set the second template parameter to \c double.
 
 */
 
@@ -314,8 +310,6 @@ private:
   Kokkos::View<bool *, host_t> numNzWeight_;
 
   bool mayHaveDiagonalEntries;
-  // is there a better way to use doMigration? Put in InputTraits?
-  // (right now, it's declared in both Crs and Row)
   RCP<User> doMigration(const User &from, size_t numLocalRows,
                         const gno_t *myNewRows) const;
 };
@@ -523,18 +517,10 @@ template <typename User, typename UserCoord>
 template <typename User, typename UserCoord>
 RCP<User> TpetraCrsMatrixAdapter<User, UserCoord>::doMigration(
     const User &from, size_t numLocalRows, const gno_t *myNewRows) const {
+  // from TpetraRowMatrixAdapter.hpp
   typedef Tpetra::Map<lno_t, gno_t, node_t> map_t;
   typedef Tpetra::CrsMatrix<scalar_t, lno_t, gno_t, node_t> tcrsmatrix_t;
 
-  // We cannot create a Tpetra::RowMatrix, unless the underlying type is
-  // something we know (like Tpetra::CrsMatrix).
-  // If the underlying type is something different, the user probably doesn't
-  // want a Tpetra::CrsMatrix back, so we throw an error.
-
-  // Try to cast "from" matrix to a TPetra::CrsMatrix
-  // If that fails we throw an error.
-  // We could cast as a ref which will throw std::bad_cast but with ptr
-  // approach it might be clearer what's going on here
   const tcrsmatrix_t *pCrsMatrix = dynamic_cast<const tcrsmatrix_t *>(&from);
 
   if (!pCrsMatrix) {
@@ -559,23 +545,6 @@ RCP<User> TpetraCrsMatrixAdapter<User, UserCoord>::doMigration(
   Tpetra::Import<lno_t, gno_t, node_t> importer(smap, tmap);
 
   // target matrix
-  // Chris Siefert proposed using the following to make migration
-  // more efficient.
-  // By default, the Domain and Range maps are the same as in "from".
-  // As in the original code, we instead set them both to tmap.
-  // The assumption is a square matrix.
-  // TODO:  what about rectangular matrices?
-  // TODO:  Should choice of domain/range maps be an option to this function?
-
-  // KDD 3/7/16:  disabling Chris' new code to avoid dashboard failures;
-  // KDD 3/7/16:  can re-enable when issue #114 is fixed.
-  // KDD 3/7/16:  when re-enable CSIEFERT code, can comment out
-  // KDD 3/7/16:  "Original way" code.
-  // CSIEFERT RCP<tcrsmatrix_t> M;
-  // CSIEFERT from.importAndFillComplete(M, importer, tmap, tmap);
-
-  // Original way we did it:
-
   int oldNumElts = smap->getLocalNumElements();
   int newNumElts = numLocalRows;
 
@@ -603,7 +572,6 @@ RCP<User> TpetraCrsMatrixAdapter<User, UserCoord>::doMigration(
   M->doImport(from, importer, Tpetra::INSERT);
   M->fillComplete();
 
-  // End of original way we did it.
   return Teuchos::rcp_dynamic_cast<User>(M);
 }
 
