@@ -262,12 +262,14 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getRowWeightsHostView(typename BaseAdapter<User>::WeightsHostView& weights) const
+  virtual void getRowWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D& weights,
+                                     int /* idx */ = 0) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getRowWeightsDeviceView(typename BaseAdapter<User>::WeightsDeviceView& weights) const
+  virtual void getRowWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& weights,
+                                       int /* idx */ = 0) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
@@ -371,12 +373,12 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getColumnWeightsHostView(typename BaseAdapter<User>::WeightsHostView& weights) const
+  virtual void getColumnWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D& weights) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getColumnWeightsDeviceView(typename BaseAdapter<User>::WeightsDeviceView& weights) const
+  virtual void getColumnWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& weights) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
@@ -577,7 +579,7 @@ public:
     }
   }
 
-  virtual void getWeightsHostView(typename BaseAdapter<User>::WeightsHostView& hostWgts) const {
+  virtual void getWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D& hostWgts) const {
       switch (getPrimaryEntityType()) {
       case MATRIX_ROW:
         getRowWeightsHostView(hostWgts);
@@ -599,7 +601,7 @@ public:
         break;
       }  }
 
-  virtual void getWeightsDeviceView(typename BaseAdapter<User>::WeightsDeviceView& deviceWgts) const {
+  virtual void getWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& deviceWgts) const {
       switch (getPrimaryEntityType()) {
       case MATRIX_ROW:
         getRowWeightsDeviceView(deviceWgts);
