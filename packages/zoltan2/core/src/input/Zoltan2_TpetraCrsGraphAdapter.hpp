@@ -161,20 +161,8 @@ template <typename Adapter>
 void TpetraCrsGraphAdapter<User, UserCoord>::applyPartitioningSolution(
     const User &in, User *&out,
     const PartitioningSolution<Adapter> &solution) const {
-  // Get an import list (rows to be received)
-  size_t numNewVtx;
-  ArrayRCP<gno_t> importList;
-  try {
-    numNewVtx =
-        Zoltan2::getImportList<Adapter, TpetraCrsGraphAdapter<User, UserCoord>>(
-            solution, this, importList);
-  }
-  Z2_FORWARD_EXCEPTIONS;
-
-  // Move the rows, creating a new graph.
-  RCP<User> outPtr = this->doMigration(in, numNewVtx, importList.getRawPtr());
-  out = outPtr.get();
-  outPtr.release();
+  TpetraRowGraphAdapter<User, UserCoord>::applyPartitioningSolution(in, out,
+                                                                    solution);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -183,18 +171,8 @@ template <typename Adapter>
 void TpetraCrsGraphAdapter<User, UserCoord>::applyPartitioningSolution(
     const User &in, RCP<User> &out,
     const PartitioningSolution<Adapter> &solution) const {
-  // Get an import list (rows to be received)
-  size_t numNewVtx;
-  ArrayRCP<gno_t> importList;
-  try {
-    numNewVtx =
-        Zoltan2::getImportList<Adapter, TpetraCrsGraphAdapter<User, UserCoord>>(
-            solution, this, importList);
-  }
-  Z2_FORWARD_EXCEPTIONS;
-
-  // Move the rows, creating a new graph.
-  out = this->doMigration(in, numNewVtx, importList.getRawPtr());
+  TpetraRowGraphAdapter<User, UserCoord>::applyPartitioningSolution(in, out,
+                                                                    solution);
 }
 
 } // namespace Zoltan2

@@ -49,11 +49,6 @@
 #ifndef ZOLTAN2_TESTHELPERS_HPP
 #define ZOLTAN2_TESTHELPERS_HPP
 
-<<<<<<< HEAD
-#include <Teuchos_UnitTestHarness.hpp>
-#include <Zoltan2_Util.hpp>
-    =======
->>>>>>> d9b703dd0f8 (Zoltan2: Provide helper test macros)
 #include <Teuchos_UnitTestHarness.hpp>
 #include <Zoltan2_Util.hpp>
 #include <iostream>

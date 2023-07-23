@@ -99,7 +99,7 @@ int verifyInputAdapter(
 {
   typedef typename Zoltan2::InputTraits<User>::offset_t offset_t;
 
-  const auto comm = graph.getComm();
+  auto comm = graph.getComm();
   int fail = 0, gfail=0;
 
   if (!fail &&
@@ -128,7 +128,7 @@ int verifyInputAdapter(
     gfail = globalFail(*comm, fail);
 
     if (gfail == 0){
-     //  printGraph<offset_t>(comm, nvtx, vtxIds, offsets, edgeIds);
+      printGraph<offset_t>(comm, nvtx, vtxIds, offsets, edgeIds);
     }
     else{
       if (!fail) fail = 10;

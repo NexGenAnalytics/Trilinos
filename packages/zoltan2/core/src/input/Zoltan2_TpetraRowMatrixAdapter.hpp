@@ -307,7 +307,7 @@ template <typename User, typename UserCoord>
 TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
     const RCP<const User> &inmatrix, int nWeightsPerRow)
     : matrix_(inmatrix), rowMap_(), colMap_(), offset_(), columnIds_(),
-      rowWeights_(), nWeightsPerRow_(nWeightsPerRow),
+      nWeightsPerRow_(nWeightsPerRow), rowWeights_(),
       mayHaveDiagonalEntries(true) {
   typedef StridedData<lno_t, scalar_t> input_t;
 
