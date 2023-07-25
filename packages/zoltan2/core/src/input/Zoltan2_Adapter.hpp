@@ -130,8 +130,8 @@ public:
   using ConstScalarsDeviceView = Kokkos::View<const scalar_t *, device_t>;
   using ConstScalarsHostView = typename ConstScalarsDeviceView::HostMirror;
 
-  using scalarsDeviceView = Kokkos::View<scalar_t *, device_t>;
-  using scalarsHostView = typename scalarsDeviceView::HostMirror;
+  using ScalarsDeviceView = Kokkos::View<scalar_t *, device_t>;
+  using ScalarsHostView = typename ScalarsDeviceView::HostMirror;
 
   using ConstWeightsDeviceView1D = Kokkos::View<const scalar_t *, device_t>;
   using ConstWeightsHostView1D = typename ConstWeightsDeviceView1D::HostMirror;
@@ -274,7 +274,7 @@ public:
   /*! \brief Provide a Kokkos view (Device side) of the weights.
       \param deviceWgts on return a Kokkos view of all the weights
    */
-  virtual void getWeightsDeviceView(ConstWeightsHostView1D& deviceWgts, int idx = 0) const {
+  virtual void getWeightsDeviceView(ConstWeightsDeviceView1D& deviceWgts, int idx = 0) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 

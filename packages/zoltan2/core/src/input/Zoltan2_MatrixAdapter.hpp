@@ -555,7 +555,8 @@ public:
     }
   }
 
-  void getWeightsView(const scalar_t *&wgt, int &stride, int idx = 0) const override
+  void getWeightsView(const scalar_t *&wgt, int &stride,
+                      int idx = 0) const override
   {
     switch (getPrimaryEntityType()) {
     case MATRIX_ROW:
@@ -579,7 +580,8 @@ public:
     }
   }
 
-  virtual void getWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D& hostWgts) const {
+  virtual void getWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D &hostWgts,
+                                  int idx = 0) const override {
       switch (getPrimaryEntityType()) {
       case MATRIX_ROW:
         getRowWeightsHostView(hostWgts);
@@ -601,7 +603,8 @@ public:
         break;
       }  }
 
-  virtual void getWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& deviceWgts) const {
+  virtual void getWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& deviceWgts,
+                                    int idx = 0) const override {
       switch (getPrimaryEntityType()) {
       case MATRIX_ROW:
         getRowWeightsDeviceView(deviceWgts);

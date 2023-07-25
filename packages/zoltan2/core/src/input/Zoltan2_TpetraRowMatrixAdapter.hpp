@@ -269,26 +269,34 @@ public:
 
 protected:
   // Used by TpetraCrsMatrixAdapter
-  // TpetraRowMatrixAdapter(const RCP<const User> &matrix, int nRowWgts)
-  //   : matrix_(matrix), nWeightsPerRow_(nRowWgts) {}
+  TpetraRowMatrixAdapter(int nWeightsPerRow,
+                         const RCP<const User> &inmatrix)
+        : matrix_(inmatrix), nWeightsPerRow_(nWeightsPerRow) {}
 
   RCP<const User> matrix_;
+
   RCP<const Tpetra::Map<lno_t, gno_t, node_t>> rowMap_;
   RCP<const Tpetra::Map<lno_t, gno_t, node_t>> colMap_;
+
   ArrayRCP<offset_t> offset_;
   ArrayRCP<gno_t> columnIds_;
   ArrayRCP<scalar_t> values_;
-  ArrayRCP<StridedData<lno_t, scalar_t>> rowWeights_;
 
-  // New Kokkos Type
-  Kokkos::View<offset_t *, device_t> kOffset_;
-  Kokkos::View<gno_t *, device_t> kColumnIds_;
-  Kokkos::View<scalar_t *, device_t> kValues_;
-  std::vector<typename Base::ConstWeightsDeviceView1D> kRowWeights_;
-  Kokkos::View<bool *, host_t> numNzWeight_;
+  typename Base::ConstOffsetsHostView offsHost_;
+  typename Base::ConstIdsHostView colIdsHost_;
+  typename Base::ScalarsHostView valuesHost_;
+
+  typename Base::ConstOffsetsDeviceView offsDevice_;
+  typename Base::ConstIdsDeviceView colIdsDevice_;
+  typename Base::ScalarsDeviceView valuesDevice_;
 
   int nWeightsPerRow_;
+  ArrayRCP<StridedData<lno_t, scalar_t>> rowWeights_;
+  std::vector<typename Base::ConstWeightsDeviceView1D> rowWeightsDevice_;
+  Kokkos::View<bool *, host_t> numNzWeight_;
+
   bool mayHaveDiagonalEntries;
+
   virtual RCP<User> doMigration(const User &from, size_t numLocalRows,
                         const gno_t *myNewRows) const;
 };
@@ -303,71 +311,60 @@ TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
       matrix_(inmatrix), rowMap_(), colMap_(), offset_(), columnIds_(),
       nWeightsPerRow_(nWeightsPerRow), rowWeights_(),
       mayHaveDiagonalEntries(true) {
-  typedef StridedData<lno_t, scalar_t> input_t;
+  using strided_t = StridedData<lno_t, scalar_t>;
+  using localInds_t = typename User::nonconst_local_inds_host_view_type;
+  using localVals_t = typename User::nonconst_values_host_view_type;
 
-  rowMap_ = matrix_->getRowMap();
-  colMap_ = matrix_->getColMap();
+  std::cout << "beginning TpetraRowMatrixAdapter constructor" << std::endl;
 
-  size_t nrows = matrix_->getLocalNumRows();
-  size_t nnz = matrix_->getLocalNumEntries();
-  size_t maxnumentries =
-      matrix_->getLocalMaxNumRowEntries(); // Diff from CrsMatrix
+  const auto nrows = matrix_->getLocalNumRows();
+  const auto nnz = matrix_->getLocalNumEntries();
+  auto maxNumEntries = matrix_->getLocalMaxNumRowEntries();
 
-  offset_.resize(nrows + 1, 0);
-  columnIds_.resize(nnz);
-  values_.resize(nnz);
-  typename User::nonconst_local_inds_host_view_type indices("indices",
-                                                            maxnumentries);
-  typename User::nonconst_values_host_view_type nzs("nzs", maxnumentries);
+  // Unfortunately we have to copy the offsets, column Ids, and vals
+  // because column Ids are not usually stored in row id order.
 
-  kOffset_ = Kokkos::View<offset_t *, device_t>(
-      Kokkos::ViewAllocateWithoutInitializing("offset_"), nrows + 1);
-  auto kOffsetHost = Kokkos::create_mirror_view(kOffset_);
+  colIdsHost_ = typename Base::ConstIdsHostView("colIdsHost_", nnz);
+  offsHost_ = typename Base::ConstOffsetsHostView("offsHost_", nrows + 1);
+  valuesHost_ = typename Base::ScalarsHostView("valuesHost_", nnz);
 
-  kColumnIds_ = Kokkos::View<gno_t *, device_t>(
-      Kokkos::ViewAllocateWithoutInitializing("columIds_"), nnz);
-  auto kColumnIdsHost = Kokkos::create_mirror_view(kColumnIds_);
+  localInds_t localColInds("localColInds", maxNumEntries);
+  localVals_t localVals("localVals", maxNumEntries);
+  std::cout << "before for loop" << std::endl;
+  for (size_t r = 0; r < nrows; r++) {
+    size_t numEntries = 0;
+    matrix_->getLocalRowCopy(r, localColInds, localVals, numEntries); // Diff from CrsGraph
 
-  kValues_ = Kokkos::View<scalar_t *, device_t>(
-      Kokkos::ViewAllocateWithoutInitializing("values_"), nnz);
-  auto kValuesHost = Kokkos::create_mirror_view(kValues_);
-
-  // kRowWeights_ = Kokkos::View<scalar_t **, device_t>(
-  //     Kokkos::ViewAllocateWithoutInitializing("rowWeights_"), nWeightsPerRow_,
-  //     nWeightsPerRow_ * nrows);
-
-  lno_t next = 0;
-  kOffsetHost(0) = 0;
-  for (size_t i = 0; i < nrows; i++) {
-    lno_t row = i;
-    matrix_->getLocalRowCopy(row, indices, nzs, nnz); // Diff from CrsMatrix
-    for (size_t j = 0; j < nnz; j++) {
-      auto cNzs = nzs[j];
-      values_[next] = cNzs;
-      kValuesHost(next) = cNzs;
-      // TODO - this will be slow
-      //   Is it possible that global columns ids might be stored in order?
-      auto colMapGId = colMap_->getGlobalElement(indices[j]);
-      kColumnIdsHost(next) = colMapGId;
-      columnIds_[next++] = colMapGId;
+    offsHost_(r + 1) = offsHost_(r) + numEntries;
+    for (offset_t e = offsHost_(r), i = 0; e < offsHost_(r + 1); e++) {
+      colIdsHost_(e) = matrix_->getColMap()->getGlobalElement(localColInds(i++));
     }
-    auto nextOffset = offset_[i] + nnz;
-    offset_[i + 1] = nextOffset;
-    kOffsetHost(i + 1) = nextOffset;
+    for (size_t j = 0; j < nnz; j++) {
+      valuesHost_(r) = localVals[j];
+    }
   }
+  std::cout << "after for loop" << std::endl;
 
-  Kokkos::deep_copy(kValues_, kValuesHost);
-  Kokkos::deep_copy(kOffset_, kOffsetHost);
-  Kokkos::deep_copy(kColumnIds_, kColumnIdsHost);
+  offsDevice_ = Kokkos::create_mirror_view_and_copy(
+                        typename Base::device_t(), offsHost_);
+  colIdsDevice_ = Kokkos::create_mirror_view_and_copy(
+                        typename Base::device_t(), colIdsHost_);
+  valuesDevice_ = Kokkos::create_mirror_view_and_copy(
+                        typename Base::device_t(), valuesHost_);
 
   if (nWeightsPerRow_ > 0) {
-    rowWeights_ = arcp(new input_t[nWeightsPerRow_], 0, nWeightsPerRow_, true);
-    numNzWeight_ =
-        Kokkos::View<bool *, host_t>("numNzWeight_", nWeightsPerRow_);
-    kRowWeights_.resize(nWeightsPerRow_);
-    for (size_t i = 0; i < numNzWeight_.extent(0); ++i) {
+    rowWeights_ =
+        arcp(new strided_t[nWeightsPerRow_], 0, nWeightsPerRow_, true);
+
+    rowWeightsDevice_.resize(nWeightsPerRow_);
+
+    numNzWeight_ =  Kokkos::View<bool *, host_t>(
+        "numNzWeight_", nWeightsPerRow_);
+
+    for (int i = 0; i < nWeightsPerRow_; ++i) {
       numNzWeight_(i) = false;
     }
+    std::cout << "after weights for loop" << std::endl;
   }
 }
 
@@ -423,26 +420,12 @@ void TpetraRowMatrixAdapter<User, UserCoord>::setWeightsHost(
 template <typename User, typename UserCoord>
 void TpetraRowMatrixAdapter<User, UserCoord>::setRowWeights(
     const scalar_t *weightVal, int stride, int idx) {
-  typedef StridedData<lno_t, scalar_t> input_t;
-  if (idx < 0 || idx >= nWeightsPerRow_) {
-    std::ostringstream emsg;
-    emsg << __FILE__ << ":" << __LINE__ << "  Invalid row weight index " << idx
-         << std::endl;
-    throw std::runtime_error(emsg.str());
-  }
+  AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
+                  "Invalid row weight index: " + std::to_string(idx));
 
-  size_t nvtx = getLocalNumRows();
-  ArrayRCP<const scalar_t> weightV(weightVal, 0, nvtx * stride, false);
+  size_t nrows = getLocalNumRows();
+  ArrayRCP<const scalar_t> weightV(weightVal, 0, nrows * stride, false);
   rowWeights_[idx] = input_t(weightV, stride);
-
-  // JD-TODO: Check if correct
-  auto kRowWeightsHost = Kokkos::create_mirror_view(kRowWeights_);
-  Kokkos::deep_copy(kRowWeightsHost, kRowWeights_);
-  for (size_t i = 0; i < nvtx; ++i) {
-    kRowWeightsHost(idx, i) = weightV[i];
-  }
-
-  Kokkos::deep_copy(kRowWeights_, kRowWeightsHost);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -453,7 +436,7 @@ void TpetraRowMatrixAdapter<User, UserCoord>::setRowWeightsDevice(
   AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
                   "Invalid row weight index: " + std::to_string(idx));
 
-  kRowWeights_[idx] = weights;
+  rowWeightsDevice_[idx] = weights;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -465,7 +448,7 @@ void TpetraRowMatrixAdapter<User, UserCoord>::setRowWeightsHost(
 
   auto weightsDevice = Kokkos::create_mirror_view_and_copy(
       typename Base::device_t(), weightsHost);
-  kRowWeights_[idx] = weightsDevice;
+  rowWeightsDevice_[idx] = weightsDevice;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -564,12 +547,12 @@ template <typename User, typename UserCoord>
 void TpetraRowMatrixAdapter<User, UserCoord>::getCRSHostView(
     typename Base::ConstOffsetsHostView &offsets,
     typename Base::ConstIdsHostView &colIds) const {
-  auto hostOffsets = Kokkos::create_mirror_view(kOffset_);
-  Kokkos::deep_copy(hostOffsets, kOffset_);
+  auto hostOffsets = Kokkos::create_mirror_view(offsDevice_);
+  Kokkos::deep_copy(hostOffsets, offsDevice_);
   offsets = hostOffsets;
 
-  auto hostColIds = Kokkos::create_mirror_view(kColumnIds_);
-  Kokkos::deep_copy(hostColIds, kColumnIds_);
+  auto hostColIds = Kokkos::create_mirror_view(colIdsDevice_);
+  Kokkos::deep_copy(hostColIds, colIdsDevice_);
   colIds = hostColIds;
 }
 
@@ -578,8 +561,8 @@ template <typename User, typename UserCoord>
 void TpetraRowMatrixAdapter<User, UserCoord>::getCRSDeviceView(
     typename Base::ConstOffsetsDeviceView &offsets,
     typename Base::ConstIdsDeviceView &colIds) const {
-  offsets = kOffset_;
-  colIds = kColumnIds_;
+  offsets = offsDevice_;
+  colIds = colIdsDevice_;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -598,16 +581,16 @@ void TpetraRowMatrixAdapter<User, UserCoord>::getCRSHostView(
     typename Base::ConstOffsetsHostView &offsets,
     typename Base::ConstIdsHostView &colIds,
     typename Base::ConstScalarsHostView &values) const {
-  auto hostOffsets = Kokkos::create_mirror_view(kOffset_);
-  Kokkos::deep_copy(hostOffsets, kOffset_);
+  auto hostOffsets = Kokkos::create_mirror_view(offsDevice_);
+  Kokkos::deep_copy(hostOffsets, offsDevice_);
   offsets = hostOffsets;
 
-  auto hostColIds = Kokkos::create_mirror_view(kColumnIds_);
-  Kokkos::deep_copy(hostColIds, kColumnIds_);
+  auto hostColIds = Kokkos::create_mirror_view(colIdsDevice_);
+  Kokkos::deep_copy(hostColIds, colIdsDevice_);
   colIds = hostColIds;
 
-  auto hostValues = Kokkos::create_mirror_view(kValues_);
-  Kokkos::deep_copy(hostValues, kValues_);
+  auto hostValues = Kokkos::create_mirror_view(valuesDevice_);
+  Kokkos::deep_copy(hostValues, valuesDevice_);
   values = hostValues;
 }
 
@@ -617,9 +600,9 @@ void TpetraRowMatrixAdapter<User, UserCoord>::getCRSDeviceView(
                   typename Base::ConstOffsetsDeviceView &offsets,
                   typename Base::ConstIdsDeviceView &colIds,
                   typename Base::ConstScalarsDeviceView &values) const {
-  offsets = kOffset_;
-  colIds = kColumnIds_;
-  values = kValues_;
+  offsets = offsDevice_;
+  colIds = colIdsDevice_;
+  values = valuesDevice_;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -647,7 +630,7 @@ void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsDeviceView(typename B
                                 int idx) const {
   AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
                   "Invalid row weight index.");
-  weights = kRowWeights_.at(idx);
+  weights = rowWeightsDevice_.at(idx);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -656,7 +639,7 @@ void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsHostView(typename Bas
                               int idx) const {
   AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
                   "Invalid row index.");
-  const auto weightsDevice = kRowWeights_.at(idx);
+  const auto weightsDevice = rowWeightsDevice_.at(idx);
   weights = Kokkos::create_mirror_view(weightsDevice);
   Kokkos::deep_copy(weights, weightsDevice);
 }
