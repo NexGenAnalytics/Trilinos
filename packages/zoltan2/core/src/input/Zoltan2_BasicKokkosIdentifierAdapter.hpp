@@ -54,8 +54,6 @@
 #include <Zoltan2_IdentifierAdapter.hpp>
 #include <Zoltan2_StridedData.hpp>
 
-using Kokkos::ALL;
-
 namespace Zoltan2 {
 
 /*! \brief This class represents a collection of global Identifiers
@@ -144,12 +142,11 @@ public:
   }
 
   int getNumWeightsPerID() const override {
-    return weightsView_.extent(1);
+    return weightsView_.extent(0);
   }
 
   void getWeightsView(const scalar_t *&wgt, int &stride,
-                      int idx = 0) const override
-  {
+                      int idx = 0) const override {
     auto h_wgts_2d = Kokkos::create_mirror_view(weightsView_);
     Kokkos::deep_copy(h_wgts_2d,weightsView_);
 
@@ -183,8 +180,7 @@ private:
 template <typename User>
 BasicKokkosIdentifierAdapter<User>::BasicKokkosIdentifierAdapter(
     Kokkos::View<gno_t *, device_t> &ids,
-    Kokkos::View<scalar_t **, device_t> &weights)
-{
+    Kokkos::View<scalar_t **, device_t> &weights) {
   idsView_ = Kokkos::View<gno_t *, device_t>("idsView_", ids.extent(0));
   Kokkos::deep_copy(idsView_, ids);
 

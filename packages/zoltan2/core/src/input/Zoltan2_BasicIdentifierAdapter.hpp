@@ -54,8 +54,6 @@
 #include <Zoltan2_IdentifierAdapter.hpp>
 #include <Zoltan2_StridedData.hpp>
 
-using Kokkos::ALL;
-
 namespace Zoltan2 {
 
 /*! \brief This class represents a collection of global Identifiers
@@ -146,21 +144,11 @@ public:
   ////////////////////////////////////////////////////////////////
 
   size_t getLocalNumIDs() const {
-    if (using_kokkos) {
-      return idsView_.extent(0);
-    } else {
       return numIds_;
-    }
   }
 
   void getIDsView(const gno_t *&ids) const {
-    if (using_kokkos) {
-      auto h_ids = Kokkos::create_mirror_view(idsView_);
-      Kokkos::deep_copy(h_ids, idsView_);
-      ids = h_ids.data();
-    } else {
       ids = idList_;
-    }
   }
 
   void getIDsKokkosView(Kokkos::View<const gno_t *, device_t> &ids) const override {
@@ -180,32 +168,19 @@ public:
   }
 
   int getNumWeightsPerID() const {
-    if (using_kokkos) {
-    return weightsView_.extent(1);
-    } else {
-      return weights_.size();
-    }
+    return numWeights_;
   }
 
   void getWeightsView(const scalar_t *&wgt, int &stride,
-                      int idx = 0) const
-  {
-    if (using_kokkos) {
-      auto h_wgts_2d = Kokkos::create_mirror_view(weightsView_);
-      Kokkos::deep_copy(h_wgts_2d,weightsView_);
-
-      wgt = Kokkos::subview(h_wgts_2d, Kokkos::ALL, idx).data();
-      stride = 1;
-    } else {
-      if (idx < 0 || idx >= weights_.size()) {
-        std::ostringstream emsg;
-        emsg << __FILE__ << ":" << __LINE__
-            << "  Invalid weight index " << idx << std::endl;
-        throw std::runtime_error(emsg.str());
-      }
-      size_t length;
-      weights_[idx].getStridedList(length, wgt, stride);
+                      int idx = 0) const {
+    if (idx < 0 || idx >= weights_.size()) {
+      std::ostringstream emsg;
+      emsg << __FILE__ << ":" << __LINE__
+          << "  Invalid weight index " << idx << std::endl;
+      throw std::runtime_error(emsg.str());
     }
+    size_t length;
+    weights_[idx].getStridedList(length, wgt, stride);
   }
 
   void getWeightsKokkosView(Kokkos::View<scalar_t **, device_t> &wgts) const override {
@@ -226,7 +201,7 @@ private:
   lno_t numIds_;
   const gno_t *idList_;
   ArrayRCP<StridedData<lno_t, scalar_t> > weights_;
-  bool using_kokkos = false;
+  size_t numWeights_;
 
   Kokkos::View<gno_t *, device_t> idsView_;
   Kokkos::View<scalar_t **, device_t> weightsView_;
@@ -240,10 +215,10 @@ template <typename User>
   BasicIdentifierAdapter<User>::BasicIdentifierAdapter(
     lno_t numIds, const gno_t *idPtr,
     std::vector<const scalar_t *> &weights, std::vector<int> &weightStrides):
-      numIds_(numIds), idList_(idPtr), weights_()
-{
+      numIds_(numIds), idList_(idPtr), weights_() {
   typedef StridedData<lno_t, scalar_t> input_t;
   size_t numWeights = weights.size();
+  numWeights_ = numWeights;
 
   if (numWeights > 0){
     weights_ = arcp(new input_t [numWeights], 0, numWeights, true);
@@ -261,9 +236,7 @@ template <typename User>
 template <typename User>
 BasicIdentifierAdapter<User>::BasicIdentifierAdapter(
     Kokkos::View<gno_t *, device_t> &ids,
-    Kokkos::View<scalar_t **, device_t> &weights)
-{
-  using_kokkos = true;
+    Kokkos::View<scalar_t **, device_t> &weights) {
   idsView_ = Kokkos::View<gno_t *, device_t>("idsView_", ids.extent(0));
   Kokkos::deep_copy(idsView_, ids);
 
@@ -271,6 +244,8 @@ BasicIdentifierAdapter<User>::BasicIdentifierAdapter(
                                                          weights.extent(0),
                                                          weights.extent(1));
   Kokkos::deep_copy(weightsView_, weights);
+
+  numWeights_ = weights.extent(0);
 }
 
 }  //namespace Zoltan2
