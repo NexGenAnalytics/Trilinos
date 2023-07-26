@@ -226,8 +226,16 @@ public:
       \param idx ranges from zero to one less than getNumWeightsPerVertex().
    */
   virtual void
-  getVertexWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &weights,
+  getVertexWeightsDeviceView(typename Base::WeightsDeviceView1D &weights,
                              int /* idx */ = 0) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  /*! \brief  Provide a device view of the vertex weights, if any.
+      \param weights is the view of all the weights for the vertices returned in getVertexIDsView().
+   */
+  virtual void
+  getVertexWeightsDeviceView(typename Base::WeightsDeviceView &weights) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
@@ -237,8 +245,16 @@ public:
       \param idx ranges from zero to one less than getNumWeightsPerVertex().
    */
   virtual void
-  getVertexWeightsHostView(typename Base::ConstWeightsHostView1D &weights,
+  getVertexWeightsHostView(typename Base::WeightsHostView1D &weights,
                            int /* idx */ = 0) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  /*! \brief  Provide a host view of the vertex weights, if any.
+      \param weights is the list of all the weights for the vertices returned in getVertexIDsView()
+   */
+  virtual void
+  getVertexWeightsHostView(typename Base::WeightsHostView &weights) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
@@ -270,8 +286,16 @@ public:
       \param idx ranges from zero to one less than getNumWeightsPerEdge().
    */
   virtual void
-  getEdgeWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &weights,
+  getEdgeWeightsDeviceView(typename Base::WeightsDeviceView1D &weights,
                            int /* idx */ = 0) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  /*! \brief  Provide a device view of the edge weights, if any.
+      \param weights is the list of weights for the edges returned in getEdgeView().
+   */
+  virtual void
+  getEdgeWeightsDeviceView(typename Base::WeightsDeviceView &weights) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
@@ -281,8 +305,16 @@ public:
       \param idx ranges from zero to one less than getNumWeightsPerEdge().
    */
   virtual void
-  getEdgeWeightsHostView(typename Base::ConstWeightsHostView1D &weights,
+  getEdgeWeightsHostView(typename Base::WeightsHostView1D &weights,
                          int /* idx */ = 0) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  /*! \brief  Provide a host view of the edge weights, if any.
+      \param weights is the list of weights for the edges returned in getEdgeView().
+   */
+  virtual void
+  getEdgeWeightsHostView(typename Base::WeightsHostView &weights) const {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
@@ -410,7 +442,7 @@ public:
     getVertexWeightsView(wgt, stride, idx);
   }
 
-  void getWeightsHostView(typename Base::ConstWeightsHostView1D &hostWgts,
+  void getWeightsHostView(typename Base::WeightsHostView1D &hostWgts,
                           int idx = 0) const override {
     AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
                     "getWeightsHostView not yet supported for graph edges.");
@@ -418,12 +450,26 @@ public:
     getVertexWeightsHostView(hostWgts, idx);
   }
 
-  void getWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &deviceWgts,
+  void getWeightsHostView(typename Base::WeightsHostView &hostWgts) const override {
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getWeightsHostView not yet supported for graph edges.");
+
+    getVertexWeightsHostView(hostWgts);
+  }
+
+  void getWeightsDeviceView(typename Base::WeightsDeviceView1D &deviceWgts,
                             int idx = 0) const override {
     AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
                     "getWeightsDeviceView not yet supported for graph edges.");
 
     getVertexWeightsDeviceView(deviceWgts, idx);
+  }
+
+  void getWeightsDeviceView(typename Base::WeightsDeviceView &deviceWgts) const override {
+    AssertCondition(getPrimaryEntityType() == GRAPH_VERTEX,
+                    "getWeightsDeviceView not yet supported for graph edges.");
+
+    getVertexWeightsDeviceView(deviceWgts);
   }
 
   bool useDegreeAsWeight(int idx) const {

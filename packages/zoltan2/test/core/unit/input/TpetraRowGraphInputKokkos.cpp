@@ -122,7 +122,7 @@ void TestGraphIds(adapter_t &ia, graph_t &graph) {
     graph.getLocalRowCopy(v, nbors, numColInds);
 
     offsHost_(v + 1) = offsHost_(v) + numColInds;
-    for (int e = offsHost_(v), i = 0; e < offsHost_(v + 1); e++) {
+    for (size_t e = offsHost_(v), i = 0; e < offsHost_(v + 1); e++) {
       adjIdsHost_(e) = graph.getColMap()->getGlobalElement(nbors(i++));
     }
   }
@@ -210,7 +210,7 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
   //// getVertexWeightsDevice
   /////////////////////////////////
   {
-    constWeightsDevice_t weightsDevice;
+    weightsDevice_t weightsDevice;
     Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 0));
 
     constWeightsHost_t weightsHost;
@@ -221,7 +221,7 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
     Z2_TEST_DEVICE_HOST_VIEWS(wgts0, weightsHost);
   }
   {
-    constWeightsDevice_t weightsDevice;
+    weightsDevice_t weightsDevice;
     Z2_TEST_NOTHROW(ia.getVertexWeightsDeviceView(weightsDevice, 1));
 
     constWeightsHost_t weightsHost;
@@ -232,7 +232,7 @@ void verifyInputAdapter(adapter_t &ia, graph_t &graph) {
     Z2_TEST_DEVICE_HOST_VIEWS(wgts1, weightsHost);
   }
   {
-    constWeightsDevice_t wgtsDevice;
+    weightsDevice_t wgtsDevice;
     Z2_TEST_THROW(ia.getVertexWeightsDeviceView(wgtsDevice, 2),
                   std::runtime_error);
 

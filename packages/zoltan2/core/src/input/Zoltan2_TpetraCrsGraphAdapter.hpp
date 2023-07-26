@@ -141,8 +141,9 @@ TpetraCrsGraphAdapter<User, UserCoord>::TpetraCrsGraphAdapter(
 
   if (this->nWeightsPerVertex_ > 0) {
 
-    // should we create underlying Views aswell?
-    this->vertexWeightsDevice_.resize(this->nWeightsPerVertex_);
+    this->vertexWeightsDevice_ = typename Base::WeightsDeviceView(
+        "vertexWeightsDevice_", graph->getLocalNumRows(),
+        this->nWeightsPerVertex_);
 
     this->vertexDegreeWeightsHost_ = typename Base::VtxDegreeHostView(
         "vertexDegreeWeightsHost_", this->nWeightsPerVertex_);
@@ -152,7 +153,10 @@ TpetraCrsGraphAdapter<User, UserCoord>::TpetraCrsGraphAdapter(
     }
   }
 
-  this->edgeWeightsDevice_.resize(this->nWeightsPerEdge_);
+  if (this->nWeightsPerEdge_) {
+    this->edgeWeightsDevice_ = typename Base::WeightsDeviceView(
+        "nWeightsPerEdge_", graph->getLocalNumRows(), this->nWeightsPerEdge_);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////
