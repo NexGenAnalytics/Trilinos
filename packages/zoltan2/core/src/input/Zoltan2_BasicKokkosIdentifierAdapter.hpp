@@ -116,7 +116,7 @@ public:
   ////////////////////////////////////////////////////////////////
 
   size_t getLocalNumIDs() const override {
-    return idsView_.extent(0);
+    return localNumIds_;
   }
 
   void getIDsView(const gno_t *&ids) const override {
@@ -142,7 +142,7 @@ public:
   }
 
   int getNumWeightsPerID() const override {
-    return weightsView_.extent(0);
+    return numWeightsPerID_;
   }
 
   void getWeightsView(const scalar_t *&wgt, int &stride,
@@ -171,6 +171,8 @@ public:
 private:
   Kokkos::View<gno_t *, device_t> idsView_;
   Kokkos::View<scalar_t **, device_t> weightsView_;
+  lno_t localNumIds_;
+  size_t numWeightsPerID_;
 };
 
 ////////////////////////////////////////////////////////////////
@@ -181,7 +183,9 @@ template <typename User>
 BasicKokkosIdentifierAdapter<User>::BasicKokkosIdentifierAdapter(
     Kokkos::View<gno_t *, device_t> &ids,
     Kokkos::View<scalar_t **, device_t> &weights) {
-  idsView_ = Kokkos::View<gno_t *, device_t>("idsView_", ids.extent(0));
+  localNumIds_ = ids.extent(0);
+  numWeightsPerID_ = weights.extent(1);
+  idsView_ = Kokkos::View<gno_t *, device_t>("idsView_", localNumIds_);
   Kokkos::deep_copy(idsView_, ids);
 
   weightsView_ = Kokkos::View<scalar_t **, device_t>("weightsView_",

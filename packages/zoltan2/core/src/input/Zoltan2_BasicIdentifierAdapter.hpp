@@ -120,13 +120,13 @@ public:
    *  lifetime of this Adapter.
    */
   BasicIdentifierAdapter(lno_t numIds, const gno_t *idPtr):
-      numIds_(numIds), idList_(idPtr), weights_() {}
+      localNumIDs_(numIds), idList_(idPtr), weights_() {}
 
   /*! \brief Constructor
    *  \param ids should point to a View of identifiers.
    *  \param weights  a list of pointers to arrays of weights.
    *      The number of weights per identifier is assumed to be
-   *      \c weights.extent(0).
+   *      \c weights.extent(1).
    *  \param weightStrides  a list of strides for the \c weights.
    *     The weight for weight index \c n for \c ids[k] should be
    *     found at <tt>weights[n][weightStrides[n] * k]</tt>.
@@ -144,7 +144,7 @@ public:
   ////////////////////////////////////////////////////////////////
 
   size_t getLocalNumIDs() const {
-      return numIds_;
+      return localNumIDs_;
   }
 
   void getIDsView(const gno_t *&ids) const {
@@ -168,7 +168,7 @@ public:
   }
 
   int getNumWeightsPerID() const {
-    return numWeights_;
+    return numWeightsPerID_;
   }
 
   void getWeightsView(const scalar_t *&wgt, int &stride,
@@ -198,10 +198,10 @@ public:
   }
 
 private:
-  lno_t numIds_;
+  lno_t localNumIDs_;
   const gno_t *idList_;
   ArrayRCP<StridedData<lno_t, scalar_t> > weights_;
-  size_t numWeights_;
+  size_t numWeightsPerID_;
 
   Kokkos::View<gno_t *, device_t> idsView_;
   Kokkos::View<scalar_t **, device_t> weightsView_;
@@ -215,10 +215,10 @@ template <typename User>
   BasicIdentifierAdapter<User>::BasicIdentifierAdapter(
     lno_t numIds, const gno_t *idPtr,
     std::vector<const scalar_t *> &weights, std::vector<int> &weightStrides):
-      numIds_(numIds), idList_(idPtr), weights_() {
+      localNumIDs_(numIds), idList_(idPtr), weights_() {
   typedef StridedData<lno_t, scalar_t> input_t;
   size_t numWeights = weights.size();
-  numWeights_ = numWeights;
+  numWeightsPerID_ = numWeights;
 
   if (numWeights > 0){
     weights_ = arcp(new input_t [numWeights], 0, numWeights, true);
@@ -244,8 +244,8 @@ BasicIdentifierAdapter<User>::BasicIdentifierAdapter(
                                                          weights.extent(0),
                                                          weights.extent(1));
   Kokkos::deep_copy(weightsView_, weights);
-
-  numWeights_ = weights.extent(0);
+  localNumIDs_ = idsView_.extent(0);
+  numWeightsPerID_ = weights.extent(1);
 }
 
 }  //namespace Zoltan2

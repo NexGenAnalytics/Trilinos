@@ -251,7 +251,6 @@ public:
 
   /*! \brief Provide a Kokkos view (Host side) of the weights.
       \param hostWgts on return a Kokkos view of the weights for this idx
-      \param idx  the weight index, zero or greater
    */
   virtual void getWeightsHostView(WeightsHostView& hostWgts) const {
     Z2_THROW_NOT_IMPLEMENTED
