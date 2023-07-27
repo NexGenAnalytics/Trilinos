@@ -95,6 +95,8 @@ public:
   typedef Xpetra::CrsGraph<lno_t, gno_t, node_t> xgraph_t;
   typedef User user_t;
   typedef UserCoord userCoord_t;
+
+  using Base = GraphAdapter<User,UserCoord>;
 #endif
 
   /*! \brief Constructor for graph with no weights or coordinates.
@@ -122,6 +124,8 @@ public:
    */
 
   void setWeights(const scalar_t *val, int stride, int idx);
+  void setWeightsDevice(typename Base::ConstWeightsDeviceView& val, int idx) {}
+  void setWeightsHost(typename Base::ConstWeightsHostView& val, int idx) {}
 
   /*! \brief Provide a pointer to vertex weights.
    *    \param val A pointer to the weights for index \c idx.
@@ -139,6 +143,8 @@ public:
    */
 
   void setVertexWeights(const scalar_t *val, int stride, int idx);
+  void setVertexWeightsDevice(typename Base::ConstWeightsDeviceView& val, int idx);
+  void setVertexWeightsHost(typename Base::ConstWeightsHostView& val, int idx);
 
   /*! \brief Specify an index for which the weight should be
               the degree of the entity
@@ -177,6 +183,8 @@ public:
    */
 
   void setEdgeWeights(const scalar_t *val, int stride, int idx);
+  void setEdgeWeightsDevice(typename Base::ConstWeightsDeviceView& val, int idx);
+  void setEdgeWeightsHost(typename Base::ConstWeightsHostView& val, int idx);
 
   /*! \brief Access to Xpetra-wrapped user's graph.
    */
@@ -187,36 +195,32 @@ public:
   RCP<const User> getUserGraph() const { return ingraph_; }
 
   ////////////////////////////////////////////////////
-  // The Adapter interface.
-  ////////////////////////////////////////////////////
-
-  ////////////////////////////////////////////////////
   // The GraphAdapter interface.
   ////////////////////////////////////////////////////
 
   // TODO:  Assuming rows == objects;
   // TODO:  Need to add option for columns or nonzeros?
-  size_t getLocalNumVertices() const { return graph_->getLocalNumRows(); }
+  size_t getLocalNumVertices() const override { return graph_->getLocalNumRows(); }
 
-  void getVertexIDsView(const gno_t *&ids) const
+  void getVertexIDsView(const gno_t *&ids) const override
   {
     ids = NULL;
     if (getLocalNumVertices())
       ids = graph_->getRowMap()->getLocalElementList().getRawPtr();
   }
 
-  size_t getLocalNumEdges() const { return graph_->getLocalNumEntries(); }
+  size_t getLocalNumEdges() const override { return graph_->getLocalNumEntries(); }
 
-  void getEdgesView(const offset_t *&offsets, const gno_t *&adjIds) const
+  void getEdgesView(const offset_t *&offsets, const gno_t *&adjIds) const override
   {
     offsets = offs_.getRawPtr();
     adjIds = (getLocalNumEdges() ? adjids_.getRawPtr() : NULL);
   }
 
-  int getNumWeightsPerVertex() const { return nWeightsPerVertex_;}
+  int getNumWeightsPerVertex() const override { return nWeightsPerVertex_;}
 
   void getVertexWeightsView(const scalar_t *&weights, int &stride,
-                            int idx) const
+                            int idx) const override
   {
     if(idx<0 || idx >= nWeightsPerVertex_)
     {
@@ -231,11 +235,11 @@ public:
     vertexWeights_[idx].getStridedList(length, weights, stride);
   }
 
-  bool useDegreeAsVertexWeight(int idx) const {return vertexDegreeWeight_[idx];}
+  bool useDegreeAsVertexWeight(int idx) const override {return vertexDegreeWeight_[idx];}
 
-  int getNumWeightsPerEdge() const { return nWeightsPerEdge_;}
+  int getNumWeightsPerEdge() const override { return nWeightsPerEdge_;}
 
-  void getEdgeWeightsView(const scalar_t *&weights, int &stride, int idx) const
+  void getEdgeWeightsView(const scalar_t *&weights, int &stride, int idx) const override
   {
     if(idx<0 || idx >= nWeightsPerEdge_)
     {
@@ -249,7 +253,6 @@ public:
     size_t length;
     edgeWeights_[idx].getStridedList(length, weights, stride);
   }
-
 
   template <typename Adapter>
     void applyPartitioningSolution(const User &in, User *&out,
