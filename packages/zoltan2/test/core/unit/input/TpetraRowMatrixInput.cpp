@@ -43,13 +43,12 @@
 //
 // @HEADER
 //
-// Basic testing of Zoltan2::TpetraCrsMatrixAdapter
-/*!  \file TpetraCrsMatrixAdapter.cpp
- *   \brief Test of Zoltan2::TpetraCrsMatrixAdapter class.
- *   \todo add weights and coordinates
- */
+// Basic testing of Zoltan2::TpetraRowMatrixAdapter
 
-#include <string>
+/*! \file TpetraRowMatrixInput.cpp
+ *  \brief Test of Zoltan2::TpetraRowMatrixAdapter class.
+ *  \todo test with geometric row coordinates.
+ */
 
 #include <Zoltan2_InputTraits.hpp>
 #include <Zoltan2_TestHelpers.hpp>
@@ -63,6 +62,7 @@
 #include <cstdlib>
 #include <stdexcept>
 
+using Teuchos::Comm;
 using Teuchos::Comm;
 using Teuchos::RCP;
 using Teuchos::rcp;
@@ -110,17 +110,17 @@ void TestMatrixIds(adapter_t &ia, matrix_t &matrix) {
 
   using idsHost_t = typename adapter_t::ConstIdsHostView;
   using offsetsHost_t = typename adapter_t::ConstOffsetsHostView;
-
   using localInds_t =
       typename adapter_t::user_t::nonconst_local_inds_host_view_type;
   using localVals_t =
       typename adapter_t::user_t::nonconst_values_host_view_type;
 
+
   const auto nrows = matrix.getLocalNumRows();
   const auto ncols = matrix.getLocalNumEntries();
   const auto maxNumEntries = matrix.getLocalMaxNumRowEntries();
 
-  typename adapter_t::Base::ConstIdsHostView colIdsHost("colIdsHost", ncols);
+  typename adapter_t::Base::ConstIdsHostView colIdsHost_("colIdsHost_", ncols);
   typename adapter_t::Base::ConstOffsetsHostView offsHost_("offsHost_",
                                                            nrows + 1);
 
@@ -129,11 +129,11 @@ void TestMatrixIds(adapter_t &ia, matrix_t &matrix) {
 
   for (size_t r = 0; r < nrows; r++) {
     size_t numEntries = 0;
-    matrix.getLocalRowCopy(r, localColInds, localVals, numEntries);
+    matrix.getLocalRowCopy(r, localColInds, localVals, numEntries);;
 
     offsHost_(r + 1) = offsHost_(r) + numEntries;
-    for (int e = offsHost_(r), i = 0; e < offsHost_(r + 1); e++) {
-      colIdsHost(e) = matrix.getColMap()->getGlobalElement(localColInds(i++));
+    for (size_t e = offsHost_(r), i = 0; e < offsHost_(r + 1); e++) {
+      colIdsHost_(e) = matrix.getColMap()->getGlobalElement(localColInds(i++));
     }
   }
 
@@ -143,13 +143,18 @@ void TestMatrixIds(adapter_t &ia, matrix_t &matrix) {
   const auto matrixIDS = matrix.getRowMap()->getLocalElementList();
 
   Z2_TEST_COMPARE_ARRAYS(matrixIDS, rowIdsHost);
+
+  idsHost_t colIdsHost;
+  offsetsHost_t offsetsHost;
+  ia.getCRSHostView(offsetsHost, colIdsHost);
+
+  Z2_TEST_COMPARE_ARRAYS(colIdsHost_, colIdsHost);
+  Z2_TEST_COMPARE_ARRAYS(offsHost_, offsetsHost);
+  std::cout << "passed testMatrixIds" << std::endl;
 }
 
-//////////////////////////////////////////////////////////////////////////
-
 template <typename adapter_t, typename matrix_t>
-void verifyInputAdapter(adapter_t &ia,
-                        matrix_t &matrix) {
+void verifyInputAdapter(adapter_t &ia, matrix_t &matrix) {
   using idsDevice_t = typename adapter_t::ConstIdsDeviceView;
   using idsHost_t = typename adapter_t::ConstIdsHostView;
   using offsetsDevice_t = typename adapter_t::ConstOffsetsDeviceView;
@@ -158,8 +163,6 @@ void verifyInputAdapter(adapter_t &ia,
   using weightsHost_t = typename adapter_t::WeightsHostView1D;
   using constWeightsDevice_t = typename adapter_t::ConstWeightsDeviceView1D;
   using constWeightsHost_t = typename adapter_t::ConstWeightsHostView1D;
-  using scalarsHost_t = typename adapter_t::ConstScalarsHostView;
-  using scalarsDevice_t = typename adapter_t::ConstScalarsDeviceView;
 
   const auto nrows = ia.getLocalNumIDs();
 
@@ -168,7 +171,7 @@ void verifyInputAdapter(adapter_t &ia,
   Z2_TEST_EQUALITY(ia.getLocalNumEntries(), matrix.getLocalNumEntries());
 
   /////////////////////////////////
-  //// getRowIDsView
+  //// getRowIdsView
   /////////////////////////////////
 
   idsDevice_t rowIdsDevice;
@@ -177,26 +180,6 @@ void verifyInputAdapter(adapter_t &ia,
   ia.getRowIDsHostView(rowIdsHost);
 
   TestDeviceHostView(rowIdsDevice, rowIdsHost);
-  Z2_TEST_COMPARE_ARRAYS(rowIdsHost, matrix.getRowMap()->getMyGlobalIndices());
-
-
-  /////////////////////////////////
-  //// getCRSView
-  /////////////////////////////////
-
-  offsetsDevice_t offsetsDevice;
-  idsDevice_t colIdsDevice;
-  scalarsDevice_t valuesDevice;
-  ia.getCRSDeviceView(offsetsDevice, colIdsDevice, valuesDevice);
-
-  offsetsHost_t offsetsHost;
-  idsHost_t colIdsHost;
-  scalarsHost_t valuesHost;
-  ia.getCRSHostView(offsetsHost, colIdsHost, valuesHost);
-
-  TestDeviceHostView(offsetsDevice, offsetsHost);
-  TestDeviceHostView(colIdsDevice, colIdsHost);
-  TestDeviceHostView(valuesDevice, valuesHost);
 
   /////////////////////////////////
   //// setRowWeightsDevice
@@ -206,15 +189,13 @@ void verifyInputAdapter(adapter_t &ia,
                 std::runtime_error);
 
   weightsDevice_t wgts0("wgts0", nrows);
-  Kokkos::parallel_for("wgts0-parallel-for",
-                        nrows,
-                        KOKKOS_LAMBDA(const int idx) {
-                          wgts0(idx) = idx * 2;
-                        }
-                        );
+  Kokkos::parallel_for(
+      nrows, KOKKOS_LAMBDA(const int idx) { wgts0(idx) = idx * 2; });
 
   Z2_TEST_NOTHROW(ia.setRowWeightsDevice(wgts0, 0));
 
+  // Don't reuse the same View, since we don't copy the values,
+  // we just assign the View (increase use count)
   weightsDevice_t wgts1("wgts1", nrows);
   Kokkos::parallel_for(
       nrows, KOKKOS_LAMBDA(const int idx) { wgts1(idx) = idx * 3; });
@@ -233,7 +214,7 @@ void verifyInputAdapter(adapter_t &ia,
 
     TestDeviceHostView(weightsDevice, weightsHost);
 
-    // /*find good macro*/(wgts0, weightsHost);
+    TestDeviceHostView(wgts0, weightsHost);
   }
   {
     constWeightsDevice_t weightsDevice;
@@ -244,7 +225,7 @@ void verifyInputAdapter(adapter_t &ia,
 
     TestDeviceHostView(weightsDevice, weightsHost);
 
-    // /*find good macro*/(wgts1, weightsHost);
+    TestDeviceHostView(wgts1, weightsHost);
   }
   {
     constWeightsDevice_t wgtsDevice;
@@ -256,17 +237,22 @@ void verifyInputAdapter(adapter_t &ia,
   }
 
   TestMatrixIds(ia, matrix);
-
+  std::cout << "passed verifyInputAdapter" << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-int main (int narg, char *arg[]) {
-  using soln_t = Zoltan2::PartitioningSolution<rowAdapter_t>;
-  using part_t = rowAdapter_t::part_t;
+int main(int narg, char *arg[]) {
+  using rowSoln_t = Zoltan2::PartitioningSolution<rowAdapter_t>;
+  using rowPart_t = rowAdapter_t::part_t;
+
+  using crsSoln_t = Zoltan2::PartitioningSolution<crsAdapter_t>;
+  using crsPart_t = crsAdapter_t::part_t;
 
   Tpetra::ScopeGuard tscope(&narg, &arg);
   const auto comm = Tpetra::getDefaultComm();
+
+  auto rank = comm->getRank();
 
   try {
     Teuchos::ParameterList params;
@@ -275,16 +261,16 @@ int main (int narg, char *arg[]) {
 
     auto uinput = rcp(new UserInputForTests(params, comm));
 
-    // Input CRS matrix and row matrix from it
+    // Input crs matrix and row matrix cast from it.
     const auto crsMatrix = uinput->getUITpetraCrsMatrix();
     const auto rowMatrix = rcp_dynamic_cast<ztrowmatrix_t>(crsMatrix);
 
-    const auto nRows = rowMatrix->getLocalNumRows();
+    const auto nrows = rowMatrix->getLocalNumRows();
 
     // To test migration in the input adapter we need a Solution object.
     const auto env = rcp(new Zoltan2::Environment(comm));
 
-    const int nWeights = 2; // changed from 2 to 1
+    const int nWeights = 2;
 
     /////////////////////////////////////////////////////////////
     // User object is Tpetra::RowMatrix
@@ -292,39 +278,36 @@ int main (int narg, char *arg[]) {
 
     PrintFromRoot("Input adapter for Tpetra::RowMatrix");
 
+    // Graph Adapters use crsGraph, original TpetraInput uses trM (=rowMatrix)
     auto tpetraRowMatrixInput = rcp(new rowAdapter_t(rowMatrix, nWeights));
 
     verifyInputAdapter(*tpetraRowMatrixInput, *rowMatrix);
-    std::cout << "test 3" << std::endl;
-    part_t *p = new part_t[nRows];
-    std::cout << "test 4" << std::endl;
-    memset(p, 0, sizeof(part_t) * nRows);
-    std::cout << "test 5" << std::endl;
-    ArrayRCP<part_t> solnParts(p, 0, nRows, true);
-    std::cout << "test 6" << std::endl;
+    std::cout << "verified first adapter" << std::endl;
 
-    soln_t solution(env, comm, nWeights);
+    rowPart_t *p = new rowPart_t[nrows];
+    memset(p, 0, sizeof(rowPart_t) * nrows);
+    ArrayRCP<rowPart_t> solnParts(p, 0, nrows, true);
+
+    rowSoln_t solution(env, comm, nWeights);
     solution.setParts(solnParts);
-    std::cout << "test 7" << std::endl;
 
     ztrowmatrix_t *mMigrate = NULL;
-    std::cout << "test 8" << std::endl;
     tpetraRowMatrixInput->applyPartitioningSolution(*rowMatrix, mMigrate,
                                                     solution);
-    std::cout << "test 9" << std::endl;
     const auto newM = rcp(mMigrate);
-    std::cout << "test 14" << std::endl;
     auto cnewM = rcp_const_cast<const ztrowmatrix_t>(newM);
     auto newInput = rcp(new rowAdapter_t(cnewM, nWeights));
-    std::cout << "test 15" << std::endl;
+
     PrintFromRoot("Input adapter for Tpetra::RowMatrix migrated to proc 0");
 
     verifyInputAdapter(*newInput, *newM);
-    std::cout << "test 16" << std::endl;
+    std::cout << "verified new adapter" << std::endl;
+
   } catch (std::exception &e) {
     std::cout << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 
   PrintFromRoot("PASS");
-}
+
+  }

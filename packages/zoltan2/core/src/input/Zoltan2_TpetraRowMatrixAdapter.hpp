@@ -78,6 +78,7 @@ template <typename User, typename UserCoord = User>
 class TpetraRowMatrixAdapter : public MatrixAdapter<User, UserCoord> {
 public:
 
+
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   using scalar_t = typename InputTraits<User>::scalar_t;
   using offset_t = typename InputTraits<User>::offset_t;
@@ -658,17 +659,19 @@ void TpetraRowMatrixAdapter<User, UserCoord>::applyPartitioningSolution(
   size_t numNewRows;
   ArrayRCP<gno_t> importList;
   try {
+    std::cout << " test 1 " << std::endl;
     numNewRows =
-        Zoltan2::getImportList<Adapter,
-                               TpetraRowMatrixAdapter<User, UserCoord>>(
+        Zoltan2::getImportList<Adapter, TpetraRowMatrixAdapter<User, UserCoord>>(
             solution, this, importList);
   }
   Z2_FORWARD_EXCEPTIONS;
+  std::cout << "test 3" << std::endl;
 
   // Move the rows, creating a new matrix.
   RCP<User> outPtr = doMigration(in, numNewRows, importList.getRawPtr());
   out = outPtr.get();
   outPtr.release();
+  std::cout << "end of partitioning soln" << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -682,8 +685,7 @@ void TpetraRowMatrixAdapter<User, UserCoord>::applyPartitioningSolution(
   ArrayRCP<gno_t> importList;
   try {
     numNewRows =
-        Zoltan2::getImportList<Adapter,
-                               TpetraRowMatrixAdapter<User, UserCoord>>(
+        Zoltan2::getImportList<Adapter, TpetraRowMatrixAdapter<User, UserCoord>>(
             solution, this, importList);
   }
   Z2_FORWARD_EXCEPTIONS;
@@ -731,24 +733,6 @@ RCP<User> TpetraRowMatrixAdapter<User, UserCoord>::doMigration(
   // importer
   Tpetra::Import<lno_t, gno_t, node_t> importer(smap, tmap);
 
-  // target matrix
-  // Chris Siefert proposed using the following to make migration
-  // more efficient.
-  // By default, the Domain and Range maps are the same as in "from".
-  // As in the original code, we instead set them both to tmap.
-  // The assumption is a square matrix.
-  // TODO:  what about rectangular matrices?
-  // TODO:  Should choice of domain/range maps be an option to this function?
-
-  // KDD 3/7/16:  disabling Chris' new code to avoid dashboard failures;
-  // KDD 3/7/16:  can re-enable when issue #114 is fixed.
-  // KDD 3/7/16:  when re-enable CSIEFERT code, can comment out
-  // KDD 3/7/16:  "Original way" code.
-  // CSIEFERT RCP<tcrsmatrix_t> M;
-  // CSIEFERT from.importAndFillComplete(M, importer, tmap, tmap);
-
-  // Original way we did it:
-  //
   int oldNumElts = smap->getLocalNumElements();
   int newNumElts = numLocalRows;
 
@@ -776,7 +760,6 @@ RCP<User> TpetraRowMatrixAdapter<User, UserCoord>::doMigration(
   M->doImport(from, importer, Tpetra::INSERT);
   M->fillComplete();
 
-  // End of original way we did it.
   return Teuchos::rcp_dynamic_cast<User>(M);
 }
 
