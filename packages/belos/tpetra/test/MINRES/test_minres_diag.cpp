@@ -48,7 +48,7 @@
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
-#include "BelosTpetraOperator.h"
+#include "BelosTpetraOperator.hpp"
 #include "BelosMinresSolMgr.hpp"
 // Tpetra includes
 #include "Tpetra_Core.hpp"
