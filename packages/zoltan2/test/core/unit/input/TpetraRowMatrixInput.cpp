@@ -150,7 +150,6 @@ void TestMatrixIds(adapter_t &ia, matrix_t &matrix) {
 
   Z2_TEST_COMPARE_ARRAYS(colIdsHost_, colIdsHost);
   Z2_TEST_COMPARE_ARRAYS(offsHost_, offsetsHost);
-  std::cout << "passed testMatrixIds" << std::endl;
 }
 
 template <typename adapter_t, typename matrix_t>
@@ -237,7 +236,6 @@ void verifyInputAdapter(adapter_t &ia, matrix_t &matrix) {
   }
 
   TestMatrixIds(ia, matrix);
-  std::cout << "passed verifyInputAdapter" << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -282,7 +280,6 @@ int main(int narg, char *arg[]) {
     auto tpetraRowMatrixInput = rcp(new rowAdapter_t(rowMatrix, nWeights));
 
     verifyInputAdapter(*tpetraRowMatrixInput, *rowMatrix);
-    std::cout << "verified first adapter" << std::endl;
 
     rowPart_t *p = new rowPart_t[nrows];
     memset(p, 0, sizeof(rowPart_t) * nrows);
@@ -301,7 +298,6 @@ int main(int narg, char *arg[]) {
     PrintFromRoot("Input adapter for Tpetra::RowMatrix migrated to proc 0");
 
     verifyInputAdapter(*newInput, *newM);
-    std::cout << "verified new adapter" << std::endl;
 
   } catch (std::exception &e) {
     std::cout << e.what() << std::endl;

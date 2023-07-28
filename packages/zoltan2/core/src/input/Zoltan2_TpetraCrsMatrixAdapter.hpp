@@ -158,6 +158,9 @@ public:
 
     this->rowWeightsDevice_.resize(this->nWeightsPerRow_);
 
+    this->numNzWeight_ =  Kokkos::View<bool *, host_t>(
+        "numNzWeight_", this->nWeightsPerRow_);
+
     for (int i = 0; i < this->nWeightsPerRow_; ++i) {
       this->numNzWeight_(i) = false;
     }
@@ -182,7 +185,7 @@ template <typename User, typename UserCoord>
   Z2_FORWARD_EXCEPTIONS;
 
   // Move the rows, creating a new matrix.
-  RCP<User> outPtr = doMigration(in, numNewRows,importList.getRawPtr());
+  RCP<User> outPtr = this->doMigration(in, numNewRows,importList.getRawPtr());
   out = const_cast<User *>(outPtr.get());
   outPtr.release();
 }
@@ -205,7 +208,7 @@ template <typename User, typename UserCoord>
   Z2_FORWARD_EXCEPTIONS;
 
   // Move the rows, creating a new matrix.
-  out = doMigration(in, numNewRows, importList.getRawPtr());
+  out = this->doMigration(in, numNewRows, importList.getRawPtr());
 }
 
 }  //namespace Zoltan2

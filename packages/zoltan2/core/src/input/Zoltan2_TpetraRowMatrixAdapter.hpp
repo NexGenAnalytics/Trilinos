@@ -276,9 +276,6 @@ protected:
 
   RCP<const User> matrix_;
 
-  RCP<const Tpetra::Map<lno_t, gno_t, node_t>> rowMap_;
-  RCP<const Tpetra::Map<lno_t, gno_t, node_t>> colMap_;
-
   ArrayRCP<offset_t> offset_;
   ArrayRCP<gno_t> columnIds_;
   ArrayRCP<scalar_t> values_;
@@ -309,14 +306,12 @@ protected:
 template <typename User, typename UserCoord>
 TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
     const RCP<const User> &inmatrix, int nWeightsPerRow):
-      matrix_(inmatrix), rowMap_(), colMap_(), offset_(), columnIds_(),
+      matrix_(inmatrix), offset_(), columnIds_(),
       nWeightsPerRow_(nWeightsPerRow), rowWeights_(),
       mayHaveDiagonalEntries(true) {
   using strided_t = StridedData<lno_t, scalar_t>;
   using localInds_t = typename User::nonconst_local_inds_host_view_type;
   using localVals_t = typename User::nonconst_values_host_view_type;
-
-  std::cout << "beginning TpetraRowMatrixAdapter constructor" << std::endl;
 
   const auto nrows = matrix_->getLocalNumRows();
   const auto nnz = matrix_->getLocalNumEntries();
@@ -331,7 +326,7 @@ TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
 
   localInds_t localColInds("localColInds", maxNumEntries);
   localVals_t localVals("localVals", maxNumEntries);
-  std::cout << "before for loop" << std::endl;
+
   for (size_t r = 0; r < nrows; r++) {
     size_t numEntries = 0;
     matrix_->getLocalRowCopy(r, localColInds, localVals, numEntries); // Diff from CrsGraph
@@ -344,8 +339,6 @@ TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
       valuesHost_(r) = localVals[j];
     }
   }
-  std::cout << "after for loop" << std::endl;
-
   offsDevice_ = Kokkos::create_mirror_view_and_copy(
                         typename Base::device_t(), offsHost_);
   colIdsDevice_ = Kokkos::create_mirror_view_and_copy(
@@ -365,7 +358,6 @@ TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
     for (int i = 0; i < nWeightsPerRow_; ++i) {
       numNzWeight_(i) = false;
     }
-    std::cout << "after weights for loop" << std::endl;
   }
 }
 
@@ -421,6 +413,7 @@ void TpetraRowMatrixAdapter<User, UserCoord>::setWeightsHost(
 template <typename User, typename UserCoord>
 void TpetraRowMatrixAdapter<User, UserCoord>::setRowWeights(
     const scalar_t *weightVal, int stride, int idx) {
+  typedef StridedData<lno_t, scalar_t> input_t;
   AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
                   "Invalid row weight index: " + std::to_string(idx));
 
@@ -506,7 +499,7 @@ bool TpetraRowMatrixAdapter<User, UserCoord>::CRSViewAvailable() const { return 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
 void TpetraRowMatrixAdapter<User, UserCoord>::getRowIDsView(const gno_t *&rowIds) const {
-  ArrayView<const gno_t> rowView = rowMap_->getLocalElementList();
+  ArrayView<const gno_t> rowView = matrix_->getRowMap()->getLocalElementList();
   rowIds = rowView.getRawPtr();
 }
 
@@ -659,19 +652,16 @@ void TpetraRowMatrixAdapter<User, UserCoord>::applyPartitioningSolution(
   size_t numNewRows;
   ArrayRCP<gno_t> importList;
   try {
-    std::cout << " test 1 " << std::endl;
     numNewRows =
         Zoltan2::getImportList<Adapter, TpetraRowMatrixAdapter<User, UserCoord>>(
             solution, this, importList);
   }
   Z2_FORWARD_EXCEPTIONS;
-  std::cout << "test 3" << std::endl;
 
   // Move the rows, creating a new matrix.
   RCP<User> outPtr = doMigration(in, numNewRows, importList.getRawPtr());
   out = outPtr.get();
   outPtr.release();
-  std::cout << "end of partitioning soln" << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////
