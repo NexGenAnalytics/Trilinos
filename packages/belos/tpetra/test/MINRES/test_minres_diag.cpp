@@ -179,7 +179,7 @@ Composed_Operator::Composed_Operator(int n_in,
 
 void Composed_Operator::operator () (const MV &x, MV &y)
 {
-  MV ytemp(y.Map(), y.getNumVectors(), false);
+  MV ytemp(y.getMap(), y.getNumVectors(), false);
   (*pB)( x, ytemp );
   (*pA)( ytemp, y );
 }
@@ -190,7 +190,7 @@ class Trilinos_Interface : public OP
 {
   public:
 
-    Trilinos_Interface(const RCP<Vector_Operator>   pA_in,
+    Trilinos_Interface(const Teuchos::RCP<Vector_Operator>   pA_in,
         const Teuchos::RCP<const Teuchos::Comm<int>> pComm_in,
         const Teuchos::RCP<const MP>  pMap_in)
       : pA (pA_in),
@@ -199,7 +199,11 @@ class Trilinos_Interface : public OP
       use_transpose (false)
   {}
 
-    int apply(const MV& X, MV& Y) const;
+    void apply (const MV &X,
+                MV &Y,
+                Teuchos::ETransp mode = Teuchos::NO_TRANS,
+                ST alpha = Teuchos::ScalarTraits<ST>::one(),
+                ST beta = Teuchos::ScalarTraits<ST>::zero()) const override;
 
     /* TD: epetra only operator method
     int applyInverse(const MV& X, MV& Y) const
@@ -228,25 +232,26 @@ class Trilinos_Interface : public OP
     */
 
     /* TD: Epetra version was: virtual const MP & OperatorDomainMap() const {return *pMap; } */
-    virtual Teuchos::RCP<const MP> > getDomainMap() const {return *pMap; }
+    Teuchos::RCP<const MP> getDomainMap() const override {return pMap; }
 
     /* TD: Epetra version was virtual const MP & OperatorRangeMap() const {return *pMap; }  */
-    virtual Teuchos::RCP<const Map<LocalOrdinal,GlobalOrdinal,Node> > getRangeMap() const {return *pMap; }
+    Teuchos::RCP<const MP> getRangeMap() const override {return pMap; }
 
   private:
 
     Teuchos::RCP<Vector_Operator>   pA;
-    Teuchos::RCP<const Teuchos::Comm> pComm;
+    Teuchos::RCP<const Teuchos::Comm<int>> pComm;
     Teuchos::RCP<const MP>  pMap;
 
     bool use_transpose;
 };
 
-int Trilinos_Interface::Apply(const MV& X, MV& Y) const
-{
-  (*pA)(X,Y);
-
-  return(0);
+void Trilinos_Interface::apply (const MV &X,
+            MV &Y,
+            Teuchos::ETransp mode,
+            ST alpha,
+            ST beta) const {
+    (*pA)(X,Y);
 }
 
 //************************************************************************************************
@@ -270,17 +275,17 @@ class Iterative_Inverse_Operator : public Vector_Operator
   const bool print;
 
   Teuchos::Time timer;
-  Teuchos::RCP<Teuchos::Comm> pComm;
+  Teuchos::RCP<Teuchos::Comm<int>> pComm;
   Teuchos::RCP<MP>  pMap;
 
   Teuchos::RCP<OP> pPE;
   Teuchos::RCP<Teuchos::ParameterList>         pList;
-  Teuchos::RCP<LinearProblem<double,MV,OP> >   pProb;
-  Teuchos::RCP<MinresSolMgr<double,MV,OP> >      pBelos;
+  Teuchos::RCP<Belos::LinearProblem<double,MV,OP> >   pProb;
+  Teuchos::RCP<Belos::MinresSolMgr<double,MV,OP> >      pBelos;
 };
 
 Iterative_Inverse_Operator::Iterative_Inverse_Operator(int n_in, int blocksize,
-    const RCP<Vector_Operator>& pA_in,
+    const Teuchos::RCP<Vector_Operator>& pA_in,
     std::string opString, bool print_in)
 : Vector_Operator(n_in, n_in),      // square operator
   pA(pA_in),
@@ -297,11 +302,11 @@ Iterative_Inverse_Operator::Iterative_Inverse_Operator(int n_in, int blocksize,
   pComm = Teuchos::rcp (new Teuchos::SerialComm<int> ());
   n_global = n;
 #endif
-  pMap =  Teuchos::rcp( new MP(n_global, n, 0, *pComm) );
+  pMap =  Teuchos::rcp( new MP(n_global, n, 0, pComm) );
 
   pPE = Teuchos::rcp( new Trilinos_Interface(pA, pComm, pMap ) );
 
-  pProb = Teuchos::rcp( new LinearProblem<double,MV,OP>() );
+  pProb = Teuchos::rcp( new Belos::LinearProblem<double,MV,OP>() );
   pProb->setOperator( pPE );
 
   int max_iter = 100;
@@ -315,12 +320,12 @@ Iterative_Inverse_Operator::Iterative_Inverse_Operator(int n_in, int blocksize,
   pList->set( "Convergence Tolerance", tol );
   pList->set( "Verbosity", verbosity );
 
-  pBelos = Teuchos::rcp( new MinresSolMgr<double,MV,OP>(pProb, pList) );
+  pBelos = Teuchos::rcp( new Belos::MinresSolMgr<double,MV,OP>(pProb, pList) );
 }
 
 void Iterative_Inverse_Operator::operator () (const MV &b, MV &x)
 {
-  int pid = pComm->MyPID();
+  int pid = pComm->getRank();
 
   // Initialize the solution to zero
   x.putScalar( 0.0 );
@@ -353,7 +358,7 @@ int main(int argc, char *argv[])
 
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
 
-  RCP<const Comm<int> > comm = Tpetra::getDefaultComm();
+  Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
 
   bool verbose = false;
   bool success = true;
@@ -364,13 +369,13 @@ int main(int argc, char *argv[])
     int n(10);
     int numRHS=1;
 
-    MP map = MP(n, 0, Comm);
+    Teuchos::RCP<MP> map = Teuchos::RCP(new MP(n, 0, comm));
 
     MV X(map, numRHS), Y(map, numRHS);
     X.putScalar( 1.0 );
 
     // Inner computes inv(D2)*y
-    Teuchos::RCP<Diagonal_Operator_2> D2 = Teuchos::rcp(new Diagonal_Operator_2(n, map.MinMyGID(), 1.0));
+    Teuchos::RCP<Diagonal_Operator_2> D2 = Teuchos::rcp(new Diagonal_Operator_2(n, map->getMinGlobalIndex(), 1.0));
     Iterative_Inverse_Operator A2(n, 1, D2, "Belos (inv(D2))", true);
 
     // should return x=(1, 1/2, 1/3, ..., 1/10)
@@ -379,7 +384,7 @@ int main(int argc, char *argv[])
     if (pid==0) {
       std::cout << "Vector Y should have all entries [1, 1/2, 1/3, ..., 1/10]" << std::endl;
     }
-    Y.Print(std::cout);
+    Y.print(std::cout);
 
     // Inner computes inv(D)*x
     Teuchos::RCP<Diagonal_Operator> D = Teuchos::rcp(new Diagonal_Operator(n, 4.0));
@@ -400,7 +405,7 @@ int main(int argc, char *argv[])
     if (pid==0) {
       std::cout << std::endl << "Vector Y should have all entries [1/4, 1/4, 1/4, ..., 1/4]" << std::endl;
     }
-    Y.Print(std::cout);
+    Y.print(std::cout);
 
     // should return x=1
     (*Outer)(X,Y);
@@ -408,12 +413,15 @@ int main(int argc, char *argv[])
     if (pid==0) {
       std::cout << "Vector Y should have all entries [1, 1, 1, ..., 1]" << std::endl;
     }
-    Y.Print(std::cout);
+    Y.print(std::cout);
 
     // Compute the norm of Y - 1.0
-    std::vector<double> norm_Y(Y.getNumVectors());
+    std::vector<ST> norm_Y(Y.getNumVectors());
+    Teuchos::ArrayView<ST> normView(norm_Y);
+
+
     Y.update(-1.0, X, 1.0);
-    Y.norm2(&norm_Y[0]);
+    Y.norm2(norm_Y);
 
     if (pid==0)
       std::cout << "Two-norm of std::vector (Y-1.0) : "<< norm_Y[0] << std::endl;
