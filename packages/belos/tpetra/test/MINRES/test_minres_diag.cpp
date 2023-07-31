@@ -56,6 +56,7 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_Vector.hpp>
+
 // Teuchos includes
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_ParameterList.hpp>
@@ -205,36 +206,11 @@ class Trilinos_Interface : public OP
                 ST alpha = Teuchos::ScalarTraits<ST>::one(),
                 ST beta = Teuchos::ScalarTraits<ST>::zero()) const override;
 
-    /* TD: epetra only operator method
-    int applyInverse(const MV& X, MV& Y) const
-    {
-      return(apply(X,Y));  // No inverse
-    };*/
-
     virtual ~Trilinos_Interface() {};
 
-    // const char * Label() const {return("Trilinos_Interface, an Operator implementation");}; only in epetra ?
-
-   /* TD: Epetra version used virtual bool UseTranspose() */
     bool hasTransposeApply() const {return(use_transpose);};      // always set to false (in fact the default)
 
-    /* TD: Only Epetra Operator has a setter
-    int SetUseTranspose(bool UseTranspose_in) { use_transpose = false; return(-1); };
-    */
-
-    /* TD: HasNormInf and NormInf not in TPetra_Operator.hpp. only EPetra
-    bool HasNormInf() const {return(false);};                // cannot return inf-norm
-    double NormInf() const {return(0.0);};
-    */
-
-    /* TD: Not in TPetra_Operator.hpp. only EPetra 
-    virtual const Teuchos::RCP<const Teuchos::Comm<int>> & Comm() const {return *pComm; }
-    */
-
-    /* TD: Epetra version was: virtual const MP & OperatorDomainMap() const {return *pMap; } */
     Teuchos::RCP<const MP> getDomainMap() const override {return pMap; }
-
-    /* TD: Epetra version was virtual const MP & OperatorRangeMap() const {return *pMap; }  */
     Teuchos::RCP<const MP> getRangeMap() const override {return pMap; }
 
   private:
@@ -295,6 +271,7 @@ Iterative_Inverse_Operator::Iterative_Inverse_Operator(int n_in, int blocksize,
 
   int n_global;
 // TD: could the following ifdef block be replaced by just pComm = Tpetra::getDefaultComm() ?
+// AM: yes
 #ifdef HAVE_TPETRA_MPI
   MPI_Allreduce(&n, &n_global, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
   pComm = Teuchos::rcp (new Teuchos::MpiComm<int> (MPI_COMM_WORLD));
@@ -418,7 +395,6 @@ int main(int argc, char *argv[])
     // Compute the norm of Y - 1.0
     std::vector<ST> norm_Y(Y.getNumVectors());
     Teuchos::ArrayView<ST> normView(norm_Y);
-
 
     Y.update(-1.0, X, 1.0);
     Y.norm2(norm_Y);
