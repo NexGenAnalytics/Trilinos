@@ -121,6 +121,8 @@ public:
   using user_t = User;
   using userCoord_t = UserCoord;
   using base_adapter_t = MatrixAdapter<User,UserCoord>;
+  using Base = AdapterWithCoordsWrapper<User, UserCoord>;
+  using device_t = typename node_t::device_type;
 #endif
 
   enum BaseAdapterType adapterType() const override {return MatrixAdapterType;}
@@ -160,12 +162,12 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getRowIDsHostView(typename BaseAdapter<User>::ConstIdsHostView& rowIds) const
+  virtual void getRowIDsHostView(typename Base::ConstIdsHostView& rowIds) const
   {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getRowIDsDeviceView(typename BaseAdapter<User>::ConstIdsDeviceView& rowIds) const
+  virtual void getRowIDsDeviceView(typename Base::ConstIdsDeviceView& rowIds) const
   {
     Z2_THROW_NOT_IMPLEMENTED
   }
@@ -189,14 +191,14 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getCRSHostView(typename BaseAdapter<User>::ConstOffsetsHostView& offsets,
-                              typename BaseAdapter<User>::ConstIdsHostView& colIds) const
+  virtual void getCRSHostView(typename Base::ConstOffsetsHostView& offsets,
+                              typename Base::ConstIdsHostView& colIds) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getCRSDeviceView(typename BaseAdapter<User>::ConstOffsetsDeviceView& offsets,
-                                typename BaseAdapter<User>::ConstIdsDeviceView& colIds) const
+  virtual void getCRSDeviceView(typename Base::ConstOffsetsDeviceView& offsets,
+                                typename Base::ConstIdsDeviceView& colIds) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
@@ -227,16 +229,16 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getCRSHostView(typename BaseAdapter<User>::ConstOffsetsHostView& offsets,
-                              typename BaseAdapter<User>::ConstIdsHostView& colIds,
-                              typename BaseAdapter<User>::ConstScalarsHostView& values) const
+  virtual void getCRSHostView(typename Base::ConstOffsetsHostView& offsets,
+                              typename Base::ConstIdsHostView& colIds,
+                              typename Base::ConstScalarsHostView& values) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getCRSDeviceView(typename BaseAdapter<User>::ConstOffsetsDeviceView& offsets,
-                                typename BaseAdapter<User>::ConstIdsDeviceView& colIds,
-                                typename BaseAdapter<User>::ConstScalarsDeviceView& values) const
+  virtual void getCRSDeviceView(typename Base::ConstOffsetsDeviceView& offsets,
+                                typename Base::ConstIdsDeviceView& colIds,
+                                typename Base::ConstScalarsDeviceView& values) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
@@ -262,16 +264,26 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getRowWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D& weights,
+  virtual void getRowWeightsHostView(typename Base::WeightsHostView1D& weights,
                                      int /* idx */ = 0) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getRowWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& weights,
+  virtual void
+  getRowWeightsHostView(typename Base::WeightsHostView &weights) const {
+    Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  virtual void getRowWeightsDeviceView(typename Base::WeightsDeviceView1D& weights,
                                        int /* idx */ = 0) const
   {
       Z2_THROW_NOT_IMPLEMENTED
+  }
+
+  virtual void
+  getRowWeightsDeviceView(typename Base::WeightsDeviceView &weights) const {
+    Z2_THROW_NOT_IMPLEMENTED
   }
 
   /*! \brief Indicate whether row weight with index idx should be the
@@ -298,12 +310,12 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getColumnIDsHostView(typename BaseAdapter<User>::ConstIdsHostView& colIds) const
+  virtual void getColumnIDsHostView(typename Base::ConstIdsHostView& colIds) const
   {
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getColumnIDsDeviceView(typename BaseAdapter<User>::ConstIdsDeviceView& colIds) const
+  virtual void getColumnIDsDeviceView(typename Base::ConstIdsDeviceView& colIds) const
   {
     Z2_THROW_NOT_IMPLEMENTED
   }
@@ -373,12 +385,12 @@ public:
     Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getColumnWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D& weights) const
+  virtual void getColumnWeightsHostView(typename Base::WeightsHostView1D& weights) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
 
-  virtual void getColumnWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& weights) const
+  virtual void getColumnWeightsDeviceView(typename Base::WeightsDeviceView1D& weights) const
   {
       Z2_THROW_NOT_IMPLEMENTED
   }
@@ -497,7 +509,7 @@ public:
     }
   }
 
-  void getIDsHostView(typename BaseAdapter<User>::ConstIdsHostView& ids) const override {
+  void getIDsHostView(typename Base::ConstIdsHostView& ids) const override {
     switch (getPrimaryEntityType()) {
     case MATRIX_ROW:
       getRowIDsHostView(ids);
@@ -519,7 +531,7 @@ public:
     }
   }
 
-  void getIDsDeviceView(typename BaseAdapter<User>::ConstIdsDeviceView& ids) const override {
+  void getIDsDeviceView(typename Base::ConstIdsDeviceView& ids) const override {
     switch (getPrimaryEntityType()) {
     case MATRIX_ROW:
       getRowIDsDeviceView(ids);
@@ -580,7 +592,7 @@ public:
     }
   }
 
-  virtual void getWeightsHostView(typename BaseAdapter<User>::ConstWeightsHostView1D &hostWgts,
+  void getWeightsHostView(typename Base::WeightsHostView1D &hostWgts,
                                   int idx = 0) const override {
       switch (getPrimaryEntityType()) {
       case MATRIX_ROW:
@@ -603,7 +615,7 @@ public:
         break;
       }  }
 
-  virtual void getWeightsDeviceView(typename BaseAdapter<User>::ConstWeightsDeviceView1D& deviceWgts,
+  void getWeightsDeviceView(typename Base::WeightsDeviceView1D& deviceWgts,
                                     int idx = 0) const override {
       switch (getPrimaryEntityType()) {
       case MATRIX_ROW:

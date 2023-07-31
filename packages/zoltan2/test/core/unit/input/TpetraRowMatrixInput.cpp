@@ -184,7 +184,7 @@ void verifyInputAdapter(adapter_t &ia, matrix_t &matrix) {
   //// setRowWeightsDevice
   /////////////////////////////////
   Z2_TEST_THROW(ia.setRowWeightsDevice(
-                    typename adapter_t::ConstWeightsDeviceView1D{}, 50),
+                    typename adapter_t::WeightsDeviceView1D{}, 50),
                 std::runtime_error);
 
   weightsDevice_t wgts0("wgts0", nrows);
@@ -205,10 +205,10 @@ void verifyInputAdapter(adapter_t &ia, matrix_t &matrix) {
   //// getRowWeightsDevice
   /////////////////////////////////
   {
-    constWeightsDevice_t weightsDevice;
+    weightsDevice_t weightsDevice;
     Z2_TEST_NOTHROW(ia.getRowWeightsDeviceView(weightsDevice, 0));
 
-    constWeightsHost_t weightsHost;
+    weightsHost_t weightsHost;
     Z2_TEST_NOTHROW(ia.getRowWeightsHostView(weightsHost, 0));
 
     TestDeviceHostView(weightsDevice, weightsHost);
@@ -216,10 +216,10 @@ void verifyInputAdapter(adapter_t &ia, matrix_t &matrix) {
     TestDeviceHostView(wgts0, weightsHost);
   }
   {
-    constWeightsDevice_t weightsDevice;
+    weightsDevice_t weightsDevice;
     Z2_TEST_NOTHROW(ia.getRowWeightsDeviceView(weightsDevice, 1));
 
-    constWeightsHost_t weightsHost;
+    weightsHost_t weightsHost;
     Z2_TEST_NOTHROW(ia.getRowWeightsHostView(weightsHost, 1));
 
     TestDeviceHostView(weightsDevice, weightsHost);
@@ -227,11 +227,11 @@ void verifyInputAdapter(adapter_t &ia, matrix_t &matrix) {
     TestDeviceHostView(wgts1, weightsHost);
   }
   {
-    constWeightsDevice_t wgtsDevice;
+    weightsDevice_t wgtsDevice;
     Z2_TEST_THROW(ia.getRowWeightsDeviceView(wgtsDevice, 2),
                   std::runtime_error);
 
-    constWeightsHost_t wgtsHost;
+    weightsHost_t wgtsHost;
     Z2_TEST_THROW(ia.getRowWeightsHostView(wgtsHost, 2), std::runtime_error);
   }
 

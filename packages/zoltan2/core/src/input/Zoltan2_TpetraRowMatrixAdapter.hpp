@@ -250,11 +250,17 @@ public:
   void getRowWeightsView(const scalar_t *&weights, int &stride,
                          int idx = 0) const;
 
-  void getRowWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &weights,
-                                  int idx) const;
+  void getRowWeightsDeviceView(typename Base::WeightsDeviceView1D &weights,
+                                  int idx = 0) const;
 
-  void getRowWeightsHostView(typename Base::ConstWeightsHostView1D &weights,
-                                int idx) const;
+  void getRowWeightsDeviceView(
+      typename Base::WeightsDeviceView &weights) const override;
+
+  void getRowWeightsHostView(typename Base::WeightsHostView1D &weights,
+                                int idx = 0) const;
+
+  void getRowWeightsHostView(
+      typename Base::WeightsHostView &weights) const override;
 
   bool useNumNonzerosAsRowWeight(int idx) const;
 
@@ -290,7 +296,7 @@ protected:
 
   int nWeightsPerRow_;
   ArrayRCP<StridedData<lno_t, scalar_t>> rowWeights_;
-  std::vector<typename Base::ConstWeightsDeviceView1D> rowWeightsDevice_;
+  typename Base::WeightsDeviceView rowWeightsDevice_;
   Kokkos::View<bool *, host_t> numNzWeight_;
 
   bool mayHaveDiagonalEntries;
@@ -350,7 +356,8 @@ TpetraRowMatrixAdapter<User, UserCoord>::TpetraRowMatrixAdapter(
     rowWeights_ =
         arcp(new strided_t[nWeightsPerRow_], 0, nWeightsPerRow_, true);
 
-    rowWeightsDevice_.resize(nWeightsPerRow_);
+    rowWeightsDevice_ = typename Base::WeightsDeviceView(
+        "rowWeightsDevice_", nrows, nWeightsPerRow_);
 
     numNzWeight_ =  Kokkos::View<bool *, host_t>(
         "numNzWeight_", nWeightsPerRow_);
@@ -430,7 +437,12 @@ void TpetraRowMatrixAdapter<User, UserCoord>::setRowWeightsDevice(
   AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
                   "Invalid row weight index: " + std::to_string(idx));
 
-  rowWeightsDevice_[idx] = weights;
+  const auto nrows = getLocalNumRows();
+  auto weightsSub = Kokkos::subview(rowWeightsDevice_, Kokkos::ALL, idx);
+  Kokkos::parallel_for(
+      nrows, KOKKOS_LAMBDA(const int rowID) {
+        weightsSub(rowID) = weights(rowID);
+      });
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -442,7 +454,13 @@ void TpetraRowMatrixAdapter<User, UserCoord>::setRowWeightsHost(
 
   auto weightsDevice = Kokkos::create_mirror_view_and_copy(
       typename Base::device_t(), weightsHost);
-  rowWeightsDevice_[idx] = weightsDevice;
+
+  const auto nrows = getLocalNumRows();
+  Kokkos::parallel_for(
+      Kokkos::RangePolicy<Kokkos::HostSpace::execution_space>(0, nrows),
+      KOKKOS_LAMBDA(const int rowID) {
+        rowWeightsDevice_(rowID, idx) = weightsDevice(rowID);
+      });
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -620,22 +638,41 @@ void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsView(const scalar_t *
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsDeviceView(typename Base::ConstWeightsDeviceView1D &weights,
-                                int idx) const {
+void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsDeviceView(
+    typename Base::WeightsDeviceView1D &weights, int idx) const {
   AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
                   "Invalid row weight index.");
-  weights = rowWeightsDevice_.at(idx);
+
+  weights = Kokkos::subview(rowWeightsDevice_, Kokkos::ALL, idx);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 template <typename User, typename UserCoord>
-void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsHostView(typename Base::ConstWeightsHostView1D &weights,
-                              int idx) const {
+void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsDeviceView(
+    typename Base::WeightsDeviceView &weights) const {
+
+  weights = rowWeightsDevice_;
+}
+
+////////////////////////////////////////////////////////////////////////////
+template <typename User, typename UserCoord>
+void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsHostView(
+    typename Base::WeightsHostView1D &weights, int idx) const {
   AssertCondition((idx >= 0) and (idx < nWeightsPerRow_),
-                  "Invalid row index.");
-  const auto weightsDevice = rowWeightsDevice_.at(idx);
+                  "Invalid row weight index.");
+
+  auto weightsDevice = Kokkos::subview(rowWeightsDevice_, Kokkos::ALL, idx);
   weights = Kokkos::create_mirror_view(weightsDevice);
   Kokkos::deep_copy(weights, weightsDevice);
+}
+
+////////////////////////////////////////////////////////////////////////////
+template <typename User, typename UserCoord>
+void TpetraRowMatrixAdapter<User, UserCoord>::getRowWeightsHostView(
+    typename Base::WeightsHostView &weights) const {
+
+  weights = Kokkos::create_mirror_view(rowWeightsDevice_);
+  Kokkos::deep_copy(weights, rowWeightsDevice_);
 }
 
 ////////////////////////////////////////////////////////////////////////////

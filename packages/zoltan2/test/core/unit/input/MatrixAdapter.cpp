@@ -275,10 +275,10 @@ int main(int narg, char *arg[]) {
   // TEST of getRowWeightsView, getRowWeightsHost0View and
   // getRowWeightsDeviceView
 
-  Zoltan2::BaseAdapter<trowMatrix_t>::ConstWeightsHostView1D weightsHost0;
-  Zoltan2::BaseAdapter<trowMatrix_t>::ConstWeightsDeviceView1D weightsDevice0;
-  Zoltan2::BaseAdapter<trowMatrix_t>::ConstWeightsHostView1D weightsHost1;
-  Zoltan2::BaseAdapter<trowMatrix_t>::ConstWeightsDeviceView1D weightsDevice1;
+  Zoltan2::BaseAdapter<trowMatrix_t>::WeightsHostView1D weightsHost0;
+  Zoltan2::BaseAdapter<trowMatrix_t>::WeightsDeviceView1D weightsDevice0;
+  Zoltan2::BaseAdapter<trowMatrix_t>::WeightsHostView1D weightsHost1;
+  Zoltan2::BaseAdapter<trowMatrix_t>::WeightsDeviceView1D weightsDevice1;
 
   tmi.getRowWeightsHostView(weightsHost0, 0);
   tmi.getRowWeightsDeviceView(weightsDevice0, 0);

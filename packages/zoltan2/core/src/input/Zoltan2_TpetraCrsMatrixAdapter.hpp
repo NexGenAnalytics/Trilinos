@@ -156,7 +156,9 @@ public:
 
   if (this->nWeightsPerRow_ > 0) {
 
-    this->rowWeightsDevice_.resize(this->nWeightsPerRow_);
+    this->rowWeightsDevice_ = typename Base::WeightsDeviceView(
+        "rowWeightsDevice_", inmatrix->getLocalNumRows(),
+        this->nWeightsPerRow_);
 
     this->numNzWeight_ =  Kokkos::View<bool *, host_t>(
         "numNzWeight_", this->nWeightsPerRow_);
