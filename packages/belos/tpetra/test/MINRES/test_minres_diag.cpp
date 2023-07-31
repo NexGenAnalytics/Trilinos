@@ -50,16 +50,18 @@
 #include "BelosTpetraAdapter.hpp"
 #include "BelosTpetraOperator.hpp"
 #include "BelosMinresSolMgr.hpp"
+
 // Tpetra includes
-#include "Tpetra_Core.hpp"
-#include "Tpetra_Map.h"
-#include "Tpetra_MultiVector.hpp"
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Map.hpp>
+#include <Tpetra_MultiVector.hpp>
+#include <Tpetra_Vector.hpp>
 // Teuchos includes
-#include "Teuchos_Comm.hpp"
-#include "Teuchos_ParameterList.hpp"
-#include "Teuchos_Time.hpp"
-#include "Teuchos_GlobalMPISession.hpp"
-#include "Teuchos_StandardCatchMacros.hpp"
+#include <Teuchos_Comm.hpp>
+#include <Teuchos_ParameterList.hpp>
+#include <Teuchos_Time.hpp>
+#include <Teuchos_GlobalMPISession.hpp>
+#include <Teuchos_StandardCatchMacros.hpp>
 
 //
 /* TD: add typedefs as it is the common way in tpetra tests */
@@ -132,9 +134,12 @@ class Diagonal_Operator_2 : public Vector_Operator
 
     void operator () (const MV &x, MV &y)
     {
-      int myCols = y.MyLength();
-      for (int j=0; j < x.getNumVectors(); ++j) {
-        for (int i=0; i < myCols; ++i) (*y(j))[i] = (min_gid+i+1)*v*(*x(j))[i];  // NOTE: square operator!
+      auto localRowsCount = y.getLocalLength();
+      for (auto j=0; j < x.getNumVectors(); ++j) {
+        for (auto i=0; i < localRowsCount; ++i) {
+            y(i,j)= (min_gid+i+1)*v*x(i,j);
+//            (*y(j))[i] = (min_gid+i+1)*v*(*x(j))[i];
+        }// NOTE: square operator!
       }
     };
 

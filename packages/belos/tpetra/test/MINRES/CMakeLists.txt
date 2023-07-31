@@ -1,6 +1,6 @@
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  minres_diag
+  tpetra_minres_diag
   SOURCES test_minres_diag.cpp
   COMM serial mpi
   STANDARD_PASS_OUTPUT
