@@ -201,7 +201,7 @@ private:
   lno_t localNumIDs_;
   const gno_t *idList_;
   ArrayRCP<StridedData<lno_t, scalar_t> > weights_;
-  size_t numWeightsPerID_;
+  size_t numWeightsPerID_ = 0;
 
   Kokkos::View<gno_t *, device_t> idsView_;
   Kokkos::View<scalar_t **, device_t> weightsView_;

@@ -46,6 +46,7 @@
 #include <limits>
 #include <Zoltan2_PartitioningProblem.hpp>
 #include <Zoltan2_XpetraCrsMatrixAdapter.hpp>
+#include <Zoltan2_TpetraCrsMatrixAdapter.hpp>
 #include <Zoltan2_XpetraMultiVectorAdapter.hpp>
 #include <Teuchos_ParameterList.hpp>
 #include <Teuchos_RCP.hpp>
@@ -80,7 +81,7 @@ int main(int narg, char** arg)
   typedef Tpetra::Vector<scalar_t, localId_t, globalId_t> Vector_t;
 
   // Useful typedefs:  Zoltan2 types
-  typedef Zoltan2::XpetraCrsMatrixAdapter<Matrix_t> MatrixAdapter_t;
+  typedef Zoltan2::TpetraCrsMatrixAdapter<Matrix_t> MatrixAdapter_t;
   typedef Zoltan2::XpetraMultiVectorAdapter<Vector_t> MultiVectorAdapter_t;
 
   // Input parameters with default values
