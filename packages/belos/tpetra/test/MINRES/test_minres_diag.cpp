@@ -331,14 +331,14 @@ template <class ScalarType>
 bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
   // Get default Tpetra template types
   using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
-  using LO = Tpetra::Vector<>::local_ordinal_type;
-  using GO = Tpetra::Vector<>::global_ordinal_type;
-  using NT = Tpetra::Vector<>::node_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NT = typename Tpetra::Vector<>::node_type;
 
   // Init Tpetra types
-  using OP = Tpetra::Operator<ST,LO,GO,NT>;
-  using MV = Tpetra::MultiVector<ST,LO,GO,NT>;
-  using MP = Tpetra::Map<LO,GO,NT>;
+  using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using MP = typename Tpetra::Map<LO,GO,NT>;
 
   Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
 
