@@ -78,6 +78,7 @@
 #include <Tpetra_CrsMatrix_fwd.hpp>
 
 // MueLu
+#include <MueLu_TpetraOperator.hpp>
 #include <MueLu_CreateTpetraPreconditioner.hpp> // includes MueLu.hpp
 
 // Belos
@@ -123,8 +124,8 @@ int main(int argc, char *argv[]) {
     using mtoperator_t = MueLu::TpetraOperator<SC,LO,GO,NT>;
     // using btprecop_t = // find something;
 
-    using scarray_t = Teuchos::ArrayView<SC>;
-    using goarray_t = Teuchos::ArrayView<GO>;
+    using scarray_t = Teuchos::Array<SC>;
+    using goarray_t = Teuchos::Array<GO>;
 
     using Teuchos::ParameterList; // all of this may look fine but do not be fooled ...
     using Teuchos::RCP;           // it is not so clear what any of this does
@@ -132,10 +133,12 @@ int main(int argc, char *argv[]) {
     using Teuchos::Comm;
     using Teuchos::rcp_dynamic_cast;
 
-    int MyPID = 0;
-    int numProc = 1;
+    // int MyPID = 0;
+    // int numProc = 1;
     // CWS: TODO initialize MPI and get communicator
     const auto comm = Tpetra::getDefaultComm();
+    const int MyPID = comm->getRank();
+    const int numProc = comm->getSize();
 
     // Laplace's equation, homogenous Dirichlet boundary counditions, [0,1]^2
     // regular mesh, Q1 finite elements
@@ -194,79 +197,95 @@ int main(int argc, char *argv[]) {
 
         //By the way, either matrix has (3*numElePerDirection - 2)^2 nonzeros.
         RCP<tmap_t> Map         = rcp(new tmap_t(numNodes, 0, comm));
-        RCP<tcrsmatrix_t> Stiff = rcp(new tcrsmatrix_t(Map, 0));
-        RCP<tcrsmatrix_t> Mass  = rcp(new tcrsmatrix_t(Map, 0));
+        RCP<tcrsmatrix_t> Stiff = rcp(new tcrsmatrix_t(Map, numNodes));
+        RCP<tcrsmatrix_t> Mass  = rcp(new tcrsmatrix_t(Map, numNodes));
         RCP<tvector_t> vecLHS   = rcp(new tvector_t(Map));
         RCP<tvector_t> vecRHS   = rcp(new tvector_t(Map));
         RCP<tmultivector_t> LHS, RHS;
 
         SC ko = 8.0 / 3.0, k1 = -1.0 / 3.0;
-        scarray_t ko_arr(&ko, 1);
-        scarray_t k1_arr(&k1, 1);
+        scarray_t k_arr(1);
 
         SC h = 1.0 / static_cast<SC>(numElePerDirection);  // x=(iX,iY)h
 
         SC mo = h*h*4.0/9.0, m1 = h*h/9.0, m2 = h*h/36.0;
-        scarray_t mo_arr(&mo, 1);
-        scarray_t m1_arr(&m1, 1);
-        scarray_t m2_arr(&m2, 1);
+        scarray_t m_arr(1);
 
         SC pi = 4.0*atan(1.0), valueLHS;
-        GO lid, node, iX, iY, pos;
+        GO lid, node, iX, iY;
 
-        goarray_t pos_arr(&pos, 1);
+        goarray_t pos_arr(1);
 
         for (lid = Map->getMinLocalIndex(); lid <= Map->getMaxLocalIndex(); lid++) {
 
             node = Map->getGlobalElement(lid);
             iX  = node  % (numElePerDirection-1);
             iY  = ( node - iX )/(numElePerDirection-1);
-            Stiff->insertGlobalValues(node, pos_arr, ko_arr); // global row ID, global col ID, value
-            Mass->insertGlobalValues(node, pos_arr, mo_arr); // init guess violates hom Dir bc
+            pos_arr[0] = node;
+            k_arr[0] = ko;
+            m_arr[0] = mo;
+            Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // global row ID, global col ID, value
+            Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1)); // init guess violates hom Dir bc
             valueLHS = sin( pi*h*((SC) iX+1) )*cos( 2.0 * pi*h*((SC) iY+1) );
             vecLHS->replaceGlobalValue(node, valueLHS);
 
             if (iY > 0) {
+                k_arr[0] = k1;
+                m_arr[0] = m1;
                 pos_arr[0] = iX + (iY-1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); //North
-                Mass->insertGlobalValues(node, pos_arr, m1_arr);
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); //North
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
             }
 
             if (iY < numElePerDirection-2) {
+                k_arr[0] = k1;
+                m_arr[0] = m1;
                 pos_arr[0] = iX + (iY+1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); //South
-                Mass->insertGlobalValues(node, pos_arr, m1_arr);
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); //South
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
             }
 
             if (iX > 0) {
+                k_arr[0] = k1;
+                m_arr[0] = m1;
                 pos_arr[0] = iX-1 + iY*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // West
-                Mass->insertGlobalValues(node, pos_arr, m1_arr);
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // West
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
                 if (iY > 0) {
-                pos_arr[0] = iX-1 + (iY-1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // North West
-                Mass->insertGlobalValues(node, pos_arr, m2_arr);
+                    k_arr[0] = k1;
+                    m_arr[0] = m2;
+                    pos_arr[0] = iX-1 + (iY-1)*(numElePerDirection-1);
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // North West
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
                 }
                 if (iY < numElePerDirection-2) {
-                pos_arr[0] = iX-1 + (iY+1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // South West
-                Mass->insertGlobalValues(node, pos_arr, m2_arr);
+                    k_arr[0] = k1;
+                    m_arr[0] = m2;
+                    pos_arr[0] = iX-1 + (iY+1)*(numElePerDirection-1);
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // South West
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
                 }
             }
 
             if (iX < numElePerDirection - 2) {
+                k_arr[0] = k1;
+                m_arr[0] = m1;
                 pos_arr[0] = iX+1 + iY*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // East
-                Mass->insertGlobalValues(node, pos_arr, m1_arr);
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // East
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
                 if (iY > 0) {
-                pos_arr[0] = iX+1 + (iY-1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // North East
-                Mass->insertGlobalValues(node, pos_arr, m2_arr);
+                    k_arr[0] = k1;
+                    m_arr[0] = m2;
+                    pos_arr[0] = iX+1 + (iY-1)*(numElePerDirection-1);
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // North East
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
                 }
                 if (iY < numElePerDirection-2) {
-                pos_arr[0] = iX+1 + (iY+1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // South East
-                Mass->insertGlobalValues(node, pos_arr, m2_arr);
+                    k_arr[0] = k1;
+                    m_arr[0] = m2;
+                    pos_arr[0] = iX+1 + (iY+1)*(numElePerDirection-1);
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // South East
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
                 }
             }
         }
@@ -284,29 +303,33 @@ int main(int argc, char *argv[]) {
 
         SC one = 1.0, hdt = .00005; // half time step
 
-        const RCP<tcrsmatrix_t> A = rcp(new tcrsmatrix_t(*Stiff) ); // A = Mass+Stiff*dt/2
+        const RCP<tcrsmatrix_t> A_add = rcp(new tcrsmatrix_t(*Stiff)); // A = Mass+Stiff*dt/2
+        const RCP<tcrsmatrix_t> A = rcp(new tcrsmatrix_t(*Stiff));
         try {
-            Tpetra::MatrixMatrix::Add(*Mass, false, one, *A, hdt);
+            Tpetra::MatrixMatrix::Add(*Mass, false, one, *A_add, false, hdt, A);
         } catch (std::runtime_error& ex) {
             std::cout << "Error from MatrixMatrix::Add: " << ex.what() << std::endl;
             return 1;
         }
 
-
+        A->resumeFill();
         A->fillComplete();
+
         if (!A->isStorageOptimized()) {
             std::cout << "A storage is not optimized" << std::endl;
         }
 
         hdt = -hdt;
-        RCP<tcrsmatrix_t> B = rcp(new tcrsmatrix_t(*Stiff) ); // B = Mass-Stiff*dt/2
+        RCP<tcrsmatrix_t> B_add = rcp(new tcrsmatrix_t(*Stiff)); // B = Mass-Stiff*dt/2
+        RCP<tcrsmatrix_t> B = rcp(new tcrsmatrix_t(*Stiff));
+
         try {
-            Tpetra::MatrixMatrix::Add(*Mass, false, one, *B,hdt);
+            Tpetra::MatrixMatrix::Add(*Mass, false, one, *B_add, false, hdt, B);
         } catch (std::runtime_error& ex) {
             std::cout << "Error from MatrixMatrix::Add: " << ex.what() << std::endl;
             return 1;
         }
-
+        B->resumeFill();
         B->fillComplete();
         if (!B->isStorageOptimized()) {
             std::cout << "B storage is not optimized" << std::endl;
@@ -324,139 +347,144 @@ int main(int argc, char *argv[]) {
 
         ParameterList MueLuList; // Set MueLuList for Smoothed Aggregation
 
-        MueLuList.set("smoother: type","Chebyshev"); // Chebyshev smoother  ... aztec??
-        MueLuList.set("smoother: sweeps",3);
+        MueLuList.set("smoother: type", "CHEBYSHEV");
         MueLuList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
-#ifdef HAVE_MUELU_AMESOS2
-        std::cout << "HAVE_MUELU_AMESOS2 active" << std::endl; // CWS: remove when done
-        MueLuList.set("coarse: type", "Amesos2-KLU2"); // solve with serial direct solver KLU (CWS: CHECK)
-#else
-        MueLuList.set("coarse: type", "Jacobi"); // not recommended
-        puts("Warning: Iterative coarse grid solve");
-#endif
 
-        const RCP<toperator_t> A_operator = rcp_dynamic_cast<toperator_t>(A);
-        RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_operator, MueLuList);
+// #ifdef HAVE_MUELU_AMESOS2
+//         MueLuList.set("coarse: type", "KLU2");
+// #else
+//         MueLuList.set("coarse: type", "none")
+// #endif
 
-        assert(Prec != Teuchos::null);
-
-        // Create the Belos preconditioned operator from the preconditioner.
-        // NOTE:  This is necessary because Belos expects an operator to apply the
-        //        preconditioner with Apply() NOT ApplyInverse().
-        // RCP<btprecop_t> belosPrec = rcp(new btprecop_t(Prec));
-
-        ///////////////////////////////////////////////////
-        //             Create Parameter List             //
-        ///////////////////////////////////////////////////
-
-        const size_t NumGlobalElements = RHS->getGlobalLength();
-        if (maxiters == -1)
-        maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
-
-        ParameterList belosList;
-        belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
-        belosList.set( "Maximum Iterations", maxiters );       // Maximum number of iterations allowed
-        belosList.set( "Convergence Tolerance", tol );         // Relative convergence tolerance requested
-        belosList.set( "Num Deflated Blocks", maxDeflate );    // Number of vectors in seed space
-        belosList.set( "Num Saved Blocks", maxSave );          // Number of vectors saved from old spaces
-        belosList.set( "Orthogonalization", ortho );           // Orthogonalization type
-
-        if (numrhs > 1) {
-        belosList.set( "Show Maximum Residual Norm Only", true );  // although numrhs = 1.
+        RCP<toperator_t> A_op = A;
+        std::cout << "before try block" << std::endl;
+        try {
+            RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_op, MueLuList);
+            std::cout << "created Prec" << std::endl;
+        } catch (std::runtime_error& ex) {
+            std::cout << "caught exception: " << std::endl;
+            std::cout << ex.what() << std::endl;
         }
-        if (verbose) {
-        belosList.set( "Verbosity", Belos::Errors + Belos::Warnings +
-            Belos::TimingDetails + Belos::FinalSummary + Belos::StatusTestDetails );
-        if (frequency > 0)
-            belosList.set( "Output Frequency", frequency );
-        }
-        else
-        belosList.set( "Verbosity", Belos::Errors + Belos::Warnings + Belos::FinalSummary );
+        std::cout << "after try block" << std::endl;
+        // assert(Prec != Teuchos::null);
 
-        ///////////////////////////////////////////////////
-        //    Construct Preconditioned Linear Problem    //
-        ///////////////////////////////////////////////////
+        // // Create the Belos preconditioned operator from the preconditioner.
+        // // NOTE:  This is necessary because Belos expects an operator to apply the
+        // //        preconditioner with Apply() NOT ApplyInverse().
+        // // RCP<btprecop_t> belosPrec = rcp(new btprecop_t(Prec));
 
-        RCP<Belos::LinearProblem<SC,MV,OP> > problem
-            = rcp( new Belos::LinearProblem<SC,MV,OP>( A, LHS, RHS ) );
-        problem->setLeftPrec( Prec );
+        // ///////////////////////////////////////////////////
+        // //             Create Parameter List             //
+        // ///////////////////////////////////////////////////
 
-        bool set = problem->setProblem();
-        if (set == false) {
-            if (proc_verbose) {
-                std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
-            }
-            return -1;
-        }
+        // const size_t NumGlobalElements = RHS->getGlobalLength();
+        // if (maxiters == -1)
+        // maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
 
-        // Create an iterative solver manager.
-        RCP< Belos::SolverManager<SC,MV,OP> > solver
-        = rcp( new Belos::PCPGSolMgr<SC,MV,OP>(problem, rcp(&belosList,false)) );
+        // ParameterList belosList;
+        // belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
+        // belosList.set( "Maximum Iterations", maxiters );       // Maximum number of iterations allowed
+        // belosList.set( "Convergence Tolerance", tol );         // Relative convergence tolerance requested
+        // belosList.set( "Num Deflated Blocks", maxDeflate );    // Number of vectors in seed space
+        // belosList.set( "Num Saved Blocks", maxSave );          // Number of vectors saved from old spaces
+        // belosList.set( "Orthogonalization", ortho );           // Orthogonalization type
 
-        ////////////////////////////////////////////////////
-        //                  Iterate PCPG                  //
-        ////////////////////////////////////////////////////
+        // if (numrhs > 1) {
+        // belosList.set( "Show Maximum Residual Norm Only", true );  // although numrhs = 1.
+        // }
+        // if (verbose) {
+        // belosList.set( "Verbosity", Belos::Errors + Belos::Warnings +
+        //     Belos::TimingDetails + Belos::FinalSummary + Belos::StatusTestDetails );
+        // if (frequency > 0)
+        //     belosList.set( "Output Frequency", frequency );
+        // }
+        // else
+        // belosList.set( "Verbosity", Belos::Errors + Belos::Warnings + Belos::FinalSummary );
 
-        if (proc_verbose) {
-            std::cout << std::endl << std::endl;
-            std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
-            std::cout << "Number of right-hand sides: " << numrhs << std::endl;
-            std::cout << "Block size used by solver: " << blocksize << std::endl;
-            std::cout << "Maximum number of iterations allowed: " << maxiters << std::endl;
-            std::cout << "Relative residual tolerance: " << tol << std::endl;
-            std::cout << std::endl;
-        }
-        bool badRes;
-        for( int time_step = 0; time_step < num_time_step; time_step++){
-        if (time_step) {
-            B->apply(*LHS, *RHS); // rhs_new := B*lhs_old,
-            set = problem->setProblem(LHS, RHS);
-            if (set == false) {
-                if (proc_verbose)
-                    std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
-                return -1;
-            }
-        } // if time_step
-        std::vector<SC> rhs_norm(numrhs);
-        MVT::MvNorm(*RHS, rhs_norm);
-        std::cout << "\t\t\t\tRHS norm is ... " << rhs_norm[0] << std::endl;
+        // ///////////////////////////////////////////////////
+        // //    Construct Preconditioned Linear Problem    //
+        // ///////////////////////////////////////////////////
 
-        // Perform solve
+        // RCP<Belos::LinearProblem<SC,MV,OP> > problem
+        //     = rcp( new Belos::LinearProblem<SC,MV,OP>( A, LHS, RHS ) );
+        // problem->setLeftPrec( Prec );
 
-        Belos::ReturnType ret = solver->solve();
+        // bool set = problem->setProblem();
+        // if (set == false) {
+        //     if (proc_verbose) {
+        //         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
+        //     }
+        //     return -1;
+        // }
 
-        // Compute actual residuals.
+        // // Create an iterative solver manager.
+        // RCP< Belos::SolverManager<SC,MV,OP> > solver
+        // = rcp( new Belos::PCPGSolMgr<SC,MV,OP>(problem, rcp(&belosList,false)) );
 
-        badRes = false;
-        std::vector<SC> actual_resids(numrhs);
-        tmultivector_t resid(Map, numrhs);
-        OPT::Apply( *A, *LHS, resid );
-        MVT::MvAddMv( -1.0, resid, 1.0, *RHS, resid );
-        MVT::MvNorm( resid, actual_resids );
-        MVT::MvNorm( *RHS, rhs_norm );
-        std::cout << "\t\t\t\tRHS norm is ... " << rhs_norm[0] << std::endl;
+        // ////////////////////////////////////////////////////
+        // //                  Iterate PCPG                  //
+        // ////////////////////////////////////////////////////
 
-        if (proc_verbose) {
-            std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
-            for ( int i=0; i<numrhs; i++) {
-                SC actRes = actual_resids[i]/rhs_norm[i];
-                std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
-                if (actRes > tol) badRes = true;
-            }
-        }
+        // if (proc_verbose) {
+        //     std::cout << std::endl << std::endl;
+        //     std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
+        //     std::cout << "Number of right-hand sides: " << numrhs << std::endl;
+        //     std::cout << "Block size used by solver: " << blocksize << std::endl;
+        //     std::cout << "Maximum number of iterations allowed: " << maxiters << std::endl;
+        //     std::cout << "Relative residual tolerance: " << tol << std::endl;
+        //     std::cout << std::endl;
+        // }
+        // bool badRes;
+        // for( int time_step = 0; time_step < num_time_step; time_step++){
+        // if (time_step) {
+        //     B->apply(*LHS, *RHS); // rhs_new := B*lhs_old,
+        //     set = problem->setProblem(LHS, RHS);
+        //     if (set == false) {
+        //         if (proc_verbose)
+        //             std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
+        //         return -1;
+        //     }
+        // } // if time_step
+        // std::vector<SC> rhs_norm(numrhs);
+        // MVT::MvNorm(*RHS, rhs_norm);
+        // std::cout << "\t\t\t\tRHS norm is ... " << rhs_norm[0] << std::endl;
 
-        success = ret==Belos::Converged && !badRes;
-        if (!success)
-            break;
-        } // for time_step
+        // // Perform solve
 
-        if (success) {
-            if (proc_verbose)
-                std::cout << "End Result: TEST PASSED" << std::endl;
-        } else {
-            if (proc_verbose)
-                std::cout << "End Result: TEST FAILED" << std::endl;
-        }
+        // Belos::ReturnType ret = solver->solve();
+
+        // // Compute actual residuals.
+
+        // badRes = false;
+        // std::vector<SC> actual_resids(numrhs);
+        // tmultivector_t resid(Map, numrhs);
+        // OPT::Apply( *A, *LHS, resid );
+        // MVT::MvAddMv( -1.0, resid, 1.0, *RHS, resid );
+        // MVT::MvNorm( resid, actual_resids );
+        // MVT::MvNorm( *RHS, rhs_norm );
+        // std::cout << "\t\t\t\tRHS norm is ... " << rhs_norm[0] << std::endl;
+
+        // if (proc_verbose) {
+        //     std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
+        //     for ( int i=0; i<numrhs; i++) {
+        //         SC actRes = actual_resids[i]/rhs_norm[i];
+        //         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
+        //         if (actRes > tol) badRes = true;
+        //     }
+        // }
+
+        // success = ret==Belos::Converged && !badRes;
+        // if (!success)
+        //     break;
+        // } // for time_step
+
+        // if (success) {
+        //     if (proc_verbose)
+        //         std::cout << "End Result: TEST PASSED" << std::endl;
+        // } else {
+        //     if (proc_verbose)
+        //         std::cout << "End Result: TEST FAILED" << std::endl;
+        // }
 
     } // try block
     TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
