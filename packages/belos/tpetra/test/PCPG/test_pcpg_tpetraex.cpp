@@ -65,7 +65,6 @@
 // Adapted from test_pcpg_epetraex.cpp by David M. Day (with original comments)
 
 
-#include <Tpetra_Map.hpp> // CWS: decl?
 
 // #ifdef TPETRA_MPI // CWS FIND REPLACEMENT
 // // #include <Epetra_MpiComm.h<
@@ -73,61 +72,69 @@
 // // #include <Epetra_SerialComm.h<
 // #endif
 
-#include <Tpetra_Core.hpp>
-#include <Tpetra_Vector.hpp> // CWS: _decl?
-#include <Tpetra_CrsMatrix.hpp> // CWS: ^^
-#include <TpetraExt_MatrixMatrix.hpp>  // CWS: _def? // build the example
-#include <MueLu_TpetraOperator_def.hpp>
-// #include <MueLu.hpp>
+// Tpetra
+#include <Tpetra_Map_fwd.hpp>
+#include <Tpetra_Vector_fwd.hpp>
+#include <Tpetra_CrsMatrix_fwd.hpp>
 
+// MueLu
+#include <MueLu_CreateTpetraPreconditioner.hpp> // includes MueLu.hpp
+
+// Belos
 #include <BelosConfigDefs.hpp>
+#include <BelosPCPGSolMgr.hpp>
+#include <BelosMueLuAdapter.hpp>
 #include <BelosLinearProblem.hpp>
 #include <BelosTpetraAdapter.hpp>
 #include <BelosTpetraOperator.hpp>
-//#include "BelosBlockCGSolMgr.hpp"
-#include <BelosPCPGSolMgr.hpp>
 
-// CWS: check with above COMM
+// Teuchos
+#include <Teuchos_RCP.hpp> // included in MueLu.hpp
 #include <Teuchos_Comm.hpp>
+#include <Teuchos_Tuple.hpp>
 #include <Teuchos_CommHelpers.hpp>
-#include <Teuchos_DefaultComm.hpp>
-#include <Teuchos_RCP.hpp>
-
-#include <Teuchos_CommandLineProcessor.hpp>
-#include <Teuchos_ParameterList.hpp>
+#include <Teuchos_DefaultComm.hpp> // included in MueLu.hpp
+#include <Teuchos_ParameterList.hpp> // included in MueLu.hpp
+#include <Teuchos_CommandLineProcessor.hpp> // included in MueLu.hpp
 #include <Teuchos_StandardCatchMacros.hpp>
 
 
 // template<class ScalarType>
 int main(int argc, char *argv[]) {
-
     // using SC = typename Tpetra::Vector<ScalarType>::scalar_type;
-    using SC = typename Tpetra::Vector<>::scalar_type;
+    using SC = typename Tpetra::Vector<double>::scalar_type;
     using LO = typename Tpetra::Vector<>::local_ordinal_type;
     using GO = typename Tpetra::Vector<>::global_ordinal_type;
     using NT = typename Tpetra::Vector<>::node_type;
 
     using SCT = typename Teuchos::ScalarTraits<SC>;
-    using MT =  typename SCT::magnitudeType;
-    using MV =  typename Tpetra::MultiVector<SC, LO, GO, NT>;
-    using OP =  typename Tpetra::Operator<SC, LO, GO, NT>;
-    using MVT = typename Belos::MultiVecTraits<SC, MV>;
-    using OPT = typename Belos::OperatorTraits<SC, MV, OP>;
+    using MT  = typename SCT::magnitudeType;
+    using MV  = typename Tpetra::MultiVector<SC,LO,GO,NT>;
+    using OP  = typename Tpetra::Operator<SC,LO,GO,NT>;
+    using MVT = typename Belos::MultiVecTraits<SC,MV>;
+    using OPT = typename Belos::OperatorTraits<SC,MV,OP>;
 
-    using tcrsmatrix_t   = Tpetra::CrsMatrix<SC, LO, GO, NT>;
-    using tmap_t         = Tpetra::Map<LO, GO, NT>;
-    using tvector_t      = Tpetra::Vector<SC, LO, GO, NT>;
-    using tmultivector_t = Tpetra::MultiVector<SC, LO, GO, NT>;
-    using toperator_t    = Tpetra::Operator<SC, LO, GO, NT>;
+    using tcrsmatrix_t   = Tpetra::CrsMatrix<SC,LO,GO,NT>;
+    using tmap_t         = Tpetra::Map<LO,GO,NT>;
+    using tvector_t      = Tpetra::Vector<SC,LO,GO,NT>;
+    using tmultivector_t = Tpetra::MultiVector<SC,LO,GO,NT>;
+
+    using toperator_t  = Tpetra::Operator<SC,LO,GO,NT>;
+    using mtoperator_t = MueLu::TpetraOperator<SC,LO,GO,NT>;
+    // using btprecop_t = // find something;
+
+    using scarray_t = Teuchos::ArrayView<SC>;
+    using goarray_t = Teuchos::ArrayView<GO>;
 
     using Teuchos::ParameterList; // all of this may look fine but do not be fooled ...
     using Teuchos::RCP;           // it is not so clear what any of this does
     using Teuchos::rcp;
     using Teuchos::Comm;
+    using Teuchos::rcp_dynamic_cast;
 
     int MyPID = 0;
     int numProc = 1;
-    // CWS: TODO initialize MPI and get communicator (check?)
+    // CWS: TODO initialize MPI and get communicator
     const auto comm = Tpetra::getDefaultComm();
 
     // Laplace's equation, homogenous Dirichlet boundary counditions, [0,1]^2
@@ -186,71 +193,80 @@ int main(int argc, char *argv[]) {
         int numNodes = (numElePerDirection - 1)*(numElePerDirection - 1);
 
         //By the way, either matrix has (3*numElePerDirection - 2)^2 nonzeros.
-        RCP<tmap_t> Map = rcp(new tmap_t(numNodes, 0, comm) );
-        RCP<tcrsmatrix_t> Stiff = rcp(new tcrsmatrix_t(Map, 0) );
-        RCP<tcrsmatrix_t> Mass = rcp(new tcrsmatrix_t(Map, 0) );
-        RCP<tvector_t> vecLHS = rcp( new tvector_t(Map) );
-        RCP<tvector_t> vecRHS = rcp( new tvector_t(Map) );
+        RCP<tmap_t> Map         = rcp(new tmap_t(numNodes, 0, comm));
+        RCP<tcrsmatrix_t> Stiff = rcp(new tcrsmatrix_t(Map, 0));
+        RCP<tcrsmatrix_t> Mass  = rcp(new tcrsmatrix_t(Map, 0));
+        RCP<tvector_t> vecLHS   = rcp(new tvector_t(Map));
+        RCP<tvector_t> vecRHS   = rcp(new tvector_t(Map));
         RCP<tmultivector_t> LHS, RHS;
 
         SC ko = 8.0 / 3.0, k1 = -1.0 / 3.0;
+        scarray_t ko_arr(&ko, 1);
+        scarray_t k1_arr(&k1, 1);
+
         SC h = 1.0 / static_cast<SC>(numElePerDirection);  // x=(iX,iY)h
+
         SC mo = h*h*4.0/9.0, m1 = h*h/9.0, m2 = h*h/36.0;
+        scarray_t mo_arr(&mo, 1);
+        scarray_t m1_arr(&m1, 1);
+        scarray_t m2_arr(&m2, 1);
+
         SC pi = 4.0*atan(1.0), valueLHS;
-        GO lid, node, pos, iX, iY;
+        GO lid, node, iX, iY, pos;
+
+        goarray_t pos_arr(&pos, 1);
 
         for (lid = Map->getMinLocalIndex(); lid <= Map->getMaxLocalIndex(); lid++) {
 
             node = Map->getGlobalElement(lid);
             iX  = node  % (numElePerDirection-1);
             iY  = ( node - iX )/(numElePerDirection-1);
-            pos = node;
-            Stiff->insertGlobalValues(node, 1, &ko, &pos); // CWS: note that this is different from Epetra::CrsMatrix version
-            Mass->insertGlobalValues(node, 1, &mo, &pos); // init guess violates hom Dir bc
+            Stiff->insertGlobalValues(node, pos_arr, ko_arr); // global row ID, global col ID, value
+            Mass->insertGlobalValues(node, pos_arr, mo_arr); // init guess violates hom Dir bc
             valueLHS = sin( pi*h*((SC) iX+1) )*cos( 2.0 * pi*h*((SC) iY+1) );
             vecLHS->replaceGlobalValue(node, valueLHS);
 
             if (iY > 0) {
-                pos = iX + (iY-1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); //North
-                Mass->insertGlobalValues(node, 1, &m1, &pos);
+                pos_arr[0] = iX + (iY-1)*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); //North
+                Mass->insertGlobalValues(node, pos_arr, m1_arr);
             }
 
             if (iY < numElePerDirection-2) {
-                pos = iX + (iY+1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); //South
-                Mass->insertGlobalValues(node, 1, &m1, &pos);
+                pos_arr[0] = iX + (iY+1)*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); //South
+                Mass->insertGlobalValues(node, pos_arr, m1_arr);
             }
 
             if (iX > 0) {
-                pos = iX-1 + iY*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); // West
-                Mass->insertGlobalValues(node, 1, &m1, &pos);
+                pos_arr[0] = iX-1 + iY*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // West
+                Mass->insertGlobalValues(node, pos_arr, m1_arr);
                 if (iY > 0) {
-                pos = iX-1 + (iY-1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); // North West
-                Mass->insertGlobalValues(node, 1, &m2, &pos);
+                pos_arr[0] = iX-1 + (iY-1)*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // North West
+                Mass->insertGlobalValues(node, pos_arr, m2_arr);
                 }
                 if (iY < numElePerDirection-2) {
-                pos = iX-1 + (iY+1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); // South West
-                Mass->insertGlobalValues(node, 1, &m2, &pos);
+                pos_arr[0] = iX-1 + (iY+1)*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // South West
+                Mass->insertGlobalValues(node, pos_arr, m2_arr);
                 }
             }
 
             if (iX < numElePerDirection - 2) {
-                pos = iX+1 + iY*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); // East
-                Mass->insertGlobalValues(node, 1, &m1, &pos);
+                pos_arr[0] = iX+1 + iY*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // East
+                Mass->insertGlobalValues(node, pos_arr, m1_arr);
                 if (iY > 0) {
-                pos = iX+1 + (iY-1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); // North East
-                Mass->insertGlobalValues(node, 1, &m2, &pos);
+                pos_arr[0] = iX+1 + (iY-1)*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // North East
+                Mass->insertGlobalValues(node, pos_arr, m2_arr);
                 }
                 if (iY < numElePerDirection-2) {
-                pos = iX+1 + (iY+1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, 1, &k1, &pos); // South East
-                Mass->insertGlobalValues(node, 1, &m2, &pos);
+                pos_arr[0] = iX+1 + (iY+1)*(numElePerDirection-1);
+                Stiff->insertGlobalValues(node, pos_arr, k1_arr); // South East
+                Mass->insertGlobalValues(node, pos_arr, m2_arr);
                 }
             }
         }
@@ -268,7 +284,7 @@ int main(int argc, char *argv[]) {
 
         SC one = 1.0, hdt = .00005; // half time step
 
-        RCP<tcrsmatrix_t> A = rcp(new tcrsmatrix_t(*Stiff) ); // A = Mass+Stiff*dt/2
+        const RCP<tcrsmatrix_t> A = rcp(new tcrsmatrix_t(*Stiff) ); // A = Mass+Stiff*dt/2
         try {
             Tpetra::MatrixMatrix::Add(*Mass, false, one, *A, hdt);
         } catch (std::runtime_error& ex) {
@@ -312,21 +328,22 @@ int main(int argc, char *argv[]) {
         MueLuList.set("smoother: sweeps",3);
         MueLuList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
 #ifdef HAVE_MUELU_AMESOS2
+        std::cout << "HAVE_MUELU_AMESOS2 active" << std::endl; // CWS: remove when done
         MueLuList.set("coarse: type", "Amesos2-KLU2"); // solve with serial direct solver KLU (CWS: CHECK)
 #else
         MueLuList.set("coarse: type", "Jacobi"); // not recommended
         puts("Warning: Iterative coarse grid solve");
 #endif
 
-        RCP<toperator_t> Prec = rcp( new MueLu::CreateTpetraPreconditioner(A, MueLuList));
+        const RCP<toperator_t> A_operator = rcp_dynamic_cast<toperator_t>(A);
+        RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_operator, MueLuList);
+
         assert(Prec != Teuchos::null);
 
         // Create the Belos preconditioned operator from the preconditioner.
         // NOTE:  This is necessary because Belos expects an operator to apply the
         //        preconditioner with Apply() NOT ApplyInverse().
-        RCP<Belos::TpetraOperator<SC,LO,GO,NT>> belosPrec = rcp( new Belos::TpetraOperator<SC,LO,GO,NT>( Prec ) );
-        // RCP<Belos::TpetraPrecOp<>> belosPrec = rcp(new Belos::TpetraPrecOp<>(Prec));
-
+        // RCP<btprecop_t> belosPrec = rcp(new btprecop_t(Prec));
 
         ///////////////////////////////////////////////////
         //             Create Parameter List             //
@@ -362,7 +379,7 @@ int main(int argc, char *argv[]) {
 
         RCP<Belos::LinearProblem<SC,MV,OP> > problem
             = rcp( new Belos::LinearProblem<SC,MV,OP>( A, LHS, RHS ) );
-        problem->setLeftPrec( belosPrec );
+        problem->setLeftPrec( Prec );
 
         bool set = problem->setProblem();
         if (set == false) {
