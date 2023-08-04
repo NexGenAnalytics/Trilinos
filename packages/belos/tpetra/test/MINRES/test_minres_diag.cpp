@@ -64,20 +64,9 @@
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_StandardCatchMacros.hpp>
 
-//
-/* TD: add typedefs as it is the common way in tpetra tests */
-// Get default Tpetra template types
-typedef Tpetra::MultiVector<>::scalar_type ST;
-typedef Tpetra::Vector<>::local_ordinal_type LO;
-typedef Tpetra::Vector<>::global_ordinal_type GO;
-typedef Tpetra::Vector<>::node_type NT;
-// Init Tpetra types
-typedef Tpetra::Operator<ST,LO,GO,NT> OP;
-typedef Tpetra::MultiVector<ST,LO,GO,NT> MV;
-typedef Tpetra::Map<LO,GO,NT> MP;
-
 //************************************************************************************************
 
+template<class MV>
 class Vector_Operator
 {
   public:
@@ -104,11 +93,12 @@ class Vector_Operator
 
 //************************************************************************************************
 
-class Diagonal_Operator : public Vector_Operator
+template<class MV>
+class Diagonal_Operator : public Vector_Operator<MV>
 {
   public:
 
-    Diagonal_Operator(int n_in, double v_in) : Vector_Operator(n_in, n_in), v(v_in) { };
+    Diagonal_Operator(int n_in, double v_in) : Vector_Operator<MV>(n_in, n_in), v(v_in) { };
 
     ~Diagonal_Operator() { };
 
@@ -124,12 +114,13 @@ class Diagonal_Operator : public Vector_Operator
 
 //************************************************************************************************
 
-class Diagonal_Operator_2 : public Vector_Operator
+template<class MV>
+class Diagonal_Operator_2 : public Vector_Operator<MV>
 {
   public:
 
-    Diagonal_Operator_2(int n_in, int min_gid_in, double v_in)
-    : Vector_Operator(n_in, n_in), min_gid(min_gid_in), v(v_in) {}
+    Diagonal_Operator_2<MV>(int n_in, int min_gid_in, double v_in)
+    : Vector_Operator<MV>(n_in, n_in), min_gid(min_gid_in), v(v_in) {}
 
     ~Diagonal_Operator_2() { };
 
@@ -153,13 +144,14 @@ class Diagonal_Operator_2 : public Vector_Operator
 
 //************************************************************************************************
 
-class Composed_Operator : public Vector_Operator
+template<class MV>
+class Composed_Operator : public Vector_Operator<MV>
 {
   public:
 
     Composed_Operator(int n,
-        const Teuchos::RCP<Vector_Operator>& pA_in,
-        const Teuchos::RCP<Vector_Operator>& pB_in);
+        const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
+        const Teuchos::RCP<Vector_Operator<MV>>& pB_in);
 
     virtual ~Composed_Operator() {};
 
@@ -167,18 +159,20 @@ class Composed_Operator : public Vector_Operator
 
   private:
 
-    Teuchos::RCP<Vector_Operator> pA;
-    Teuchos::RCP<Vector_Operator> pB;
+    Teuchos::RCP<Vector_Operator<MV>> pA;
+    Teuchos::RCP<Vector_Operator<MV>> pB;
 };
 
-Composed_Operator::Composed_Operator(int n_in,
-    const Teuchos::RCP<Vector_Operator>& pA_in,
-    const Teuchos::RCP<Vector_Operator>& pB_in)
-: Vector_Operator(n_in, n_in), pA(pA_in), pB(pB_in)
+template<class MV>
+Composed_Operator<MV>::Composed_Operator(int n_in,
+    const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
+    const Teuchos::RCP<Vector_Operator<MV>>& pB_in)
+: Vector_Operator<MV>(n_in, n_in), pA(pA_in), pB(pB_in)
 {
 }
 
-void Composed_Operator::operator () (const MV &x, MV &y)
+template<class MV>
+void Composed_Operator<MV>::operator () (const MV &x, MV &y)
 {
   MV ytemp(y.getMap(), y.getNumVectors(), false);
   (*pB)( x, ytemp );
@@ -187,11 +181,12 @@ void Composed_Operator::operator () (const MV &x, MV &y)
 
 //************************************************************************************************
 
+template<class OP, class ST, class MP, class MV>
 class Trilinos_Interface : public OP
 {
   public:
 
-    Trilinos_Interface(const Teuchos::RCP<Vector_Operator>   pA_in,
+    Trilinos_Interface(const Teuchos::RCP<Vector_Operator<MV>>   pA_in,
         const Teuchos::RCP<const Teuchos::Comm<int>> pComm_in,
         const Teuchos::RCP<const MP>  pMap_in)
       : pA (pA_in),
@@ -215,14 +210,15 @@ class Trilinos_Interface : public OP
 
   private:
 
-    Teuchos::RCP<Vector_Operator>   pA;
+    Teuchos::RCP<Vector_Operator<MV>>   pA;
     Teuchos::RCP<const Teuchos::Comm<int>> pComm;
     Teuchos::RCP<const MP>  pMap;
 
     bool use_transpose;
 };
 
-void Trilinos_Interface::apply (const MV &X,
+template<class OP, class ST, class MP, class MV>
+void Trilinos_Interface<OP, ST, MP, MV>::apply (const MV &X,
             MV &Y,
             Teuchos::ETransp mode,
             ST alpha,
@@ -232,12 +228,13 @@ void Trilinos_Interface::apply (const MV &X,
 
 //************************************************************************************************
 
-class Iterative_Inverse_Operator : public Vector_Operator
+template<class OP, class ST, class MP, class MV>
+class Iterative_Inverse_Operator : public Vector_Operator<MV>
 {
   public:
 
   Iterative_Inverse_Operator(int n_in, int blocksize,
-      const Teuchos::RCP<Vector_Operator>& pA_in,
+      const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
       std::string opString="Iterative Solver", bool print_in=false);
 
   virtual ~Iterative_Inverse_Operator() {}
@@ -246,7 +243,7 @@ class Iterative_Inverse_Operator : public Vector_Operator
 
   private:
 
-  Teuchos::RCP<Vector_Operator> pA;       // operator which will be inverted
+  Teuchos::RCP<Vector_Operator<MV>> pA;       // operator which will be inverted
   // supplies a matrix std::vector multiply
   const bool print;
 
@@ -260,10 +257,11 @@ class Iterative_Inverse_Operator : public Vector_Operator
   Teuchos::RCP<Belos::MinresSolMgr<double,MV,OP> >      pBelos;
 };
 
-Iterative_Inverse_Operator::Iterative_Inverse_Operator(int n_in, int blocksize,
-    const Teuchos::RCP<Vector_Operator>& pA_in,
+template<class OP, class ST, class MP, class MV>
+Iterative_Inverse_Operator<OP, ST, MP, MV>::Iterative_Inverse_Operator(int n_in, int blocksize,
+    const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
     std::string opString, bool print_in)
-: Vector_Operator(n_in, n_in),      // square operator
+: Vector_Operator<MV>(n_in, n_in),      // square operator
   pA(pA_in),
   print(print_in),
   timer(opString)
@@ -273,15 +271,15 @@ Iterative_Inverse_Operator::Iterative_Inverse_Operator(int n_in, int blocksize,
 // TD: could the following ifdef block be replaced by just pComm = Tpetra::getDefaultComm() ?
 // AM: yes
 #ifdef HAVE_TPETRA_MPI
-  MPI_Allreduce(&n, &n_global, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&n_in, &n_global, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
   pComm = Teuchos::rcp (new Teuchos::MpiComm<int> (MPI_COMM_WORLD));
 #else
   pComm = Teuchos::rcp (new Teuchos::SerialComm<int> ());
-  n_global = n;
+  n_global = n_in;
 #endif
-  pMap =  Teuchos::rcp( new MP(n_global, n, 0, pComm) );
+  pMap =  Teuchos::rcp( new MP(n_global, n_in, 0, pComm) );
 
-  pPE = Teuchos::rcp( new Trilinos_Interface(pA, pComm, pMap ) );
+  pPE = Teuchos::rcp( new Trilinos_Interface<OP, ST, MP, MV>(pA, pComm, pMap ) );
 
   pProb = Teuchos::rcp( new Belos::LinearProblem<double,MV,OP>() );
   pProb->setOperator( pPE );
@@ -300,7 +298,8 @@ Iterative_Inverse_Operator::Iterative_Inverse_Operator(int n_in, int blocksize,
   pBelos = Teuchos::rcp( new Belos::MinresSolMgr<double,MV,OP>(pProb, pList) );
 }
 
-void Iterative_Inverse_Operator::operator () (const MV &b, MV &x)
+template<class OP, class ST, class MP, class MV>
+void Iterative_Inverse_Operator<OP, ST, MP, MV>::operator () (const MV &b, MV &x)
 {
   int pid = pComm->getRank();
 
@@ -327,21 +326,27 @@ void Iterative_Inverse_Operator::operator () (const MV &b, MV &x)
 }
 
 //************************************************************************************************
-//************************************************************************************************
 
-int main(int argc, char *argv[])
-{
-  int pid = -1;
+template <class ScalarType>
+bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
+  // Get default Tpetra template types
+  using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
+  typedef Tpetra::Vector<>::local_ordinal_type LO;
+  typedef Tpetra::Vector<>::global_ordinal_type GO;
+  typedef Tpetra::Vector<>::node_type NT;
 
-  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
+  // Init Tpetra types
+  typedef Tpetra::Operator<ST,LO,GO,NT> OP;
+  typedef Tpetra::MultiVector<ST,LO,GO,NT> MV;
+  typedef Tpetra::Map<LO,GO,NT> MP;
 
   Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
 
   bool verbose = false;
   bool success = true;
-  try {
 
-    pid = Teuchos::rank(*comm);
+  try {
+    bool proc_verbose = verbose_in;
 
     int n(10);
     int numRHS=1;
@@ -352,34 +357,34 @@ int main(int argc, char *argv[])
     X.putScalar( 1.0 );
 
     // Inner computes inv(D2)*y
-    Teuchos::RCP<Diagonal_Operator_2> D2 = Teuchos::rcp(new Diagonal_Operator_2(n, map->getMinGlobalIndex(), 1.0));
-    Iterative_Inverse_Operator A2(n, 1, D2, "Belos (inv(D2))", true);
+    Teuchos::RCP<Diagonal_Operator_2<MV>> D2 = Teuchos::rcp(new Diagonal_Operator_2<MV>(n, map->getMinGlobalIndex(), 1.0));
+    Iterative_Inverse_Operator<OP, ST, MP, MV> A2(n, 1, D2, "Belos (inv(D2))", true);
 
     // should return x=(1, 1/2, 1/3, ..., 1/10)
     A2(X,Y);
 
-    if (pid==0) {
+    if (proc_verbose) {
       std::cout << "Vector Y should have all entries [1, 1/2, 1/3, ..., 1/10]" << std::endl;
     }
     Y.print(std::cout);
 
     // Inner computes inv(D)*x
-    Teuchos::RCP<Diagonal_Operator> D = Teuchos::rcp(new Diagonal_Operator(n, 4.0));
-    Teuchos::RCP<Iterative_Inverse_Operator> Inner =
-      Teuchos::rcp(new Iterative_Inverse_Operator(n, 1, D, "Belos (inv(D))", false));
+    Teuchos::RCP<Diagonal_Operator<MV>> D = Teuchos::rcp(new Diagonal_Operator<MV>(n, 4.0));
+    Teuchos::RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Inner =
+      Teuchos::rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, D, "Belos (inv(D))", false));
 
     // Composed_Operator computed inv(D)*B*x
-    Teuchos::RCP<Diagonal_Operator> B = Teuchos::rcp(new Diagonal_Operator(n, 4.0));
-    Teuchos::RCP<Composed_Operator> C = Teuchos::rcp(new Composed_Operator(n, Inner, B));
+    Teuchos::RCP<Diagonal_Operator<MV>> B = Teuchos::rcp(new Diagonal_Operator<MV>(n, 4.0));
+    Teuchos::RCP<Composed_Operator<MV>> C = Teuchos::rcp(new Composed_Operator<MV>(n, Inner, B));
 
     // Outer computes inv(C) = inv(inv(D)*B)*x = inv(B)*D*x = x
-    Teuchos::RCP<Iterative_Inverse_Operator> Outer =
-      Teuchos::rcp(new Iterative_Inverse_Operator(n, 1, C, "Belos (inv(C)=inv(inv(D)*B))", true));
+    Teuchos::RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Outer =
+      Teuchos::rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, C, "Belos (inv(C)=inv(inv(D)*B))", true));
 
     // should return x=1/4
     (*Inner)(X,Y);
 
-    if (pid==0) {
+    if (proc_verbose) {
       std::cout << std::endl << "Vector Y should have all entries [1/4, 1/4, 1/4, ..., 1/4]" << std::endl;
     }
     Y.print(std::cout);
@@ -387,7 +392,7 @@ int main(int argc, char *argv[])
     // should return x=1
     (*Outer)(X,Y);
 
-    if (pid==0) {
+    if (proc_verbose) {
       std::cout << "Vector Y should have all entries [1, 1, 1, ..., 1]" << std::endl;
     }
     Y.print(std::cout);
@@ -399,20 +404,29 @@ int main(int argc, char *argv[])
     Y.update(-1.0, X, 1.0);
     Y.norm2(norm_Y);
 
-    if (pid==0)
+    if (proc_verbose)
       std::cout << "Two-norm of std::vector (Y-1.0) : "<< norm_Y[0] << std::endl;
 
     success = (norm_Y[0] < 1e-10 && !Teuchos::ScalarTraits<double>::isnaninf( norm_Y[0] ) );
 
     if (success) {
-      if (pid==0)
+      if (proc_verbose)
         std::cout << "End Result: TEST PASSED" << std::endl;
     } else {
-      if (pid==0)
+      if (proc_verbose)
         std::cout << "End Result: TEST FAILED" << std::endl;
     }
   }
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose,std::cerr,success);
 
-  return success ? EXIT_SUCCESS : EXIT_FAILURE;
+  return success;
+}
+
+//************************************************************************************************
+//************************************************************************************************
+
+int main(int argc, char *argv[])
+{
+  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
+  return run_test<double>(session, false) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
