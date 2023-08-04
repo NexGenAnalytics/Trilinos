@@ -340,6 +340,8 @@ bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
   using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using MP = typename Tpetra::Map<LO,GO,NT>;
 
+  // AM: TODO add using Teuchos::
+
   Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
 
   bool verbose = false;
