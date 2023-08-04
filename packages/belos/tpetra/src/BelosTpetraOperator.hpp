@@ -39,7 +39,7 @@
 // ************************************************************************
 //@HEADER
 
-/*! \file BelosTpetraOperator.hpp
+/*! \file BelosTpetraOperator.h
     \brief This file provides a Tpetra::Operator interface so Belos can be integrated into
      other codes as an abstract operator.
 */
