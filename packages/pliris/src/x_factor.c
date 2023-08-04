@@ -69,6 +69,7 @@ double  timing(double secs, int type);
 #include "block.h"
 #include "factor.h"
 #include "pcomm.h"
+#include "global_comm.h"
 
 #define PERMTYPE ((1 << 5) + (1 << 4))
 
@@ -88,8 +89,8 @@ void X_FACTOR_ (DATA_TYPE *matrix,int *matrixsize,
    Determine who I am (me ) and the total number of nodes (nprocs_cube)
                                                                         */
 
-  MPI_Comm_size(MPI_COMM_WORLD,&nprocs_cube);
-  MPI_Comm_rank(MPI_COMM_WORLD, &me);
+  MPI_Comm_size(get_pliris_global_comm(),&nprocs_cube);
+  MPI_Comm_rank(get_pliris_global_comm(), &me);
 
   permutations = permute;
   mat = matrix;
@@ -107,8 +108,8 @@ void X_FACTOR_ (DATA_TYPE *matrix,int *matrixsize,
 
     myrow = mesh_row(me);
     mycol = mesh_col(me);
-    MPI_Comm_split(MPI_COMM_WORLD,myrow,mycol,&row_comm);
-    MPI_Comm_split(MPI_COMM_WORLD,mycol,myrow,&col_comm);
+    MPI_Comm_split(get_pliris_global_comm(),myrow,mycol,&row_comm);
+    MPI_Comm_split(get_pliris_global_comm(),mycol,myrow,&col_comm);
 
     {int checkcol,checkrow;
      MPI_Comm_rank(col_comm, &checkrow) ;

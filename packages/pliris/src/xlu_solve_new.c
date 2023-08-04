@@ -68,6 +68,7 @@ double  timing(double secs, int type);
 #include "solve.h"
 #include "factor.h"
 #include "pcomm.h"
+#include "global_comm.h"
 
 #define PERMTYPE ((1 << 5) + (1 << 4))
 
@@ -88,8 +89,8 @@ void XLU_SOLVE_ (DATA_TYPE *matrix, int *matrix_size, int *num_procsr,
    Determine who I am (me ) and the total number of nodes (nprocs_cube)
                                                                         */
 
-  MPI_Comm_size(MPI_COMM_WORLD,&nprocs_cube);
-  MPI_Comm_rank(MPI_COMM_WORLD, &me);
+  MPI_Comm_size(get_pliris_global_comm(),&nprocs_cube);
+  MPI_Comm_rank(get_pliris_global_comm(), &me);
 
 
   mat = matrix;
@@ -108,9 +109,9 @@ void XLU_SOLVE_ (DATA_TYPE *matrix, int *matrix_size, int *num_procsr,
     mycol = mesh_col(me);
 
 
-    MPI_Comm_split(MPI_COMM_WORLD,myrow,mycol,&row_comm);
+    MPI_Comm_split(get_pliris_global_comm(),myrow,mycol,&row_comm);
 
-    MPI_Comm_split(MPI_COMM_WORLD,mycol,myrow,&col_comm);
+    MPI_Comm_split(get_pliris_global_comm(),mycol,myrow,&col_comm);
 
   /* Distribution for the matrix on me */
 
@@ -368,7 +369,7 @@ void perm1_(DATA_TYPE *vec, int *num_my_rhs)
           bytes = (my_rhs + 1)*sizeof(DATA_TYPE);
 
           MPI_Irecv( (char *)(rhs_temp +next_s),bytes,MPI_CHAR,MPI_ANY_SOURCE,
-                MPI_ANY_TAG,MPI_COMM_WORLD,&msgrequest);
+                MPI_ANY_TAG,get_pliris_global_comm(),&msgrequest);
 
          XCOPY(my_rhs, ptr1, my_rows, temp_s, one);
 #ifdef COMPLEX
@@ -379,7 +380,7 @@ void perm1_(DATA_TYPE *vec, int *num_my_rhs)
 
          type = PERMTYPE+change_send;
          MPI_Send((char *) temp_s,bytes,MPI_CHAR,dest,
-                 type,MPI_COMM_WORLD);
+                 type,get_pliris_global_comm());
          change_send++;
 
          next_s = change_send * (my_rhs+1);

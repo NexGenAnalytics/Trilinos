@@ -50,6 +50,7 @@
 #include "BLAS_prototypes.h"
 #include "dblassp.h"
 #include "macros.h"
+#include "global_comm.h"
 
 #define INITTYPE1 ((1 << 17) + 1)
 #define INITTYPE2 ((1 << 17) + 2)

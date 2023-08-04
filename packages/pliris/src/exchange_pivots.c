@@ -62,6 +62,7 @@ jdkotul@sandia.gov
 #include "BLAS_prototypes.h"
 #include "macros.h"
 #include "pcomm.h"
+#include "global_comm.h"
 
 
 extern int myrow;
@@ -118,17 +119,17 @@ exchange_pivots(int *permutations)
 		{
 			j=k/nprocs_row;
 			MPI_Send(&pivot_vec[j],1,MPI_INT,
-				rank_row,0,MPI_COMM_WORLD);
+				rank_row,0,get_pliris_global_comm());
 		}
 		if (me == rank_row)
 		{
 			i=k/nprocs_col;
 			MPI_Recv(&permutations[i],1,MPI_INT,pivot_col,0,
-				MPI_COMM_WORLD,&msgstatus);
+				get_pliris_global_comm(),&msgstatus);
 		}
 	}
-  }	
-  MPI_Barrier(MPI_COMM_WORLD);
+  }
+  MPI_Barrier(get_pliris_global_comm());
   /*   Broadcast to the rest of the processors  in row_comm     */
   MPI_Bcast(permutations,my_rows,MPI_INT,0,row_comm);
 }/* End of function exchange_pivots*/
