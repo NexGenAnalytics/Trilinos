@@ -88,9 +88,9 @@
 #include <Teuchos_StandardCatchMacros.hpp>
 
 
-// template<class ScalarType>
-int main(int argc, char *argv[]) {
-    using SC = typename Tpetra::Vector<double>::scalar_type;
+template<class ScalarType>
+int run(int argc, char *argv[]) {
+    using SC = typename Tpetra::Vector<ScalarType>::scalar_type;
     using LO = typename Tpetra::Vector<>::local_ordinal_type;
     using GO = typename Tpetra::Vector<>::global_ordinal_type;
     using NT = typename Tpetra::Vector<>::node_type;
@@ -439,3 +439,9 @@ int main(int argc, char *argv[]) {
 
     return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 } // run
+
+int main(int argc, char *argv[]) {
+    // run with different scalar types
+    run<double>(argc, argv);
+    // run<float>(argc, argv); // FAILS
+}
