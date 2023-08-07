@@ -66,13 +66,9 @@
 
 // CWS NOTE: I have commented out all preconditioning
 
-// Tpetra
-#include <Tpetra_Map_fwd.hpp>
-#include <Tpetra_Vector_fwd.hpp>
-#include <Tpetra_CrsMatrix_fwd.hpp>
 
 // MueLu
-#include <MueLu_CreateTpetraPreconditioner.hpp>
+// #include <MueLu_CreateTpetraPreconditioner.hpp>
 // #include <MueLu_TpetraOperator.hpp>
 
 // Belos
@@ -80,12 +76,22 @@
 #include <BelosLinearProblem.hpp>
 #include <BelosTpetraAdapter.hpp>
 
+// Tpetra
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Map_fwd.hpp>
+#include <Tpetra_Vector_fwd.hpp>
+#include <Tpetra_CrsMatrix_fwd.hpp>
+#include <TpetraExt_MatrixMatrix.hpp>
+
 // Teuchos
+#include <Teuchos_RCP.hpp>
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_CommHelpers.hpp>
-#include <Teuchos_GlobalMPISession.hpp>
+#include <Teuchos_DefaultComm.hpp>
+#include <Teuchos_ParameterList.hpp>
 #include <Teuchos_StandardCatchMacros.hpp>
+#include <Teuchos_CommandLineProcessor.hpp>
 
 
 template<class ScalarType>
