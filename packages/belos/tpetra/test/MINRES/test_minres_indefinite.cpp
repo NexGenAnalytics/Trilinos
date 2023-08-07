@@ -87,9 +87,10 @@ int main(int argc, char *argv[])
   using Teuchos::RCP;
   using Teuchos::rcp;
 
-  const int MyPID = 0;
-  // AM: TODO initialize MPI and get communicator
+  // AM: TODO Better initialize MPI and get communicator
+  MPI_Init(&argc,&argv);
   const auto comm = Tpetra::getDefaultComm();
+  const int MyPID = 0;
 
   bool success = true;
   bool verbose = false;
@@ -140,6 +141,7 @@ int main(int argc, char *argv[])
       double val = 2*(GIDk-m) + 1;
       A->insertGlobalValues( GIDk, 1, &val, &GIDk );
     }
+    A->fillComplete();
     TEUCHOS_ASSERT_EQUALITY( true, A->isFillComplete() );
     TEUCHOS_ASSERT_EQUALITY( true, A->isStorageOptimized() );
 
@@ -288,7 +290,7 @@ int main(int argc, char *argv[])
   }
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
-  // MPI_Finalize();
+  MPI_Finalize();
 
   return ( success ? EXIT_SUCCESS : EXIT_FAILURE );
 }
