@@ -64,7 +64,7 @@
 
 // Adapted from test_pcpg_epetraex.cpp by David M. Day (with original comments)
 
-// NOTE: I have commented out all references to preconditioning.
+// CWS NOTE: I have commented out all preconditioning
 
 // Tpetra
 #include <Tpetra_Map_fwd.hpp>
@@ -72,26 +72,19 @@
 #include <Tpetra_CrsMatrix_fwd.hpp>
 
 // MueLu
-#include <MueLu_TpetraOperator.hpp>
-#include <MueLu_CreateTpetraPreconditioner.hpp> // includes MueLu.hpp
+#include <MueLu_CreateTpetraPreconditioner.hpp>
+// #include <MueLu_TpetraOperator.hpp>
 
 // Belos
-#include <BelosOperator.hpp>
-#include <BelosConfigDefs.hpp>
 #include <BelosPCPGSolMgr.hpp>
-#include <BelosMueLuAdapter.hpp>
 #include <BelosLinearProblem.hpp>
 #include <BelosTpetraAdapter.hpp>
 
 // Teuchos
-#include <Teuchos_RCP.hpp> // included in MueLu.hpp
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_CommHelpers.hpp>
-#include <Teuchos_DefaultComm.hpp> // included in MueLu.hpp
-#include <Teuchos_ParameterList.hpp> // included in MueLu.hpp
 #include <Teuchos_GlobalMPISession.hpp>
-#include <Teuchos_CommandLineProcessor.hpp> // included in MueLu.hpp
 #include <Teuchos_StandardCatchMacros.hpp>
 
 
@@ -182,8 +175,8 @@ int main(int argc, char *argv[]) {
         //                Form the problem                //
         ////////////////////////////////////////////////////
 
-        int num_time_step = 4; // CWS: why 4?
-        GO numElePerDirection = 14 * numProc; // CWS: why 14?
+        int num_time_step = 4;
+        GO numElePerDirection = 14 * numProc;
         size_t numNodes = (numElePerDirection - 1)*(numElePerDirection - 1);
         GO base = 0;
 
@@ -196,90 +189,75 @@ int main(int argc, char *argv[]) {
         RCP<tmultivector_t> LHS, RHS;
 
         SC ko = 8.0 / 3.0, k1 = -1.0 / 3.0;
-        scarray_t k_arr(1);
+        scarray_t k_arr(2);
+        k_arr[0] = ko;
+        k_arr[1] = k1;
 
         SC h = 1.0 / static_cast<SC>(numElePerDirection);  // x=(iX,iY)h
 
         SC mo = h*h*4.0/9.0, m1 = h*h/9.0, m2 = h*h/36.0;
-        scarray_t m_arr(1);
+        scarray_t m_arr(3);
+        m_arr[0] = mo;
+        m_arr[1] = m1;
+        m_arr[2] = m2;
 
         SC pi = 4.0*atan(1.0), valueLHS;
         GO lid, node, iX, iY;
 
         goarray_t pos_arr(1);
 
-        // CWS: TODO refactor pos, k, and m arrays
-        // CWS (keep all elements in one array, then create view only from chosen element)
         for (lid = Map->getMinLocalIndex(); lid <= Map->getMaxLocalIndex(); lid++) {
 
             node = Map->getGlobalElement(lid);
             iX  = node  % (numElePerDirection-1);
             iY  = ( node - iX )/(numElePerDirection-1);
             pos_arr[0] = node;
-            k_arr[0] = ko;
-            m_arr[0] = mo;
             Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // global row ID, global col ID, value
             Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1)); // init guess violates hom Dir bc
             valueLHS = sin( pi*h*((SC) iX+1) )*cos( 2.0 * pi*h*((SC) iY+1) );
             vecLHS->replaceGlobalValue(node, valueLHS);
 
             if (iY > 0) {
-                k_arr[0] = k1;
-                m_arr[0] = m1;
                 pos_arr[0] = iX + (iY-1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); //North
-                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); //North
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(1,1));
             }
 
             if (iY < numElePerDirection-2) {
-                k_arr[0] = k1;
-                m_arr[0] = m1;
                 pos_arr[0] = iX + (iY+1)*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); //South
-                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); //South
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(1,1));
             }
 
             if (iX > 0) {
-                k_arr[0] = k1;
-                m_arr[0] = m1;
                 pos_arr[0] = iX-1 + iY*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // West
-                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); // West
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(1,1));
                 if (iY > 0) {
-                    k_arr[0] = k1;
-                    m_arr[0] = m2;
                     pos_arr[0] = iX-1 + (iY-1)*(numElePerDirection-1);
-                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // North West
-                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); // North West
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(2,1));
                 }
                 if (iY < numElePerDirection-2) {
-                    k_arr[0] = k1;
-                    m_arr[0] = m2;
                     pos_arr[0] = iX-1 + (iY+1)*(numElePerDirection-1);
-                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // South West
-                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); // South West
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(2,1));
                 }
             }
 
             if (iX < numElePerDirection - 2) {
-                k_arr[0] = k1;
-                m_arr[0] = m1;
                 pos_arr[0] = iX+1 + iY*(numElePerDirection-1);
-                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // East
-                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); // East
+                Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(1,1));
                 if (iY > 0) {
-                    k_arr[0] = k1;
-                    m_arr[0] = m2;
                     pos_arr[0] = iX+1 + (iY-1)*(numElePerDirection-1);
-                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // North East
-                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); // North East
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(2,1));
                 }
                 if (iY < numElePerDirection-2) {
-                    k_arr[0] = k1;
-                    m_arr[0] = m2;
                     pos_arr[0] = iX+1 + (iY+1)*(numElePerDirection-1);
-                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // South East
-                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1));
+                    Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(1,1)); // South East
+                    Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(2,1));
                 }
             }
         }
@@ -324,7 +302,6 @@ int main(int argc, char *argv[]) {
         ////////////////////////////////////////////////////
         //            Construct Preconditioner            //
         ////////////////////////////////////////////////////
-// CWS: Must find Tpetra alternative for EpetraPrecOp
 
 //         ParameterList MueLuList; // Set MueLuList for Smoothed Aggregation
 
