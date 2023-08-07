@@ -328,7 +328,7 @@ void Iterative_Inverse_Operator<OP, ST, MP, MV>::operator () (const MV &b, MV &x
 //************************************************************************************************
 
 template <class ScalarType>
-bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
+bool run_test(int argc, char *argv[]){
   // Get default Tpetra template types
   using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
@@ -340,53 +340,56 @@ bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
   using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using MP = typename Tpetra::Map<LO,GO,NT>;
 
-  // AM: TODO add using Teuchos::
+  using Teuchos::RCP;
+  using Teuchos::rcp;
 
-  Teuchos::RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
+  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
+
+  RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
+  const int pid = rank(*comm);
 
   bool verbose = false;
   bool success = true;
 
   try {
-    bool proc_verbose = verbose_in;
 
     int n(10);
     int numRHS=1;
-
-    Teuchos::RCP<MP> map = Teuchos::RCP(new MP(n, 0, comm));
-
+    
+    RCP<MP> map = RCP(new MP(n, 0, comm));
+    
     MV X(map, numRHS), Y(map, numRHS);
     X.putScalar( 1.0 );
-
+    
     // Inner computes inv(D2)*y
-    Teuchos::RCP<Diagonal_Operator_2<MV>> D2 = Teuchos::rcp(new Diagonal_Operator_2<MV>(n, map->getMinGlobalIndex(), 1.0));
+    RCP<Diagonal_Operator_2<MV>> D2 = rcp(new Diagonal_Operator_2<MV>(n, map->getMinGlobalIndex(), 1.0));
     Iterative_Inverse_Operator<OP, ST, MP, MV> A2(n, 1, D2, "Belos (inv(D2))", true);
-
+    
     // should return x=(1, 1/2, 1/3, ..., 1/10)
-    A2(X,Y);
-
-    if (proc_verbose) {
+    A2 = A2(X,Y);
+    
+    if (pid == 0) {
       std::cout << "Vector Y should have all entries [1, 1/2, 1/3, ..., 1/10]" << std::endl;
     }
     Y.print(std::cout);
 
     // Inner computes inv(D)*x
-    Teuchos::RCP<Diagonal_Operator<MV>> D = Teuchos::rcp(new Diagonal_Operator<MV>(n, 4.0));
-    Teuchos::RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Inner =
-      Teuchos::rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, D, "Belos (inv(D))", false));
+    RCP<Diagonal_Operator<MV>> D = rcp(new Diagonal_Operator<MV>(n, 4.0));
+    RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Inner =
+      rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, D, "Belos (inv(D))", false));
 
     // Composed_Operator computed inv(D)*B*x
-    Teuchos::RCP<Diagonal_Operator<MV>> B = Teuchos::rcp(new Diagonal_Operator<MV>(n, 4.0));
-    Teuchos::RCP<Composed_Operator<MV>> C = Teuchos::rcp(new Composed_Operator<MV>(n, Inner, B));
+    RCP<Diagonal_Operator<MV>> B = rcp(new Diagonal_Operator<MV>(n, 4.0));
+    RCP<Composed_Operator<MV>> C = rcp(new Composed_Operator<MV>(n, Inner, B));
 
     // Outer computes inv(C) = inv(inv(D)*B)*x = inv(B)*D*x = x
-    Teuchos::RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Outer =
-      Teuchos::rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, C, "Belos (inv(C)=inv(inv(D)*B))", true));
+    RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Outer =
+      rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, C, "Belos (inv(C)=inv(inv(D)*B))", true));
 
     // should return x=1/4
     (*Inner)(X,Y);
 
-    if (proc_verbose) {
+    if (pid == 0) {
       std::cout << std::endl << "Vector Y should have all entries [1/4, 1/4, 1/4, ..., 1/4]" << std::endl;
     }
     Y.print(std::cout);
@@ -394,7 +397,7 @@ bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
     // should return x=1
     (*Outer)(X,Y);
 
-    if (proc_verbose) {
+    if (pid == 0) {
       std::cout << "Vector Y should have all entries [1, 1, 1, ..., 1]" << std::endl;
     }
     Y.print(std::cout);
@@ -406,20 +409,20 @@ bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
     Y.update(-1.0, X, 1.0);
     Y.norm2(norm_Y);
 
-    if (proc_verbose)
+    if (pid == 0)
       std::cout << "Two-norm of std::vector (Y-1.0) : "<< norm_Y[0] << std::endl;
 
     success = (norm_Y[0] < 1e-10 && !Teuchos::ScalarTraits<double>::isnaninf( norm_Y[0] ) );
-
+    
     if (success) {
-      if (proc_verbose)
+      if (pid == 0)
         std::cout << "End Result: TEST PASSED" << std::endl;
     } else {
-      if (proc_verbose)
+      if (pid == 0)
         std::cout << "End Result: TEST FAILED" << std::endl;
     }
   }
-  TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose,std::cerr,success);
+  TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
   return success;
 }
@@ -429,6 +432,5 @@ bool run_test(Teuchos::GlobalMPISession session, bool verbose_in){
 
 int main(int argc, char *argv[])
 {
-  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
-  return run_test<double>(session, false) ? EXIT_SUCCESS : EXIT_FAILURE;
+  return run_test<double>(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
