@@ -23,16 +23,15 @@
 // Trilinos
 #include "Trilinos_Util.h"
 
-int main (int argc, char *argv[])
-{
-  using ST = typename Tpetra::MultiVector<double>::scalar_type;
+template<class ScalarType>
+int run(int argc, char *argv[]) {
+  using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
   using NT = typename Tpetra::Vector<>::node_type;
 
   using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
-  using MP = typename Tpetra::Map<LO,GO,NT>;
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
 
@@ -88,22 +87,18 @@ int main (int argc, char *argv[])
     //
     verbOut << "Generating the linear system(s) to solve" << std::endl << std::endl;
     RCP<tcrsmatrix_t> A;
-    //Tpetra::Utils::readHBMatrix(filename, comm, A); ISSUE HERE TO
+    // Tpetra::Utils::readHBMatrix(filename, comm, A); // Issue, infinite run?
     RCP<const Tpetra::Map<> > rowMap = A->getDomainMap();
 
     //
     // *****Construct initial guess and random right-hand-sides *****
     //
     RCP<tmultivector_t> B, X;    
-    int tmp_numRHS = numRHS;
-    if (tmp_numRHS != numRHS)
-    {
-      X = rcp( new MV(rowMap, numRHS) );
-      MVT::MvRandom( *X );
-      B = rcp( new MV(rowMap, numRHS ) );
-      OPT::Apply( *A, *X, *B );
-      MVT::MvInit( *X, 0.0 );
-    }
+    X = rcp( new MV(rowMap, numRHS) );
+    MVT::MvRandom( *X );
+    B = rcp( new MV(rowMap, numRHS ) );
+    OPT::Apply( *A, *X, *B );
+    MVT::MvInit( *X, 0.0 );
     
     //
     // Compute the initial residual norm of the problem, so we can see
@@ -182,15 +177,15 @@ int main (int argc, char *argv[])
     // Compute the infinity-norm of A.
     //
     // AM: No equivalence in Tpetra for normInf() ...
-    //const double normOfA = A->NormInf();
-    //verbOut << "||A||_inf:                           \t" << normOfA << std::endl;
+    const double normOfA = 0.0; // A->NormInf();
+    verbOut << "||A||_inf:                           \t" << normOfA << std::endl;
     //
     // Compute ||A|| ||X_i|| + ||B_i|| for each right-hand side B_i.
     //
     std::vector<double> scaleFactors (numRHS);
-    /*for (int i = 0; i < numRHS; ++i) {
+    for (int i = 0; i < numRHS; ++i) {
       scaleFactors[i] = normOfA * initialGuessInfNorms[i] + rhsInfNorms[i];
-    }*/
+    }
     if (verbose) {
       verbOut << "||A||_inf ||X_i||_inf + ||B_i||_inf: \t";
       for (int i = 0; i < numRHS; ++i) {
@@ -298,5 +293,11 @@ int main (int argc, char *argv[])
   } // try
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
-  return success ? EXIT_SUCCESS : EXIT_FAILURE;
+  return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 } // end test_minres_hb.cpp
+
+int main(int argc, char *argv[]) {
+  // run with different scalar types
+  run<double>(argc, argv);
+  // run<float>(argc, argv); // FAILS
+}

@@ -285,7 +285,7 @@ void Iterative_Inverse_Operator<OP, ST, MP, MV>::operator () (const MV &b, MV &x
 //************************************************************************************************
 
 template <class ScalarType>
-bool run_test(int argc, char *argv[]){
+int run(int argc, char *argv[]){
   // Get default Tpetra template types
   using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
@@ -382,7 +382,7 @@ bool run_test(int argc, char *argv[]){
   }
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
-  return success;
+  return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
 //************************************************************************************************
@@ -390,5 +390,6 @@ bool run_test(int argc, char *argv[]){
 
 int main(int argc, char *argv[])
 {
-  return run_test<double>(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
+  run<double>(argc, argv);
+  // run<float>(argc, argv); // FAILS
 }
