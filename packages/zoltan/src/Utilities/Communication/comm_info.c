@@ -90,7 +90,7 @@ int i, j, k, my_proc;
 
   /* Check input parameters */
   if (!plan) {
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_proc);
+    MPI_Comm_rank(MPI_Comm_Default(), &my_proc);
     ZOLTAN_COMM_ERROR("Communication plan = NULL", yo, my_proc);
     return ZOLTAN_FATAL;
   }
