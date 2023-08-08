@@ -61,17 +61,17 @@ size_t total_leak = 0;
 void test_function()
 {
 MPI_Comm local_comm;
-int myproc, nprocs;               // MPI info wrt MPI_COMM_WORLD.
+int myproc, nprocs;               // MPI info wrt comm from MPI_Comm_Default().
 int set;
 size_t oldheap, newheap;
 size_t used, freed;
 static int itercnt = 0;
 int ierr;
 
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myproc);
+  MPI_Comm_size(MPI_Comm_Default(), &nprocs);
+  MPI_Comm_rank(MPI_Comm_Default(), &myproc);
 
-  //  Split MPI_COMM_WORLD to half-sized local communicator.
+  //  Split MPI_Comm_Default() to half-sized local communicator.
   if (myproc < nprocs/2) set = 0;      // set = LOWERHALF;
   else set = 1;                        // set = UPPERHALF;
 
@@ -79,7 +79,7 @@ int ierr;
   std::cout << "KDD " << myproc 
             << " ITER " << itercnt
             << " BEFORE Comm_split:  " << oldheap << std::endl;
-  ierr = MPI_Comm_split(MPI_COMM_WORLD, set, myproc, &local_comm);
+  ierr = MPI_Comm_split(MPI_Comm_Default(), set, myproc, &local_comm);
   newheap = get_heap_usage();
   used = newheap - oldheap;
   if (ierr != MPI_SUCCESS) std::cout << " ERROR SPLIT " << ierr << std::endl;
@@ -125,11 +125,11 @@ main(int argc, char *argv[])
   size_t finalheap = get_heap_usage();
 
   int myproc;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myproc);
+  MPI_Comm_rank(MPI_Comm_Default(), &myproc);
 
   int localmax, globalmax;
   localmax = total_leak;
-  MPI_Allreduce(&localmax, &globalmax, 1, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&localmax, &globalmax, 1, MPI_INTEGER, MPI_MAX, MPI_Comm_Default());
 
   MPI_Finalize();
   size_t ending = get_heap_usage();

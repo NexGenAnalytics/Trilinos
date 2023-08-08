@@ -114,8 +114,8 @@ hwloc_cpuset_t ancestor_cpuset[MAX_NUM_LEVELS];  /* mask representing cpus in th
 uint64_t lmem[MAX_NUM_LEVELS];           /* memory owned by this object */
 uint64_t tmem[MAX_NUM_LEVELS];           /* owned by this object and all its children */
 
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_Comm_Default(), &size);
+  MPI_Comm_rank(MPI_Comm_Default(), &rank);
 
   /* allocate & initialize topology object */
 
@@ -309,11 +309,11 @@ uint64_t *local_memory=NULL, *total_memory=NULL;
 char **type_name=NULL;
 
   MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(MPI_Comm_Default(), &rank);
 
   depth = Zoltan_Get_Topology(&branching_degree, &num_cpus, &type_name, &total_memory, &local_memory);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_Comm_Default());
 
   if (rank == 0){
 
@@ -355,7 +355,7 @@ char **type_name=NULL;
 
   /* Allocated cpusets can be freed with hwloc_cpuset_free() */
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_Comm_Default());
   MPI_Finalize();
 
   return 0;
