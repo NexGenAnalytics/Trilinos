@@ -364,11 +364,11 @@ int nproc_y = m2d->comm->nProc_y;
   
       fflush(stderr);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_Comm_Default());
+    MPI_Barrier(MPI_Comm_Default());
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_Comm_Default());
+  MPI_Barrier(MPI_Comm_Default());
   return ZOLTAN_OK;
 }
 int Zoltan_Third_Graph_Print(ZZ *zz, ZOLTAN_Third_Graph *gr, char *s)
@@ -416,11 +416,11 @@ me = zz->Proc;
   
       fflush(stderr);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_Comm_Default());
+    MPI_Barrier(MPI_Comm_Default());
   }
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_Comm_Default());
+  MPI_Barrier(MPI_Comm_Default());
   return ZOLTAN_OK;
 }
 

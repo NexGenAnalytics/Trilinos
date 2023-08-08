@@ -89,8 +89,8 @@ int i, j;
     fprintf(stderr,"\n");
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_Comm_Default());
+    MPI_Barrier(MPI_Comm_Default());
   }
 
 }
