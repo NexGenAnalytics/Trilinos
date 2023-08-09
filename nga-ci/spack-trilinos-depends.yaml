@@ -1,0 +1,18 @@
+spack:
+  definitions:
+    - compilers: [gcc]
+    - packages:
+        - cmake
+        - ninja
+        - ccache
+        - openmpi
+  specs:
+    - matrix:
+        - [$packages]
+        - [$%compilers]
+        - [arch=linux-ubuntu22.04-x86_64_v3]
+  concretizer:
+    unify: true
+  config:
+    install_tree: /opt/software
+  view: /opt/view
