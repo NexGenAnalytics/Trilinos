@@ -2,15 +2,9 @@ name: Test NGA CI
 
 # Trigger the workflow on push or pull request
 on:
-  push:
-    branches:
-      - master
-      - develop
   pull_request:
     branches:
-      - develop-refactor
-      - master
-      - develop
+      - NGA-FY23-develop
 
   workflow_dispatch:
 
