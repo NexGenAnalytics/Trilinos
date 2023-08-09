@@ -30,3 +30,4 @@ jobs:
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
           echo "DOCKER_TAG: ${{ env.DOCKER_TAG }}"
           echo "SCOPE_NAME  ${{ env.SCOPE_NAME }}"
+          echo "hello there"
