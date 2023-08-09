@@ -15,7 +15,7 @@ RUN . /opt/spack/share/spack/setup-env.sh && spack external find --not-buildable
 
 ## Make trilinos env
 RUN mkdir -p /opt/spack-trilinos-env
-ADD ./spack-trilinos-depends.yaml /opt/spack-trilinos-env/spack-trilinos-depends.yaml
+ADD ./nga-ci/spack-trilinos-depends.yaml /opt/spack-trilinos-env/spack-trilinos-depends.yaml
 RUN mv /opt/spack-trilinos-env/spack-trilinos-depends.yaml /opt/spack-trilinos-env/spack.yaml
 
 # create pre_trilinos environment from spack.yaml and concretize
