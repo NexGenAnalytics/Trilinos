@@ -20,9 +20,6 @@
 #include <Teuchos_ParameterList.hpp>
 #include <Teuchos_StandardCatchMacros.hpp>
 
-// Trilinos
-#include "Trilinos_Util.h"
-
 template<class ScalarType>
 int run(int argc, char *argv[]) {
   using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
@@ -85,11 +82,11 @@ int run(int argc, char *argv[]) {
     //
     // Generate the linear system(s) to solve.
     //
-    verbOut << "Generating the linear system(s) to solve" << std::endl << std::endl;
+    verbOut << "Generating the linear system(s) to solve" << std::endl << std::endl;    
     RCP<tcrsmatrix_t> A;
-    // Tpetra::Utils::readHBMatrix(filename, comm, A); // Issue, infinite run?
+    Tpetra::Utils::readHBMatrix(filename, comm, A); 
     RCP<const Tpetra::Map<> > rowMap = A->getDomainMap();
-
+  
     //
     // *****Construct initial guess and random right-hand-sides *****
     //
@@ -177,7 +174,8 @@ int run(int argc, char *argv[]) {
     // Compute the infinity-norm of A.
     //
     // AM: No equivalence in Tpetra for normInf() ...
-    const double normOfA = 0.0; // A->NormInf();
+    // AM: Random value here
+    const double normOfA = 2.5; // A->NormInf();
     verbOut << "||A||_inf:                           \t" << normOfA << std::endl;
     //
     // Compute ||A|| ||X_i|| + ||B_i|| for each right-hand side B_i.
