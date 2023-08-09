@@ -45,15 +45,29 @@
  */
 
 #include "comm.h"
+#include <pthread.h>
 
 #ifdef __cplusplus
 /* if C++, define the rest of this header file as extern C */
 extern "C" {
 #endif
 
+static pthread_mutex_t global_comm_lock;
+static MPI_Comm Global_Zoltan_Comm = MPI_COMM_WORLD;
+
+/* Function to set the default communicator */
+inline void initialize_global_comm(MPI_Comm comm) {
+  pthread_mutex_lock(&global_comm_lock);
+  Global_Zoltan_Comm = comm;
+  pthread_mutex_unlock(&global_comm_lock);
+}
+
 /* Function to get the default communicator */
-MPI_Comm MPI_Comm_Default() {
-  return MPI_COMM_WORLD;
+inline MPI_Comm MPI_Comm_Default() {
+  pthread_mutex_lock(&global_comm_lock);
+  MPI_Comm comm = Global_Zoltan_Comm;
+  pthread_mutex_unlock(&global_comm_lock);
+  return comm;
 }
 
 #ifdef __cplusplus
