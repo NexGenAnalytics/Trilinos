@@ -85,6 +85,7 @@
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_Tuple.hpp>
+#include <Teuchos_VerboseObject.hpp>
 #include <Teuchos_FancyOStream.hpp>
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
@@ -271,32 +272,53 @@ int run(int argc, char *argv[]) {
         Stiff->fillComplete();
         Mass->fillComplete();
 
-        SC one = 1.0, hdt = .00005; // half time step
 
-        const RCP<tcrsmatrix_t> A_add = rcp(new tcrsmatrix_t(*Stiff)); // A = Mass+Stiff*dt/2
-        const RCP<tcrsmatrix_t> A = rcp(new tcrsmatrix_t(*Stiff));
+        Teuchos::RCP<Teuchos::FancyOStream> outStream =
+            Teuchos::VerboseObjectBase::getDefaultOStream();
+        Teuchos::EVerbosityLevel v=Teuchos::VERB_EXTREME;
+
+        std::cout << " ========================================== " << std::endl;
+        std::cout << "DESCRIBING STIFF MATRIX: " << std::endl;
+        Stiff->describe(*outStream,v);
+        std::cout << "DESCRIBING MASS MATRIX: " << std::endl;
+        Mass->describe(*outStream,v);
+        std::cout << " ========================================== " << std::endl;
+
+        ST one = 1.0, hdt = .00005; // half time step
+
+        RCP<tcrsmatrix_t> A = rcp(new tcrsmatrix_t(*Stiff)); // A = Mass+Stiff*dt/2
+        A->resumeFill();
+        if (A->isGloballyIndexed()) {
+            std::cout << "A IS Globally INDEXED" << std::endl;
+        } else {
+            std::cout << "a is NOT Globally indexed" << std::endl;
+        }
         try {
-            Tpetra::MatrixMatrix::Add(*Mass, false, one, *A_add, false, hdt, A);
+            Tpetra::MatrixMatrix::Add(*Mass, false, one, *A, hdt);
         } catch (std::runtime_error& ex) {
             std::cout << "Error from MatrixMatrix::Add: " << ex.what() << std::endl;
             return 1;
         }
 
-        A->resumeFill();
         A->fillComplete();
 
         hdt = -hdt;
-        RCP<tcrsmatrix_t> B_add = rcp(new tcrsmatrix_t(*Stiff)); // B = Mass-Stiff*dt/2
-        RCP<tcrsmatrix_t> B = rcp(new tcrsmatrix_t(*Stiff));
-
+        RCP<tcrsmatrix_t> B = rcp(new tcrsmatrix_t(*Stiff)); // B = Mass-Stiff*dt/2
+        B->resumeFill();
         try {
-            Tpetra::MatrixMatrix::Add(*Mass, false, one, *B_add, false, hdt, B);
+            Tpetra::MatrixMatrix::Add(*Mass, false, one, *B, hdt);
         } catch (std::runtime_error& ex) {
             std::cout << "Error from MatrixMatrix::Add: " << ex.what() << std::endl;
             return 1;
         }
-        B->resumeFill();
         B->fillComplete();
+
+        std::cout << " ========================================== " << std::endl;
+        std::cout << "DESCRIBING A: " << std::endl;
+        A->describe(*outStream,v);
+        std::cout << "DESCRIBING B: " << std::endl;
+        B->describe(*outStream,v);
+        std::cout << " ========================================== " << std::endl;
 
         B->apply(*vecLHS, *vecRHS); // rhs_new := B*lhs_old,
 
