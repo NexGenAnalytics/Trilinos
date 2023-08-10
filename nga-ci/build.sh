@@ -5,14 +5,15 @@ set -x
 . /opt/spack/share/spack/setup-env.sh
 spack env activate trilinos
 
+spack find -p
+
 export MPICC_DIR=$(which mpicc)
 export MPICXX_DIR=$(which mpicxx)
 export MPIF90_DIR=$(which mpif90)
 export MPIRUN_DIR=$(which mpirun)
 
-export BLAS_DIR=$(which openblas)
-
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
+    -D CMAKE_PREFIX_PATH=/opt \
     -D Trilinos_PARALLEL_LINK_JOBS_LIMIT=2 \
     -D Trilinos_ENABLE_ALL_PACKAGES=ON \
     -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=ON \
@@ -22,11 +23,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_TESTS=ON \
     -D Trilinos_TEST_CATEGORIES=BASIC \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
-    -D Trilinos_TRIBITS_DIR=/opt/src/Trilinos/cmake/tribits \
     \
-    -D TPL_ENABLE_BLAS=OFF \
-    -D BLAS_LIBRARY_DIRS=${BLAS_DIR} \
-    -D TPL_ENABLE_LAPACK=OFF \
+    -D TPL_ENABLE_BLAS=ON \
+    -D TPL_ENABLE_LAPACK=ON \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
