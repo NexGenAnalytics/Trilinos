@@ -12,6 +12,9 @@ export MPICXX_DIR=$(which mpicxx)
 export MPIF90_DIR=$(which mpif90)
 export MPIRUN_DIR=$(which mpirun)
 
+export BLAS_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
+export LAPACK_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
+
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D CMAKE_PREFIX_PATH=/opt \
     -D Trilinos_PARALLEL_LINK_JOBS_LIMIT=2 \
@@ -25,7 +28,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
+    -D BLAS_LIBRARY_DIRS="${BLAS_ROOT}/lib" \
     -D TPL_ENABLE_LAPACK=ON \
+    -D LAPACK_LIBRARY_DIRS="${LAPACK_ROOT}/lib" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
