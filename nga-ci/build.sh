@@ -7,6 +7,11 @@ spack env activate trilinos
 
 spack find -p
 
+ls /opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two/lib
+ls /opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two/include
+ls /opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/ninja-1.11.1-w2exfq75hptbov6qn4tcxjbkebmnlhfb/bin
+ls /opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/ninja-1.11.1-w2exfq75hptbov6qn4tcxjbkebmnlhfb/misc
+
 export MPICC_DIR=$(which mpicc)
 export MPICXX_DIR=$(which mpicxx)
 export MPIF90_DIR=$(which mpif90)
