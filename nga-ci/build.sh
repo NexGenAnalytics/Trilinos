@@ -23,7 +23,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_TEST_CATEGORIES=BASIC \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
     \
-    -D TPL_ENABLE_BLAS=ON \
+    -D TPL_ENABLE_BLAS=OFF \
     -D BLAS_LIBRARY_DIRS=${BLAS_DIR} \
     \
     -D TPL_ENABLE_Matio=OFF \
