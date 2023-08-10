@@ -16,7 +16,7 @@ export BLAS_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/op
 export LAPACK_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
-    -D CMAKE_PREFIX_PATH=/opt \
+    -D CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0" \
     -D Trilinos_PARALLEL_LINK_JOBS_LIMIT=2 \
     -D Trilinos_ENABLE_ALL_PACKAGES=ON \
     -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=ON \
@@ -28,9 +28,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
-    -D BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
+    -D BLAS_LIBRARY_DIRS="${BLAS_ROOT}/lib" \
     -D TPL_ENABLE_LAPACK=ON \
-    -D LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.so" \
+    -D LAPACK_LIBRARY_DIRS="${LAPACK_ROOT}/lib" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
