@@ -173,7 +173,7 @@ int run(int argc, char *argv[]) {
     //
     // Compute the infinity-norm of A.
     //
-    // AM: No equivalence in Tpetra for normInf() ...
+    // AM: No equivalence in Tpetra for normInf() on CrsMatrix ...
     // AM: Random value here
     const double normOfA = 2.5; // A->NormInf();
     verbOut << "||A||_inf:                           \t" << normOfA << std::endl;
