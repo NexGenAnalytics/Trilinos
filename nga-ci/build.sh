@@ -5,6 +5,8 @@ set -x
 . /opt/spack/share/spack/setup-env.sh
 spack env activate trilinos
 
+cd /opt/build/Trilinos
+
 spack find -p
 
 export MPICC=$(which mpicc)
