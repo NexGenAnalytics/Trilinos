@@ -40,7 +40,7 @@
 //@HEADER
 
 // Purpose
-// The example tests the successive right-hand sides capabilities of ML
+// The example tests the successive right-hand sides capabilities of MueLu
 // and Belos on a heat flow u_t = u_xx problem.
 //
 // A sequence of linear systems with the same coefficient matrix and
@@ -64,15 +64,9 @@
 
 // Adapted from test_pcpg_epetraex.cpp by David M. Day (with original comments)
 
-// CWS NOTE: I have commented out all preconditioning
-
-
-// MueLu
-// #include <MueLu_CreateTpetraPreconditioner.hpp>
-// #include <MueLu_TpetraOperator.hpp>
-
 // Belos
 #include <BelosPCPGSolMgr.hpp>
+// #include <BelosMueLuAdapter.hpp>
 #include <BelosLinearProblem.hpp>
 #include <BelosTpetraAdapter.hpp>
 
@@ -83,10 +77,15 @@
 #include <Tpetra_CrsMatrix_fwd.hpp>
 #include <TpetraExt_MatrixMatrix.hpp>
 
+// MueLu
+#include <MueLu_TpetraOperator.hpp>
+#include <MueLu_CreateTpetraPreconditioner.hpp>
+
 // Teuchos
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_Tuple.hpp>
+#include <Teuchos_FancyOStream.hpp>
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
 #include <Teuchos_ParameterList.hpp>
@@ -96,27 +95,28 @@
 
 template<class ScalarType>
 int run(int argc, char *argv[]) {
-    using SC = typename Tpetra::Vector<ScalarType>::scalar_type;
+    using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
     using LO = typename Tpetra::Vector<>::local_ordinal_type;
     using GO = typename Tpetra::Vector<>::global_ordinal_type;
     using NT = typename Tpetra::Vector<>::node_type;
 
-    using SCT = typename Teuchos::ScalarTraits<SC>;
+    using SCT = typename Teuchos::ScalarTraits<ST>;
     using MT  = typename SCT::magnitudeType;
-    using MV  = typename Tpetra::MultiVector<SC,LO,GO,NT>;
-    using OP  = typename Tpetra::Operator<SC,LO,GO,NT>;
-    using MVT = typename Belos::MultiVecTraits<SC,MV>;
-    using OPT = typename Belos::OperatorTraits<SC,MV,OP>;
+    using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+    using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+    using MVT = typename Belos::MultiVecTraits<ST,MV>;
+    using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
 
-    using tcrsmatrix_t   = Tpetra::CrsMatrix<SC,LO,GO,NT>;
+    using tcrsmatrix_t   = Tpetra::CrsMatrix<ST,LO,GO,NT>;
     using tmap_t         = Tpetra::Map<LO,GO,NT>;
-    using tvector_t      = Tpetra::Vector<SC,LO,GO,NT>;
-    using tmultivector_t = Tpetra::MultiVector<SC,LO,GO,NT>;
+    using tvector_t      = Tpetra::Vector<ST,LO,GO,NT>;
+    using tmultivector_t = Tpetra::MultiVector<ST,LO,GO,NT>;
 
-    // using toperator_t  = Tpetra::Operator<SC,LO,GO,NT>;
-    // using mtoperator_t = MueLu::TpetraOperator<SC,LO,GO,NT>;
+    using toperator_t  = Tpetra::Operator<ST,LO,GO,NT>;
+    using mtoperator_t = MueLu::TpetraOperator<ST,LO,GO,NT>;
+    // using boperator_t = Belos::MueLuOp<ST,LO,GO,NT>;
 
-    using scarray_t = Teuchos::Array<SC>;
+    using starray_t = Teuchos::Array<ST>;
     using goarray_t = Teuchos::Array<GO>;
 
     using Teuchos::ParameterList; // all of this may look fine but do not be fooled ...
@@ -194,20 +194,20 @@ int run(int argc, char *argv[]) {
         RCP<tvector_t> vecRHS   = rcp(new tvector_t(Map));
         RCP<tmultivector_t> LHS, RHS;
 
-        SC ko = 8.0 / 3.0, k1 = -1.0 / 3.0;
-        scarray_t k_arr(2);
+        ST ko = 8.0 / 3.0, k1 = -1.0 / 3.0;
+        starray_t k_arr(2);
         k_arr[0] = ko;
         k_arr[1] = k1;
 
-        SC h = 1.0 / static_cast<SC>(numElePerDirection);  // x=(iX,iY)h
+        ST h = 1.0 / static_cast<ST>(numElePerDirection);  // x=(iX,iY)h
 
-        SC mo = h*h*4.0/9.0, m1 = h*h/9.0, m2 = h*h/36.0;
-        scarray_t m_arr(3);
+        ST mo = h*h*4.0/9.0, m1 = h*h/9.0, m2 = h*h/36.0;
+        starray_t m_arr(3);
         m_arr[0] = mo;
         m_arr[1] = m1;
         m_arr[2] = m2;
 
-        SC pi = 4.0*atan(1.0), valueLHS;
+        ST pi = 4.0*atan(1.0), valueLHS;
         GO lid, node, iX, iY;
 
         goarray_t pos_arr(1);
@@ -220,7 +220,7 @@ int run(int argc, char *argv[]) {
             pos_arr[0] = node;
             Stiff->insertGlobalValues(node, pos_arr.view(0,1), k_arr.view(0,1)); // global row ID, global col ID, value
             Mass->insertGlobalValues(node, pos_arr.view(0,1), m_arr.view(0,1)); // init guess violates hom Dir bc
-            valueLHS = sin( pi*h*((SC) iX+1) )*cos( 2.0 * pi*h*((SC) iY+1) );
+            valueLHS = sin( pi*h*((ST) iX+1) )*cos( 2.0 * pi*h*((ST) iY+1) );
             vecLHS->replaceGlobalValue(node, valueLHS);
 
             if (iY > 0) {
@@ -309,31 +309,32 @@ int run(int argc, char *argv[]) {
         //            Construct Preconditioner            //
         ////////////////////////////////////////////////////
 
-//         ParameterList MueLuList; // Set MueLuList for Smoothed Aggregation
+        ParameterList MueLuList; // Set MueLuList for Smoothed Aggregation
 
-//         MueLuList.set("smoother: type", "CHEBYSHEV");
-//         MueLuList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
+        MueLuList.set("smoother: type", "CHEBYSHEV");
+        MueLuList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
 
-// #ifdef HAVE_MUELU_AMESOS2
-//         MueLuList.set("coarse: type", "KLU2");
-// #else
-//         MueLuList.set("coarse: type", "none")
-// #endif
-//         RCP<toperator_t> A_op = A;
-//         RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_op, MueLuList);
+#ifdef HAVE_MUELU_AMESOS2
+        MueLuList.set("coarse: type", "KLU2");
+#else
+        MueLuList.set("coarse: type", "none")
+#endif
+        RCP<toperator_t> A_op = A;
+        RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_op, MueLuList);
 
-//         // Create the Belos preconditioned operator from the preconditioner.
-//         // NOTE:  This is necessary because Belos expects an operator to apply the
-//         //        preconditioner with Apply() NOT ApplyInverse().
-//         RCP<boperator_t> belosPrec = rcp(new boperator_t(Prec));
+        // Create the Belos preconditioned operator from the preconditioner.
+        // NOTE:  This is necessary because Belos expects an operator to apply the
+        //        preconditioner with Apply() NOT ApplyInverse().
+        // RCP<boperator_t> belosPrec = rcp(new boperator_t(Prec));
 
         ///////////////////////////////////////////////////
         //             Create Parameter List             //
         ///////////////////////////////////////////////////
 
         const size_t NumGlobalElements = RHS->getGlobalLength();
+
         if (maxiters == -1)
-        maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
+            maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
 
         ParameterList belosList;
         belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
@@ -347,22 +348,22 @@ int run(int argc, char *argv[]) {
         belosList.set( "Show Maximum Residual Norm Only", true );  // although numrhs = 1.
         }
         if (verbose) {
-        belosList.set( "Verbosity", Belos::Errors + Belos::Warnings +
+            belosList.set( "Verbosity", Belos::Errors + Belos::Warnings +
             Belos::TimingDetails + Belos::FinalSummary + Belos::StatusTestDetails );
-        if (frequency > 0)
-            belosList.set( "Output Frequency", frequency );
+            if (frequency > 0)
+                belosList.set( "Output Frequency", frequency );
         }
         else
-        belosList.set( "Verbosity", Belos::Errors + Belos::Warnings + Belos::FinalSummary );
+            belosList.set( "Verbosity", Belos::Errors + Belos::Warnings + Belos::FinalSummary );
 
         ///////////////////////////////////////////////////
         //  Construct /*Preconditioned*/ Linear Problem  //
         ///////////////////////////////////////////////////
 
-        RCP<Belos::LinearProblem<SC,MV,OP> > problem
-            = rcp( new Belos::LinearProblem<SC,MV,OP>( A, LHS, RHS ) );
+        RCP<Belos::LinearProblem<ST,MV,OP> > problem
+            = rcp( new Belos::LinearProblem<ST,MV,OP>( A, LHS, RHS ) );
 
-        // problem->setLeftPrec( belosPrec ); // for Preconditioned Problem
+        problem->setLeftPrec( Prec ); // for Preconditioned Problem
 
         bool set = problem->setProblem();
         if (set == false) {
@@ -373,8 +374,8 @@ int run(int argc, char *argv[]) {
         }
 
         // Create an iterative solver manager.
-        RCP< Belos::SolverManager<SC,MV,OP> > solver
-        = rcp( new Belos::PCPGSolMgr<SC,MV,OP>(problem, rcp(&belosList,false)) );
+        RCP< Belos::SolverManager<ST,MV,OP> > solver
+        = rcp( new Belos::PCPGSolMgr<ST,MV,OP>(problem, rcp(&belosList,false)) );
 
         ////////////////////////////////////////////////////
         //                  Iterate PCPG                  //
@@ -400,7 +401,7 @@ int run(int argc, char *argv[]) {
                 return -1;
             }
         } // if time_step
-        std::vector<SC> rhs_norm(numrhs);
+        std::vector<ST> rhs_norm(numrhs);
         MVT::MvNorm(*RHS, rhs_norm);
         std::cout << "\t\t\t\tRHS norm is ... " << rhs_norm[0] << std::endl;
 
@@ -411,7 +412,7 @@ int run(int argc, char *argv[]) {
         // Compute actual residuals.
 
         badRes = false;
-        std::vector<SC> actual_resids(numrhs);
+        std::vector<ST> actual_resids(numrhs);
         tmultivector_t resid(Map, numrhs);
         OPT::Apply( *A, *LHS, resid );
         MVT::MvAddMv( -1.0, resid, 1.0, *RHS, resid );
@@ -422,7 +423,7 @@ int run(int argc, char *argv[]) {
         if (proc_verbose) {
             std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
             for ( int i=0; i<numrhs; i++) {
-                SC actRes = actual_resids[i]/rhs_norm[i];
+                ST actRes = actual_resids[i]/rhs_norm[i];
                 std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
                 if (actRes > tol) badRes = true;
             }
