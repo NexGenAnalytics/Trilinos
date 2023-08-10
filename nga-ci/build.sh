@@ -29,7 +29,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
     -D TPL_ENABLE_Pthread=OFF \
-    -D TPL_ENABLE_LAPACK=ON \
+    -D TPL_ENABLE_LAPACK=OFF \
     -D TPL_ENABLE_Boost=OFF \
     -D TPL_ENABLE_BoostLib=OFF \
     -D TPL_ENABLE_ParMETIS=OFF \
