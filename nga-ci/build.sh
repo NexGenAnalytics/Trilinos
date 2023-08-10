@@ -28,9 +28,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
-    -D BLAS_LIBRARY_DIRS="${BLAS_ROOT}/lib" \
+    -D BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
     -D TPL_ENABLE_LAPACK=ON \
-    -D LAPACK_LIBRARY_DIRS="${LAPACK_ROOT}/lib" \
+    -D LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.so" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
