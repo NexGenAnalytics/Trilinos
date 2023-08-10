@@ -30,10 +30,9 @@ jobs:
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
           echo "DOCKER_TAG: ${{ env.DOCKER_TAG }}"
           echo "SCOPE_NAME  ${{ env.SCOPE_NAME }}"
-          echo "hello there"
       - name: Build the Docker Image and Code
         id: docker_build
-        continue-on-error: true
+        continue-on-error: false
         uses: docker/build-push-action@v3
         with:
           push: false

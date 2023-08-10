@@ -22,14 +22,15 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_TESTS=ON \
     -D Trilinos_TEST_CATEGORIES=BASIC \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
+    -D Trilinos_TRIBITS_DIR=/opt/src/Trilinos/cmake/tribits \
     \
     -D TPL_ENABLE_BLAS=OFF \
     -D BLAS_LIBRARY_DIRS=${BLAS_DIR} \
+    -D TPL_ENABLE_LAPACK=OFF \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
     -D TPL_ENABLE_Pthread=OFF \
-    -D TPL_ENABLE_LAPACK=OFF \
     -D TPL_ENABLE_Boost=OFF \
     -D TPL_ENABLE_BoostLib=OFF \
     -D TPL_ENABLE_ParMETIS=OFF \
