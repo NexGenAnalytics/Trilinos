@@ -1,6 +1,7 @@
 # Choose a base image
 FROM calebschilly/trilinos-deps:main
 
+COPY . /opt/src/Trilinos
 RUN mkdir -p /opt/build/Trilinos
 
 # Build using the spack environment we created
