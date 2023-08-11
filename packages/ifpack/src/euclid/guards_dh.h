@@ -44,7 +44,7 @@
 #define GUARDS_DH
 
 #include "euclid_common.h"
-#include "Ifpack_DefaultComm.h"
+#include "Ifpack_GlobalComm.h"
 
 /*
    This file defines the INITIALIZE_DH and FINALIZE_DH macros

@@ -109,7 +109,7 @@ SET(HEADERS ${HEADERS}
   Ifpack_SILU.h
   Ifpack_IHSS.h
   Ifpack_SORa.h
-  Ifpack_DefaultComm.h
+  Ifpack_GlobalComm.h
   )
 
 SET(SOURCES ${SOURCES}

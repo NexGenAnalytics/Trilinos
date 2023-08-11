@@ -40,8 +40,8 @@
 //@HEADER
 */
 
-#ifndef IFPACK_DEFAULTCOMM_H
-#define IFPACK_DEFAULTCOMM_H
+#ifndef IFPACK_GLOBAL_COMM_H
+#define IFPACK_GLOBAL_COMM_H
 
 #include <mpi.h>
 #include <pthread.h>
@@ -73,4 +73,4 @@ static MPI_Comm get_global_comm() {
 } /* closing bracket for extern "C" */
 #endif
 
-#endif /* IFPACK_DEFAULTCOMM_H */
+#endif /* IFPACK_GLOBAL_COMM_H */

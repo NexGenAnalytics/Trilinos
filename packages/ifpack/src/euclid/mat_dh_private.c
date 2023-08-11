@@ -46,7 +46,7 @@
 #include "Mat_dh.h"
 #include "Mem_dh.h"
 #include "Vec_dh.h"
-#include "Ifpack_DefaultComm.h"
+#include "Ifpack_GlobalComm.h"
 
 #define IS_UPPER_TRI 97
 #define IS_LOWER_TRI 98
