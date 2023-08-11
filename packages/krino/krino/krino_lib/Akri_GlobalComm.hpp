@@ -6,8 +6,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-#ifndef KRINO_KRINO_KRINO_LIB_AKRI_DEFAULT_COMM_HPP_
-#define KRINO_KRINO_KRINO_LIB_AKRI_DEFAULT_COMM_HPP_
+#ifndef KRINO_KRINO_KRINO_LIB_AKRI_GLOBAL_COMM_HPP_
+#define KRINO_KRINO_KRINO_LIB_AKRI_GLOBAL_COMM_HPP_
 
 #include <mpi.h>
 #include <mutex>
@@ -29,4 +29,4 @@ inline MPI_Comm get_global_comm() {
 
 }
 
-#endif /* KRINO_KRINO_KRINO_LIB_AKRI_DEFAULT_COMM_HPP_ */
+#endif /* KRINO_KRINO_KRINO_LIB_AKRI_GLOBAL_COMM_HPP_ */

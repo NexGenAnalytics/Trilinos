@@ -10,7 +10,7 @@
 #define Akri_BoundingBoxMesh_h
 
 #include <Akri_BoundingBox.hpp>
-#include <Akri_DefaultComm.hpp>
+#include <Akri_GlobalComm.hpp>
 #include <stk_mesh/base/BulkData.hpp>
 #include <stk_mesh/base/MetaData.hpp>
 #include <array>

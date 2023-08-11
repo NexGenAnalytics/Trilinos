@@ -7,7 +7,7 @@
 // license that can be found in the LICENSE file.
 
 #include <Akri_Startup.hpp>
-#include <Akri_DefaultComm.hpp>
+#include <Akri_GlobalComm.hpp>
 #include <Akri_DiagWriter.hpp>
 #include <Akri_RegisterProduct.hpp>
 
