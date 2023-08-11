@@ -1,5 +1,45 @@
 //@HEADER
-// TOREDO
+// ************************************************************************
+//
+//                 Belos: Block Linear Solvers Package
+//                  Copyright 2004 Sandia Corporation
+//
+// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+// the U.S. Government retains certain rights in this software.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+// 1. Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright
+// notice, this list of conditions and the following disclaimer in the
+// documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the Corporation nor the names of the
+// contributors may be used to endorse or promote products derived from
+// this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Questions? Contact Michael A. Heroux (maherou@sandia.gov)
+//
+// ************************************************************************
+//@HEADER
+
+/* Originally convert test here: belos/epetra/test/MINRES/test_minres_hb.cpp */
 
 // Belos
 #include "BelosConfigDefs.hpp"
@@ -101,8 +141,8 @@ int run(int argc, char *argv[]) {
     // Compute the initial residual norm of the problem, so we can see
     // by how much it improved after the solve.
     //
-    std::vector<double> initialResidualNorms (numRHS);
-    std::vector<double> initialResidualInfNorms (numRHS);
+    std::vector<ST> initialResidualNorms (numRHS);
+    std::vector<ST> initialResidualInfNorms (numRHS);
     MV R(rowMap, numRHS);
     OPT::Apply (*A, *X, R);
     MVT::MvAddMv (-1.0, R, 1.0, *B, R); // R := -(A*X) + B.
@@ -126,8 +166,8 @@ int run(int argc, char *argv[]) {
       verbOut << std::endl;
     }
     
-    std::vector<double> rhs2Norms (numRHS);
-    std::vector<double> rhsInfNorms (numRHS);
+    std::vector<ST> rhs2Norms (numRHS);
+    std::vector<ST> rhsInfNorms (numRHS);
     MVT::MvNorm (*B, rhs2Norms);
     MVT::MvNorm (*B, rhsInfNorms, Belos::InfNorm);
     if (verbose) {
@@ -148,8 +188,8 @@ int run(int argc, char *argv[]) {
       verbOut << std::endl;
     }
     
-    std::vector<double> initialGuess2Norms (numRHS);
-    std::vector<double> initialGuessInfNorms (numRHS);
+    std::vector<ST> initialGuess2Norms (numRHS);
+    std::vector<ST> initialGuessInfNorms (numRHS);
     MVT::MvNorm (*X, initialGuess2Norms);
     MVT::MvNorm (*X, initialGuessInfNorms, Belos::InfNorm);
     if (verbose) {
@@ -173,14 +213,12 @@ int run(int argc, char *argv[]) {
     //
     // Compute the infinity-norm of A.
     //
-    // AM: No equivalence in Tpetra for normInf() on CrsMatrix ...
-    // AM: Random value here
-    const double normOfA = 2.5; // A->NormInf();
+    const ST normOfA = A->getFrobeniusNorm(); 
     verbOut << "||A||_inf:                           \t" << normOfA << std::endl;
     //
     // Compute ||A|| ||X_i|| + ||B_i|| for each right-hand side B_i.
     //
-    std::vector<double> scaleFactors (numRHS);
+    std::vector<ST> scaleFactors (numRHS);
     for (int i = 0; i < numRHS; ++i) {
       scaleFactors[i] = normOfA * initialGuessInfNorms[i] + rhsInfNorms[i];
     }
@@ -217,7 +255,7 @@ int run(int argc, char *argv[]) {
     belosList->set ("Output Stream", Teuchos::rcpFromRef (verbOut));
 
     // Construct an unpreconditioned linear problem instance.
-    typedef Belos::LinearProblem<double,MV,OP> prob_type;
+    typedef Belos::LinearProblem<ST,MV,OP> prob_type;
     RCP<prob_type> problem = rcp (new prob_type (A, X, B));
     if (! problem->setProblem()) {
       verbOut << std::endl << "ERROR:  Failed to set up Belos::LinearProblem!" << std::endl;
@@ -225,8 +263,8 @@ int run(int argc, char *argv[]) {
     }
     
     // Create an iterative solver manager.
-    Belos::SolverFactory<double, MV, OP> factory;
-    RCP<Belos::SolverManager<double,MV,OP> > newSolver =
+    Belos::SolverFactory<ST, MV, OP> factory;
+    RCP<Belos::SolverManager<ST,MV,OP> > newSolver =
       factory.create ("MINRES", belosList);
     newSolver->setProblem (problem);
 
@@ -257,12 +295,12 @@ int run(int argc, char *argv[]) {
     // After the solve, compute residual(s) explicitly.  This tests
     // whether the Belos solver did so correctly.
     //
-    std::vector<double> absoluteResidualNorms (numRHS);
+    std::vector<ST> absoluteResidualNorms (numRHS);
     OPT::Apply (*A, *X, R);
     MVT::MvAddMv (-1.0, R, 1.0, *B, R);
     MVT::MvNorm (R, absoluteResidualNorms);
 
-    std::vector<double> relativeResidualNorms (numRHS);
+    std::vector<ST> relativeResidualNorms (numRHS);
     for (int i = 0; i < numRHS; ++i) {
       relativeResidualNorms[i] = (initialResidualNorms[i] == 0.0) ?
         absoluteResidualNorms[i] :

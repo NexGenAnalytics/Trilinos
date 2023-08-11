@@ -1,5 +1,45 @@
 //@HEADER
-// TOREDO
+// ************************************************************************
+//
+//                 Belos: Block Linear Solvers Package
+//                  Copyright 2004 Sandia Corporation
+//
+// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+// the U.S. Government retains certain rights in this software.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+// 1. Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright
+// notice, this list of conditions and the following disclaimer in the
+// documentation and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the Corporation nor the names of the
+// contributors may be used to endorse or promote products derived from
+// this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Questions? Contact Michael A. Heroux (maherou@sandia.gov)
+//
+// ************************************************************************
+//@HEADER
+
+/* Originally convert test here: belos/epetra/test/MINRES/test_minres_indefinite.cpp */
 
 // Belos
 #include "BelosConfigDefs.hpp"
@@ -21,28 +61,27 @@
 template<class ScalarType>
 int run(int argc, char *argv[])
 {
-  using SC = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
   using NT = typename Tpetra::Vector<>::node_type;
 
-  using SCT = typename Teuchos::ScalarTraits<SC>;
+  using SCT = typename Teuchos::ScalarTraits<ST>;
   using MT = typename SCT::magnitudeType;
-  using MV = typename Tpetra::MultiVector<SC,LO,GO,NT>;
-  using OP = typename Tpetra::Operator<SC,LO,GO,NT>;
-  using MVT = typename Belos::MultiVecTraits<SC,MV>;
-  using OPT = typename Belos::OperatorTraits<SC,MV,OP>;
+  using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MVT = typename Belos::MultiVecTraits<ST,MV>;
+  using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
  
-  using tcrsmatrix_t = Tpetra::CrsMatrix<SC,LO,GO,NT>;
+  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
   using tmap_t = Tpetra::Map<LO,GO,NT>;
-  using tmultivector_t = Tpetra::MultiVector<SC,LO,GO,NT>;
+  using tmultivector_t = Tpetra::MultiVector<ST,LO,GO,NT>;
 
   using Teuchos::CommandLineProcessor;
   using Teuchos::ParameterList;
   using Teuchos::RCP;
   using Teuchos::rcp;
 
-  // AM: TODO Better initialize MPI and get communicator
   MPI_Init(&argc,&argv);
   const auto comm = Tpetra::getDefaultComm();
   const int MyPID = 0;
@@ -115,7 +154,7 @@ int run(int argc, char *argv[])
 
     // Choose an initial guess of all zeros.
     RCP<tmultivector_t> X = MVT::Clone (*X_exact, numrhs);
-    MVT::MvInit (*X, SC(0.0));
+    MVT::MvInit (*X, ST(0.0));
 
     // **********************************************************************
     //
@@ -175,7 +214,7 @@ int run(int argc, char *argv[])
     //
     // Construct an unpreconditioned linear problem instance.
     //
-    Belos::LinearProblem< SC, MV, OP > problem (A, X, B);
+    Belos::LinearProblem< ST, MV, OP > problem (A, X, B);
     {
       const bool set = problem.setProblem();
       TEUCHOS_TEST_FOR_EXCEPTION( set == false, std::logic_error,
@@ -189,8 +228,8 @@ int run(int argc, char *argv[])
     // *******************************************************************
     //
     // Create an iterative solver manager.
-    RCP< Belos::SolverManager<SC,MV,OP> > newSolver
-      = rcp( new Belos::MinresSolMgr<SC,MV,OP>(rcp(&problem,false), rcp(&belosList,false)));
+    RCP< Belos::SolverManager<ST,MV,OP> > newSolver
+      = rcp( new Belos::MinresSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)));
 
     //
     // **********Print out information about problem*******************
@@ -217,8 +256,8 @@ int run(int argc, char *argv[])
     // Compute actual residuals.
     //
     bool badRes = false;
-    std::vector<double> actual_resids( numrhs );
-    std::vector<double> rhs_norm( numrhs );
+    std::vector<ST> actual_resids( numrhs );
+    std::vector<ST> rhs_norm( numrhs );
     tmultivector_t resid(A->getMap(), numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
