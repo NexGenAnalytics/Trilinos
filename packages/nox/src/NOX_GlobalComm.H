@@ -48,8 +48,8 @@
 // ************************************************************************
 //@HEADER
 
-#ifndef NOX_DEFAULT_COMM_H
-#define NOX_DEFAULT_COMM_H
+#ifndef NOX_GLOBAL_COMM_H
+#define NOX_GLOBAL_COMM_H
 
 #ifdef HAVE_MPI
 
@@ -74,4 +74,4 @@ inline MPI_Comm get_global_comm() {
 }
 
 #endif /* HAVE_MPI */
-#endif /* NOX_DEFAULT_COMM_H */
+#endif /* NOX_GLOBAL_COMM_H */

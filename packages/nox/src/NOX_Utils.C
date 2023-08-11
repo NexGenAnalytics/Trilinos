@@ -54,7 +54,7 @@
 
 #ifdef HAVE_MPI
 #include <mpi.h>
-#include <NOX_DefaultComm.H>
+#include <NOX_GlobalComm.H>
 #endif
 
 NOX::Utils::Utils(int outputInformation, int MyPID, int outputProcess,
