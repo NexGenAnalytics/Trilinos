@@ -51,7 +51,7 @@
 #  include "mpi.h"
 #  include <H5FDmpio.h>
 #  include "Epetra_MpiComm.h"
-#  include "EpetraExt_DefaultComm.h"
+#  include "EpetraExt_GlobalComm.h"
 #endif // HAVE_MPI
 
 // The user could have passed in an Epetra_Comm that is either an

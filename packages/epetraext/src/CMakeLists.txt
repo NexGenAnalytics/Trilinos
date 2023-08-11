@@ -177,7 +177,7 @@ IF (${PACKAGE_NAME}_BUILD_INOUT)
     inout/EpetraExt_HDF5.h
     inout/EpetraExt_HDF5_Handle.h
     inout/EpetraExt_DistArray.h
-    inout/EpetraExt_DefaultComm.h
+    inout/EpetraExt_GlobalComm.h
     )
 
   SET(SOURCES ${SOURCES}
