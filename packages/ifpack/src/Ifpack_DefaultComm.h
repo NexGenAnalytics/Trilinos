@@ -40,32 +40,37 @@
 //@HEADER
 */
 
-#ifndef GUARDS_DH
-#define GUARDS_DH
+#ifndef IFPACK_DEFAULTCOMM_H
+#define IFPACK_DEFAULTCOMM_H
 
-#include "euclid_common.h"
-#include "Ifpack_DefaultComm.h"
+#include <mpi.h>
+#include <pthread.h>
 
-/*
-   This file defines the INITIALIZE_DH and FINALIZE_DH macros
-*/
+#ifdef __cplusplus
+/* if C++, define the rest of this header file as extern C */
+extern "C" {
+#endif
 
-#define  INITIALIZE_DH(argc, argv, help) \
-            MPI_Init(&argc,&argv);  \
-            comm_dh = get_global_comm();    \
-            MPI_Errhandler_set(comm_dh, MPI_ERRORS_RETURN); \
-            EuclidInitialize(argc, argv, help); \
-            dh_StartFunc(__FUNC__, __FILE__, __LINE__, 1); \
-            {
+static pthread_mutex_t global_comm_lock;
+static MPI_Comm Global_MPI_Comm = MPI_COMM_WORLD;
 
+/* Function to set the default communicator */
+static void initialize_global_comm(MPI_Comm comm) {
+  pthread_mutex_lock(&global_comm_lock);
+  Global_MPI_Comm = comm;
+  pthread_mutex_unlock(&global_comm_lock);
+}
 
-#define  FINALIZE_DH \
-            } \
-            dh_EndFunc(__FUNC__, 1); \
-            EuclidFinalize(); \
-            MPI_Finalize();
+/* Function to get the default communicator */
+static MPI_Comm get_global_comm() {
+  pthread_mutex_lock(&global_comm_lock);
+  MPI_Comm comm = Global_MPI_Comm;
+  pthread_mutex_unlock(&global_comm_lock);
+  return comm;
+}
 
+#ifdef __cplusplus
+} /* closing bracket for extern "C" */
+#endif
 
-
-
-#endif /* #ifndef GUARDS_DH */
+#endif /* IFPACK_DEFAULTCOMM_H */
