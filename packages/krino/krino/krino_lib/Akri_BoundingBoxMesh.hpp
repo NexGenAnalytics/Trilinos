@@ -10,6 +10,7 @@
 #define Akri_BoundingBoxMesh_h
 
 #include <Akri_BoundingBox.hpp>
+#include <Akri_DefaultComm.hpp>
 #include <stk_mesh/base/BulkData.hpp>
 #include <stk_mesh/base/MetaData.hpp>
 #include <array>
@@ -75,7 +76,7 @@ public:
 public:
   BoundingBoxMesh(stk::topology element_topology, const std::vector<std::string>& rank_names = std::vector<std::string>());
   void set_domain(const BoundingBoxType & mesh_bbox, const double mesh_size, const int pad_cells = 0);
-  void populate_mesh(stk::ParallelMachine pm = MPI_COMM_WORLD, const stk::mesh::BulkData::AutomaticAuraOption auto_aura_option = stk::mesh::BulkData::AUTO_AURA);
+  void populate_mesh(stk::ParallelMachine pm = get_global_comm(), const stk::mesh::BulkData::AutomaticAuraOption auto_aura_option = stk::mesh::BulkData::AUTO_AURA);
   stk::mesh::MetaData & meta_data() { STK_ThrowAssert( nullptr != m_meta.get() ) ; return *m_meta; }
   stk::mesh::BulkData & bulk_data() { STK_ThrowAssert( nullptr != m_mesh.get() ) ; return *m_mesh; }
   const stk::mesh::MetaData & meta_data() const { STK_ThrowAssert( nullptr != m_meta.get() ) ; return *m_meta; }

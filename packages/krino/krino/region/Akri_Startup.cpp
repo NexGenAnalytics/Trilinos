@@ -7,7 +7,7 @@
 // license that can be found in the LICENSE file.
 
 #include <Akri_Startup.hpp>
-
+#include <Akri_DefaultComm.hpp>
 #include <Akri_DiagWriter.hpp>
 #include <Akri_RegisterProduct.hpp>
 
@@ -84,7 +84,7 @@ Startup::Startup(int argc, char ** argv)
     throw std::runtime_error("MPI_Init failed");
   }
 
-  stk::EnvData::instance().m_parallelComm = MPI_COMM_WORLD;
+  stk::EnvData::instance().m_parallelComm = get_global_comm();
   MPI_Comm_size(stk::EnvData::parallel_comm(), &stk::EnvData::instance().m_parallelSize);
   MPI_Comm_rank(stk::EnvData::parallel_comm(), &stk::EnvData::instance().m_parallelRank);
 
