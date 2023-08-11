@@ -179,9 +179,9 @@ ZoltanLibClass::ZoltanLibClass(Teuchos::RCP<const Epetra_BlockMap> input_map,
 int ZoltanLibClass::precompute()
 {
   std::string str1("Isorropia::ZoltanLibClass::precompute ");
-  MPI_Comm mpicomm = MPI_COMM_WORLD;
+  MPI_Comm mpicomm = MPI_Comm_Default();
 #ifdef HAVE_MPI
-  MPI_Comm default_mpicomm = MPI_COMM_WORLD;
+  MPI_Comm default_mpicomm = MPI_Comm_Default();
 #endif // HAVE_MPI
   int itype;
 
