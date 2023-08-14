@@ -277,3 +277,9 @@ IF (PIRO_HAVE_EPETRA_STACK)
   )
 
 ENDIF(PIRO_HAVE_EPETRA_STACK)
+
+# IF (PIRO_HAVE_TPETRA_STACK)
+#   ObserveSolution_Tpetra.hpp
+#   Main_EvalModel_Tpetra.cpp
+#   ...
+# ENDIF(PIRO_HAVE_TPETRA_STACK)
