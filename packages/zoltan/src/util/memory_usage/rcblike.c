@@ -57,22 +57,22 @@
 void test_function()
 {
 MPI_Comm local_comm, tmp_comm;
-int myproc, nprocs;               // MPI info wrt comm form MPI_Comm_Default().
+int myproc, nprocs;               // MPI info wrt comm form zoltan_get_global_comm().
 int local_myproc, local_nprocs;   // MPI info wrt local_comm.
 int set, procmid;
 int commcnt = 0;
 size_t oldheap, newheap;
 static int itercnt = 0;
 
-  MPI_Comm_size(MPI_Comm_Default(), &nprocs);
-  MPI_Comm_rank(MPI_Comm_Default(), &myproc);
+  MPI_Comm_size(zoltan_get_global_comm(), &nprocs);
+  MPI_Comm_rank(zoltan_get_global_comm(), &myproc);
 
-  //  Duplicate MPI_Comm_Default() to local communicator.
+  //  Duplicate zoltan_get_global_comm() to local communicator.
   oldheap = get_heap_usage();
   std::cout << "KDD " << myproc 
             << " ITER " << itercnt
             << " BEFORE Comm_dup:  " << oldheap << std::endl;
-  MPI_Comm_dup(MPI_Comm_Default(),&local_comm);
+  MPI_Comm_dup(zoltan_get_global_comm(),&local_comm);
   newheap = get_heap_usage();
   std::cout << "KDD " << myproc 
             << " ITER " << itercnt
@@ -148,7 +148,7 @@ main(int argc, char *argv[])
   size_t finalheap = get_heap_usage();
 
   int myproc;
-  MPI_Comm_rank(MPI_Comm_Default(), &myproc);
+  MPI_Comm_rank(zoltan_get_global_comm(), &myproc);
   std::cout << "KDDEND " << myproc 
             << " Total leaked " << finalheap - initheap
             << " Avg per iteration " << (finalheap - initheap) / NUM_ITER

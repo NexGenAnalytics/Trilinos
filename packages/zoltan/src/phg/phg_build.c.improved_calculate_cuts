@@ -881,7 +881,7 @@ End:
       fflush(stdout);
     }
   
-    rc = MPI_Barrier(MPI_Comm_Default());
+    rc = MPI_Barrier(zoltan_get_global_comm());
   }
 #endif
 

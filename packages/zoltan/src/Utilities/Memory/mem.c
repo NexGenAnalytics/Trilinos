@@ -80,7 +80,7 @@ static int nfree = 0;           /* number of calls to free */
 #define GET_RANK(a) *(a)=0
 #else
 #include <zoltan_comm.h>
-#define GET_RANK(a) MPI_Comm_rank(MPI_Comm_Default(), (a))
+#define GET_RANK(a) MPI_Comm_rank(zoltan_get_global_comm(), (a))
 #endif
 
 #define MAX_STRING_LEN 50

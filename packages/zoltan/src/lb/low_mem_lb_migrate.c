@@ -89,8 +89,8 @@ int i, j;
     fprintf(stderr,"\n");
     }
 
-    MPI_Barrier(MPI_Comm_Default());
-    MPI_Barrier(MPI_Comm_Default());
+    MPI_Barrier(zoltan_get_global_comm());
+    MPI_Barrier(zoltan_get_global_comm());
   }
 
 }

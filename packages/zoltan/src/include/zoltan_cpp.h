@@ -75,7 +75,7 @@ public:
 
   // Constructor
 
-  Zoltan (const MPI_Comm &communicator = MPI_Comm_Default()) 
+  Zoltan (const MPI_Comm &communicator = zoltan_get_global_comm()) 
   {
     this->ZZ_Ptr = Zoltan_Create(communicator);
 

@@ -52,21 +52,21 @@
 extern "C" {
 #endif
 
-static pthread_mutex_t global_comm_lock;
-static MPI_Comm Global_Zoltan_Comm = MPI_COMM_WORLD;
+static pthread_mutex_t zoltan_global_mpi_lock;
+static MPI_Comm Zoltan_Global_MPI_Comm = MPI_COMM_WORLD;
 
 /* Function to set the default communicator */
-inline void initialize_global_comm(MPI_Comm comm) {
-  pthread_mutex_lock(&global_comm_lock);
-  Global_Zoltan_Comm = comm;
-  pthread_mutex_unlock(&global_comm_lock);
+inline void zoltan_initialize_global_comm(MPI_Comm comm) {
+  pthread_mutex_lock(&zoltan_global_mpi_lock);
+  Zoltan_Global_MPI_Comm = comm;
+  pthread_mutex_unlock(&zoltan_global_mpi_lock);
 }
 
 /* Function to get the default communicator */
-inline MPI_Comm MPI_Comm_Default() {
-  pthread_mutex_lock(&global_comm_lock);
-  MPI_Comm comm = Global_Zoltan_Comm;
-  pthread_mutex_unlock(&global_comm_lock);
+inline MPI_Comm zoltan_get_global_comm() {
+  pthread_mutex_lock(&zoltan_global_mpi_lock);
+  MPI_Comm comm = Zoltan_Global_MPI_Comm;
+  pthread_mutex_unlock(&zoltan_global_mpi_lock);
   return comm;
 }
 

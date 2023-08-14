@@ -104,8 +104,8 @@ int main(int argc, char *argv[])
 
   /* get some machine information */
   int Proc = 0, Num_Proc = 0;
-  MPI_Comm_rank(MPI_Comm_Default(), &Proc);
-  MPI_Comm_size(MPI_Comm_Default(), &Num_Proc);
+  MPI_Comm_rank(zoltan_get_global_comm(), &Proc);
+  MPI_Comm_size(zoltan_get_global_comm(), &Num_Proc);
 
   /* Initialize flags */
   Test.DDirectory = 0;
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     print_input_info(cout, Num_Proc, &prob, &pio_info, version);
   }
 
-  MPI_Allreduce(&error, &gerror, 1, MPI_INT, MPI_MAX, MPI_Comm_Default());
+  MPI_Allreduce(&error, &gerror, 1, MPI_INT, MPI_MAX, zoltan_get_global_comm());
 
   if (gerror) goto End;
 
