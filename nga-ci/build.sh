@@ -31,8 +31,11 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D BLAS_LIBRARY_DIRS="${BLAS_ROOT}/lib" \
+    -D BLAS_LIBRARY_NAMES='blas;blas_win32' \
     -D TPL_ENABLE_LAPACK=ON \
     -D LAPACK_LIBRARY_DIRS="${LAPACK_ROOT}/lib" \
+    -D LAPACK_LIBRARY_NAMES='lapack;lapack_win32' \
+    -D LAPACK_LIB_DEFINED_DEPENDENCIES='BLAS' \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
