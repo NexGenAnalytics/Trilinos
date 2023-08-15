@@ -1,13 +1,13 @@
 /*
 //@HEADER
 // ***********************************************************************
-// 
-//        AztecOO: An Object-Oriented Aztec Linear Solver Package 
+//
+//        AztecOO: An Object-Oriented Aztec Linear Solver Package
 //                 Copyright (2002) Sandia Corporation
-// 
+//
 // Under terms of Contract DE-AC04-94AL85000, there is a non-exclusive
 // license for use of this work by or on behalf of the U.S. Government.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -35,8 +35,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Questions? Contact Michael A. Heroux (maherou@sandia.gov) 
-// 
+// Questions? Contact Michael A. Heroux (maherou@sandia.gov)
+//
 // ***********************************************************************
 //@HEADER
 */
@@ -101,10 +101,15 @@
 #include <mpi.h>
 #define MPI_AZRequest MPI_Request
 #define MPI_AZComm    MPI_Comm
+#define AZ_MPI_COMM_WORLD MPI_COMM_WORLD
 #else
 #define MPI_AZRequest int
 #define MPI_AZComm    int
+#define AZ_MPI_COMM_WORLD 0
 #endif
+
+// declared in az_comm.c
+extern MPI_AZComm az_global_mpi_comm;
 
 #include <stdio.h>
 
@@ -314,7 +319,7 @@ struct AZ_CONVERGE_STRUCT {
                         int * isnan,         /* = 0 on return if not NaN, otherwise NaNs detected */
                         double * rnorm,     /* = current norm on return */
 			int * r_avail);     /* If set to AZ_TRUE on return, the residual vector is needed
-					       by this convergence on subsequent calls and it should be 
+					       by this convergence on subsequent calls and it should be
 					       supplied by the calling routine */
 };
 
@@ -598,7 +603,7 @@ extern void AZ_fortransolve(double x[], double b[], int options[],
  * There are different conventions for external names for fortran subroutines.
  * In addition, different compilers return differing caluse for a fortran
  * subroutine call.  Finally, there is now also an option to disable Fortran,
- * so we also supply C versions of Fortran subroutines defined in AztecOO. 
+ * so we also supply C versions of Fortran subroutines defined in AztecOO.
  * In this section we take all of this into account.
 
  */
@@ -1444,7 +1449,7 @@ void PREFIX AZ_SLAIC1_F77(int * , int *, float *, float *, float *, float *,
 			       double params[], int proc_config[],double status[],
 			       AZ_MATRIX *Amat, AZ_PRECOND *precond,
 			       struct AZ_CONVERGE_STRUCT *convergence_info );
-  
+
 
   /*****************************************************************************/
   /*                    IFPACK interface routine                               */

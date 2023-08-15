@@ -1,13 +1,13 @@
 /*
 //@HEADER
 // ***********************************************************************
-// 
-//        AztecOO: An Object-Oriented Aztec Linear Solver Package 
+//
+//        AztecOO: An Object-Oriented Aztec Linear Solver Package
 //                 Copyright (2002) Sandia Corporation
-// 
+//
 // Under terms of Contract DE-AC04-94AL85000, there is a non-exclusive
 // license for use of this work by or on behalf of the U.S. Government.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -35,8 +35,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Questions? Contact Michael A. Heroux (maherou@sandia.gov) 
-// 
+// Questions? Contact Michael A. Heroux (maherou@sandia.gov)
+//
 // ***********************************************************************
 //@HEADER
 */
@@ -67,14 +67,17 @@ int gl_sbuf = 3;
 /******************************************************************************/
 int the_proc_name = -1;
 
+// declared in az_comm.c (we use MPI_Comm instead of MPI_AZComm as it's guaranteed AztecOO is built with MPI)
+extern MPI_Comm az_global_mpi_comm;
+
 void get_parallel_info(int *proc, int *nprocs, int *dim)
 
 {
 
   /* local variables */
 
-  MPI_Comm_size(MPI_COMM_WORLD, nprocs);
-  MPI_Comm_rank(MPI_COMM_WORLD, proc);
+  MPI_Comm_size(az_global_mpi_comm, nprocs);
+  MPI_Comm_rank(az_global_mpi_comm, proc);
   *dim = 0;
 the_proc_name = *proc;
 
@@ -99,11 +102,11 @@ int md_read(char *buf, int bytes, int *source, int *type, int *flag)
   if (*source == -1) *source = MPI_ANY_SOURCE;
 
   if (bytes == 0) {
-    err = MPI_Recv(&gl_rbuf, 1, MPI_BYTE, *source, *type, MPI_COMM_WORLD,
+    err = MPI_Recv(&gl_rbuf, 1, MPI_BYTE, *source, *type, az_global_mpi_comm,
                    &status);
   }
   else {
-    err = MPI_Recv(buf, bytes, MPI_BYTE, *source, *type, MPI_COMM_WORLD,
+    err = MPI_Recv(buf, bytes, MPI_BYTE, *source, *type, az_global_mpi_comm,
                    &status);
   }
 
@@ -129,10 +132,10 @@ int md_write(char *buf, int bytes, int dest, int type, int *flag)
   int err;
 
   if (bytes == 0) {
-    err = MPI_Send(&gl_sbuf, 1, MPI_BYTE, dest, type, MPI_COMM_WORLD);
+    err = MPI_Send(&gl_sbuf, 1, MPI_BYTE, dest, type, az_global_mpi_comm);
   }
   else {
-    err = MPI_Send(buf, bytes, MPI_BYTE, dest, type, MPI_COMM_WORLD);
+    err = MPI_Send(buf, bytes, MPI_BYTE, dest, type, az_global_mpi_comm);
   }
 
   if (err != 0) (void) fprintf(stderr, "MPI_Send error = %d\n", err);
@@ -182,11 +185,11 @@ int md_wrap_iread(void *buf, int bytes, int *source, int *type,
   if (*source == -1) *source = MPI_ANY_SOURCE;
 
   if (bytes == 0) {
-    err = MPI_Irecv(&gl_rbuf, 1, MPI_BYTE, *source, *type, MPI_COMM_WORLD,
+    err = MPI_Irecv(&gl_rbuf, 1, MPI_BYTE, *source, *type, az_global_mpi_comm,
                     request);
   }
   else {
-    err = MPI_Irecv(buf, bytes, MPI_BYTE, *source, *type, MPI_COMM_WORLD,
+    err = MPI_Irecv(buf, bytes, MPI_BYTE, *source, *type, az_global_mpi_comm,
                     request);
   }
 
@@ -231,10 +234,10 @@ int md_wrap_write(void *buf, int bytes, int dest, int type, int *flag)
   int err = 0;
 
   if (bytes == 0) {
-    err = MPI_Send(&gl_sbuf, 1, MPI_BYTE, dest, type, MPI_COMM_WORLD);
+    err = MPI_Send(&gl_sbuf, 1, MPI_BYTE, dest, type, az_global_mpi_comm);
   }
   else {
-    err = MPI_Send(buf, bytes, MPI_BYTE, dest, type, MPI_COMM_WORLD);
+    err = MPI_Send(buf, bytes, MPI_BYTE, dest, type, az_global_mpi_comm);
   }
 
   return err;
@@ -303,7 +306,7 @@ int md_wrap_iwrite(void *buf, int bytes, int dest, int type, int *flag,
 
 /*******************************************************************************
 
-  Machine dependent wrapped message-sending (nonblocking) communication 
+  Machine dependent wrapped message-sending (nonblocking) communication
   routine for MPI.
 
   Author:          Scott A. Hutchinson, SNL, 9221
@@ -332,11 +335,11 @@ int md_wrap_iwrite(void *buf, int bytes, int dest, int type, int *flag,
   int err = 0;
 
   if (bytes == 0) {
-    err = MPI_Isend(&gl_sbuf, 1, MPI_BYTE, dest, type, MPI_COMM_WORLD,
+    err = MPI_Isend(&gl_sbuf, 1, MPI_BYTE, dest, type, az_global_mpi_comm,
                   request);
   }
   else {
-    err = MPI_Isend(buf, bytes, MPI_BYTE, dest, type, MPI_COMM_WORLD,
+    err = MPI_Isend(buf, bytes, MPI_BYTE, dest, type, az_global_mpi_comm,
                   request);
   }
 
