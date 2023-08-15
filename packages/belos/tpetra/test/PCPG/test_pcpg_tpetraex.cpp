@@ -195,6 +195,11 @@ int run(int argc, char *argv[]) {
         RCP<tvector_t> vecRHS   = rcp(new tvector_t(Map));
         RCP<tmultivector_t> LHS, RHS;
 
+        assert(4 == 4);
+        assert(!Stiff->isGloballyIndexed());
+
+        assert(!Stiff->isLocallyIndexed()); // because empty
+
         ST ko = 8.0 / 3.0, k1 = -1.0 / 3.0;
         starray_t k_arr(2);
         k_arr[0] = ko;
@@ -269,56 +274,46 @@ int run(int argc, char *argv[]) {
             }
         }
 
+        assert(Stiff->isGloballyIndexed()); // because non-empty
+        assert(Stiff->getRowMap()->isOneToOne());
+
+        assert(Stiff->isFillActive());
+
         Stiff->fillComplete();
         Mass->fillComplete();
 
+        assert(!Stiff->isFillActive());
+        assert(Stiff->isFillComplete());
+
+        assert(!Stiff->isGloballyIndexed()); // fails because fillComplete() turns global indicies into local
 
         Teuchos::RCP<Teuchos::FancyOStream> outStream =
             Teuchos::VerboseObjectBase::getDefaultOStream();
         Teuchos::EVerbosityLevel v=Teuchos::VERB_EXTREME;
 
-        std::cout << " ========================================== " << std::endl;
-        std::cout << "DESCRIBING STIFF MATRIX: " << std::endl;
-        Stiff->describe(*outStream,v);
-        std::cout << "DESCRIBING MASS MATRIX: " << std::endl;
-        Mass->describe(*outStream,v);
-        std::cout << " ========================================== " << std::endl;
+        // std::cout << " ========================================== " << std::endl;
+        // std::cout << "DESCRIBING STIFF MATRIX: " << std::endl;
+        // Stiff->describe(*outStream,v);
+        // std::cout << "DESCRIBING MASS MATRIX: " << std::endl;
+        // Mass->describe(*outStream,v);
+        // std::cout << " ========================================== " << std::endl;
 
         ST one = 1.0, hdt = .00005; // half time step
-
-        RCP<tcrsmatrix_t> A = rcp(new tcrsmatrix_t(*Stiff)); // A = Mass+Stiff*dt/2
-        A->resumeFill();
-        if (A->isGloballyIndexed()) {
-            std::cout << "A IS Globally INDEXED" << std::endl;
-        } else {
-            std::cout << "a is NOT Globally indexed" << std::endl;
-        }
-        try {
-            Tpetra::MatrixMatrix::Add(*Mass, false, one, *A, hdt);
-        } catch (std::runtime_error& ex) {
-            std::cout << "Error from MatrixMatrix::Add: " << ex.what() << std::endl;
-            return 1;
-        }
-
+        RCP<tcrsmatrix_t> A_add = rcp(new tcrsmatrix_t(*Stiff)); // A = Mass+Stiff*dt/2
+        RCP<tcrsmatrix_t> A = Tpetra::MatrixMatrix::add(one, false, *Mass, hdt, false, *A);
         A->fillComplete();
 
         hdt = -hdt;
-        RCP<tcrsmatrix_t> B = rcp(new tcrsmatrix_t(*Stiff)); // B = Mass-Stiff*dt/2
-        B->resumeFill();
-        try {
-            Tpetra::MatrixMatrix::Add(*Mass, false, one, *B, hdt);
-        } catch (std::runtime_error& ex) {
-            std::cout << "Error from MatrixMatrix::Add: " << ex.what() << std::endl;
-            return 1;
-        }
+        RCP<tcrsmatrix_t> B_add = rcp(new tcrsmatrix_t(*Stiff)); // B = Mass-Stiff*dt/2
+        RCP<tcrsmatrix_t> B = Tpetra::MatrixMatrix::add(one, false, *Mass, hdt, false, *B);
         B->fillComplete();
 
-        std::cout << " ========================================== " << std::endl;
-        std::cout << "DESCRIBING A: " << std::endl;
-        A->describe(*outStream,v);
-        std::cout << "DESCRIBING B: " << std::endl;
-        B->describe(*outStream,v);
-        std::cout << " ========================================== " << std::endl;
+        // std::cout << " ========================================== " << std::endl;
+        // std::cout << "DESCRIBING A: " << std::endl;
+        // A->describe(*outStream,v);
+        // std::cout << "DESCRIBING B: " << std::endl;
+        // B->describe(*outStream,v);
+        // std::cout << " ========================================== " << std::endl;
 
         B->apply(*vecLHS, *vecRHS); // rhs_new := B*lhs_old,
 
