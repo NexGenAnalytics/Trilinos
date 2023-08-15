@@ -7,7 +7,7 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-# spack find -p
+spack find -p
 
 export MPICC=$(which mpicc)
 export MPICXX=$(which mpicxx)
@@ -29,9 +29,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_TEST_CATEGORIES=BASIC \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
     \
-    -D TPL_ENABLE_BLAS=OFF \
+    -D TPL_ENABLE_BLAS=ON \
     -D BLAS_LIBRARY_DIRS="${BLAS_ROOT}/lib" \
-    -D TPL_ENABLE_LAPACK=OFF \
+    -D TPL_ENABLE_LAPACK=ON \
     -D LAPACK_LIBRARY_DIRS="${LAPACK_ROOT}/lib" \
     \
     -D TPL_ENABLE_Matio=OFF \
