@@ -127,12 +127,12 @@ int main(int argc, char** argv) {
   //Check whether the -test flag was used.
 
   std::string testname = fei_test_utils::get_arg_value("-test", argc, argv);
-  fei_test_utils::broadcast_string(MPI_COMM_WORLD, 0, testname);
+  fei_test_utils::broadcast_string(fei::get_global_comm(), 0, testname);
 
   int errcode = 0;
 
   if (!testname.empty()) {
-    errcode = execute_named_test(testname, argc, argv, MPI_COMM_WORLD);
+    errcode = execute_named_test(testname, argc, argv, fei::get_global_comm());
 
     if (localProc == 0 && errcode == 0) {
       FEI_COUT << localProc << ": FEI test successful" << FEI_ENDL;
@@ -147,10 +147,10 @@ int main(int argc, char** argv) {
     if (localProc == 0) {
       filename = fei_test_utils::construct_filename(argc, argv);
     }
-    fei_test_utils::broadcast_string(MPI_COMM_WORLD, 0, filename);
+    fei_test_utils::broadcast_string(fei::get_global_comm(), 0, filename);
 
     try {
-      read_input_and_execute_fullsystem_tests(filename, argc, argv, MPI_COMM_WORLD);
+      read_input_and_execute_fullsystem_tests(filename, argc, argv, fei::get_global_comm());
     }
     catch(std::runtime_error& exc) {
       fei::console_out() << "caught fei test error: "<<exc.what() << FEI_ENDL;
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
   }
 
   int global_err_code = 0;
-  fei::GlobalSum(MPI_COMM_WORLD, errcode, global_err_code);
+  fei::GlobalSum(fei::get_global_comm(), errcode, global_err_code);
 
   if (localProc == 0) {
     double elapsedTime = fei::utils::cpu_time() - start_time;
@@ -292,7 +292,7 @@ int execute_named_test(const std::string& testname,
   std::string path = fei_test_utils::get_arg_value("-d", argc, argv);
 
   //make sure every processor has the path string.
-  fei_test_utils::broadcast_string(MPI_COMM_WORLD, 0, path);
+  fei_test_utils::broadcast_string(fei::get_global_comm(), 0, path);
 
   int errcode = 0;
 

@@ -84,7 +84,7 @@ void init_MatrixGraph_1(fei::MatrixGraph& mgraph, Teuchos::FancyOStream& out, bo
 
   int elemID = 1;
   std::vector<int> elem_nodes(nodes_per_elem); 
-  int thisProc = fei::localProc(MPI_COMM_WORLD);
+  int thisProc = fei::localProc(fei::get_global_comm());
   int firstNode = 2*thisProc;
   for(int i=0; i<nodes_per_elem; ++i) elem_nodes[i] = firstNode + i;
 
@@ -97,7 +97,7 @@ void init_MatrixGraph_1(fei::MatrixGraph& mgraph, Teuchos::FancyOStream& out, bo
 
 void test_factory_1(fei::Factory& factory, Teuchos::FancyOStream& out, bool& success)
 {
-  fei::SharedPtr<fei::VectorSpace> vspace = factory.createVectorSpace(MPI_COMM_WORLD, "test1_VecSpc");
+  fei::SharedPtr<fei::VectorSpace> vspace = factory.createVectorSpace(fei::get_global_comm(), "test1_VecSpc");
   TEUCHOS_TEST_INEQUALITY(vspace.get(), (fei::VectorSpace*)NULL, out, success);
 
   fei::SharedPtr<fei::VectorSpace> nullvspace;
@@ -143,7 +143,7 @@ void test_Matrix_1(fei::Matrix& mat, Teuchos::FancyOStream& out, bool& success)
 
 void test_factory_2(fei::Factory& factory, Teuchos::FancyOStream& out, bool& success)
 {
-  fei::SharedPtr<fei::VectorSpace> vspace = factory.createVectorSpace(MPI_COMM_WORLD, "test1_VecSpc2");
+  fei::SharedPtr<fei::VectorSpace> vspace = factory.createVectorSpace(fei::get_global_comm(), "test1_VecSpc2");
   fei::SharedPtr<fei::VectorSpace> nullvspace;
   fei::SharedPtr<fei::MatrixGraph> mgraph = factory.createMatrixGraph(vspace, nullvspace, "test1_MGrph2");
 
@@ -165,7 +165,7 @@ void test_factory_2(fei::Factory& factory, Teuchos::FancyOStream& out, bool& suc
 
 TEUCHOS_UNIT_TEST(Factory, Trilinos1)
 {
-  Factory_Trilinos factory(MPI_COMM_WORLD);
+  Factory_Trilinos factory(fei::get_global_comm());
 
   test_factory_1(factory, out, success);
 
@@ -174,8 +174,8 @@ TEUCHOS_UNIT_TEST(Factory, Trilinos1)
 
 TEUCHOS_UNIT_TEST(Factory, AZLSC1)
 {
-  fei::SharedPtr<LinearSystemCore> az_lsc(new fei_trilinos::Aztec_LinSysCore(MPI_COMM_WORLD));
-  snl_fei::Factory factory(MPI_COMM_WORLD, az_lsc);
+  fei::SharedPtr<LinearSystemCore> az_lsc(new fei_trilinos::Aztec_LinSysCore(fei::get_global_comm()));
+  snl_fei::Factory factory(fei::get_global_comm(), az_lsc);
 
   test_factory_1(factory, out, success);
 
@@ -184,7 +184,7 @@ TEUCHOS_UNIT_TEST(Factory, AZLSC1)
 
 TEUCHOS_UNIT_TEST(Factory, Aztec1)
 {
-  Factory_Aztec factory(MPI_COMM_WORLD);
+  Factory_Aztec factory(fei::get_global_comm());
 
   test_factory_1(factory, out, success);
 

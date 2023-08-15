@@ -81,7 +81,7 @@ int main(int argc, char** argv)
   MPI_Comm comm;
   int numProcs, localProc;
   CHK_ERR( fei_test_utils::initialize_mpi(argc, argv, localProc, numProcs) );
-  comm = MPI_COMM_WORLD;
+  comm = fei::get_global_comm();
 
   std::vector<std::string> stdstrings;
   CHK_ERR( fei_test_utils::get_filename_and_read_input(argc, argv,

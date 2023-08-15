@@ -40,29 +40,41 @@
 // @HEADER
 */
 
-#ifndef _fei_mpi_h_
-#define _fei_mpi_h_
+#ifndef _fei_global_comm_h_
+#define _fei_global_comm_h_
 
-
-#include "fei_macros.hpp"
-
-#ifdef FEI_SER
-/**
-  If FEI_SER is defined, the user wants to build/run in purely serial mode,
-  without linking against MPI.
-  To minimize #ifdefs in FEI code, we do a few #defines for
-  some common MPI symbols that appear in the code.
-*/
-#define MPI_Comm int
-#define MPI_Request int
-#define MPI_Abort(a, b) abort()
-#define MPI_Wtime() 0.0
-#define MPI_Barrier( a ) (void)a
-#define MPI_SUCCESS 0
-
+#ifdef HAVE_MPI
+#include <mpi.h>
+#include <mutex>
 #endif
 
-#include "fei_GlobalComm.hpp"
+namespace fei {
 
-#endif // _fei_mpi_h_
+#ifdef HAVE_MPI
 
+static std::mutex mpi_mutex;
+static MPI_Comm Global_MPI_Comm = MPI_COMM_WORLD;
+
+inline void initialize_global_comm(MPI_Comm comm) {
+    std::lock_guard<std::mutex> guard(mpi_mutex);
+    Global_MPI_Comm = comm;
+}
+
+inline MPI_Comm get_global_comm() {
+    std::lock_guard<std::mutex> guard(mpi_mutex);
+    return Global_MPI_Comm;
+}
+
+#else
+
+inline void initialize_global_comm(MPI_Comm) {}
+
+inline MPI_Comm get_global_comm() {
+    return 0;
+}
+
+#endif /* HAVE_MPI */
+
+}
+
+#endif /* _fei_global_comm_h_ */

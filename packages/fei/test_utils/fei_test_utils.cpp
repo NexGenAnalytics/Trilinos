@@ -66,8 +66,8 @@ int initialize_mpi(int argc, char** argv, int& localProc, int& numProcs)
 {
 #ifndef FEI_SER
   if (MPI_Init(&argc, &argv) != MPI_SUCCESS) ERReturn(-1);
-  if (MPI_Comm_rank(MPI_COMM_WORLD, &localProc) != MPI_SUCCESS) ERReturn(-1);
-  if (MPI_Comm_size(MPI_COMM_WORLD, &numProcs) != MPI_SUCCESS) ERReturn(-1);
+  if (MPI_Comm_rank(fei::get_global_comm(), &localProc) != MPI_SUCCESS) ERReturn(-1);
+  if (MPI_Comm_size(fei::get_global_comm(), &numProcs) != MPI_SUCCESS) ERReturn(-1);
 #else
   localProc = 0;
   numProcs = 1;
@@ -121,8 +121,8 @@ void broadcast_string(MPI_Comm comm, int root, std::string& strg)
   return;
 #else
   int numprocs = 1, localproc = 0;
-  MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &localproc);
+  MPI_Comm_size(fei::get_global_comm(), &numprocs);
+  MPI_Comm_rank(fei::get_global_comm(), &localproc);
   if (numprocs==1) {
     return;
   }
