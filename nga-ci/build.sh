@@ -36,9 +36,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D BUILD_SHARED_LIBS:BOOL=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
-    -D BLAS_LIBRARY_DIRS="${BLAS_ROOT}/lib" \
     -D TPL_ENABLE_LAPACK=ON \
-    -D LAPACK_LIBRARY_DIRS="${LAPACK_ROOT}/lib" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
