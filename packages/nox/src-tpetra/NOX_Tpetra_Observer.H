@@ -1,13 +1,12 @@
-/*
-// @HEADER
+//@HEADER
 // ************************************************************************
-// 
-//        Piro: Strategy package for embedded analysis capabilitites
-//                  Copyright (2010) Sandia Corporation
-// 
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software.
-// 
+//
+//            NOX: An Object-Oriented Nonlinear Solver Package
+//                 Copyright (2002) Sandia Corporation
+//
+// Under terms of Contract DE-AC04-94AL85000, there is a non-exclusive
+// license for use of this work by or on behalf of the U.S. Government.
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -35,52 +34,44 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Questions? Contact Andy Salinger (agsalin@sandia.gov), Sandia
-// National Laboratories.
-// 
+// Questions? Contact Roger Pawlowski (rppawlo@sandia.gov) or
+// Eric Phipps (etphipp@sandia.gov), Sandia National Laboratories.
 // ************************************************************************
-// @HEADER
-*/
+//  CVS Information
+//  $Source$
+//  $Author$
+//  $Date$
+//  $Revision$
+// ************************************************************************
+//@HEADER
 
-#ifndef PIROTEST_OBSERVESOLUTION_TPETRA
-#define PIROTEST_OBSERVESOLUTION_TPETRA
+#ifndef NOX_TPETRA_OBSERVER
+#define NOX_TPETRA_OBSERVER
 
-#include "NOX_Tpetra_Observer.H"
+#include <Tpetra_Vector.hpp>
+
+namespace NOX {
+namespace Tpetra {
 
 template<class ScalarType>
-class ObserveSolution_Tpetra : public NOX::Tpetra::Observer<ScalarType>
+class Observer
 {
   using tvector_t = Tpetra::Vector<ScalarType>;
-
+  
 public:
-  ObserveSolution_Tpetra () {};
+  Observer () {};
+  virtual ~Observer () {};
 
-  ~ObserveSolution_Tpetra () {};
+  virtual void observeSolution(const tvector_t& soln) = 0;
 
-  void observeSolution(const tvector_t& solution)
-  {
-    double norm;
-    solution.norm2(&norm);
-    if(solution.getMap().getComm().MyPID() == 0)
-    {
-      std::cout << "ObserveSolution: Norm = " << norm << std::endl;
-    }
-  }
-
-  void observeSolution(const tvector_t& solution, double time_or_param_val)
-  {
-    double norm;
-    solution.norm2(&norm);
-    if(solution.getMap().getComm().MyPID() == 0)
-    {
-      std::cout << "ObserveSolution: Norm = " << norm 
-                << "  for param/time = " << time_or_param_val
-                << std::endl;
-    }
-  }
+  virtual void observeSolution(const tvector_t& soln, double /* time_or_param_val */)
+  { observeSolution(soln); };
 
 private:
 
 };
 
-#endif //PIROTEST_OBSERVESOLUTION_TPETRA
+} // end of namespace Tpetra
+} // end of namespace NOX
+
+#endif //NOX_TPETRA_OBSERVER
