@@ -8,6 +8,7 @@
 
 #include "Pike_BlackBox_config.hpp"  // for debug define
 #include "Pike_MultiphysicsDistributor.hpp"
+#include "Pike_GlobalComm.hpp"
 
 namespace pike {
   int translateMpiRank(const int& rankA, 
@@ -273,7 +274,7 @@ namespace pike {
     MPI_Comm_group(myRawMpiComm,&myGroup);
 
     MPI_Group worldGroup;
-    MPI_Comm_group(MPI_COMM_WORLD,&worldGroup);
+    MPI_Comm_group(get_global_comm(),&worldGroup);
 
     MPI_Group_translate_ranks(myGroup,1,&myRank,worldGroup,&worldRank);
    
