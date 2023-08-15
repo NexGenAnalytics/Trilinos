@@ -7,7 +7,7 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-spack find -p
+# spack find -p
 
 export MPICC=$(which mpicc)
 export MPICXX=$(which mpicxx)
