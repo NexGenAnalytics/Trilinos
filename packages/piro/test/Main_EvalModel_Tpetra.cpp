@@ -50,7 +50,9 @@
 
 #include "Thyra_ModelEvaluator.hpp"
 
-#include "Tpetra_Core.hpp" // ???????,
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_CrsMatrix.hpp>
 
 template<class ScalarType>
 int run(int argc, char *argv[]) {
