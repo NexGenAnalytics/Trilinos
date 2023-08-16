@@ -21,7 +21,7 @@ export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb
 
 
 # install LAPACK
-sudo apt-get install liblapack-dev
+apt-get install liblapack-dev
 
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
