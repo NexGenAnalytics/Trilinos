@@ -2,7 +2,6 @@ name: Check MPI_COMM_WORLD
 
 on:
   pull_request:
-  pull_request_target:
 
 jobs:
   build:
@@ -12,16 +11,10 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
       with:
-        ref: ${{ github.event.pull_request.head.sha }}
-        fetch-depth: 0  # this line fetches the complete history
-
-    - name: Install dependencies
-      run: |
-        pip install gitpython
+        fetch-depth: 0
 
     - name: Search for MPI_COMM_WORLD in modified lines
-      env:
-        BASE_REF: origin/${{ github.event.pull_request.base.ref }}
-        HEAD_REF: ${{ github.event.pull_request.head.sha }}
       run: |
-        python ./sampleScripts/check-mpi-comm-world-usage.py
+        python $GITHUB_WORKSPACE/sampleScripts/check-mpi-comm-world-usage.py \
+        --base origin/${{ github.event.pull_request.base.ref }} \
+        --head ${{ github.event.pull_request.head.sha }}

@@ -1,19 +1,15 @@
 import sys
-import os
 import subprocess
 import re
+import argparse
 
-def get_changed_files(start_commit, end_commit):
-    """Get a dictionary of files and their changed lines between two commits where MPI_COMM_WORLD was added."""
-    cmd = ["git", "diff", "-U0", "--ignore-all-space", start_commit, end_commit]
-    result = subprocess.check_output(cmd).decode('utf-8')
-
+def parse_diff_output(changed_files):
     # Regex to capture filename and the line numbers of the changes
     file_pattern = re.compile(r'^\+\+\+ b/(.*?)$', re.MULTILINE)
     line_pattern = re.compile(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@', re.MULTILINE)
 
     files = {}
-    for match in file_pattern.finditer(result):
+    for match in file_pattern.finditer(changed_files):
         file_name = match.group(1)
 
         # Filtering for C/C++ files and excluding certain directories
@@ -22,10 +18,10 @@ def get_changed_files(start_commit, end_commit):
         ):
             # Find the lines that changed for this file
             lines_start_at = match.end()
-            next_file_match = file_pattern.search(result, pos=match.span(0)[1])
+            next_file_match = file_pattern.search(changed_files, pos=match.span(0)[1])
 
             # Slice out the part of the diff that pertains to this file
-            file_diff = result[lines_start_at:next_file_match.span(0)[0] if next_file_match else None]
+            file_diff = changed_files[lines_start_at:next_file_match.span(0)[0] if next_file_match else None]
 
             # Extract line numbers of the changes
             changed_lines = []
@@ -38,9 +34,14 @@ def get_changed_files(start_commit, end_commit):
                 next_chunk = line_pattern.search(file_diff, pos=line_match.span(0)[1])
                 chunk_diff = file_diff[chunk_start:next_chunk.span(0)[0] if next_chunk else None]
 
-                # Only include if "MPI_COMM_WORLD" is added and "CHECK: ALLOW MPI_COMM_WORLD" isn't present
-                if "MPI_COMM_WORLD" in chunk_diff and "CHECK: ALLOW MPI_COMM_WORLD" not in chunk_diff:
-                    changed_lines.extend(range(start_line, start_line + num_lines))
+                lines = chunk_diff.splitlines()
+                line_counter = 0
+                for line in lines:
+                    if line.startswith('+'):
+                        line_counter += 1
+                        if "MPI_COMM_WORLD" in line and not "CHECK: ALLOW MPI_COMM_WORLD" in line:
+                            # Only include lines where "MPI_COMM_WORLD" is added and "CHECK: ALLOW MPI_COMM_WORLD" is not present")
+                            changed_lines.append(start_line + line_counter)
 
             if changed_lines:
                 files[file_name] = changed_lines
@@ -48,21 +49,50 @@ def get_changed_files(start_commit, end_commit):
     return files
 
 
+def get_changed_files_uncommitted():
+    """Get a dictionary of files and their changed lines where MPI_COMM_WORLD was added from uncommitted changes."""
+    cmd = ["git", "diff", "-U0", "--ignore-all-space", "HEAD"]
+    result = subprocess.check_output(cmd).decode('utf-8')
+
+    return parse_diff_output(result)
+
+def get_changed_files(start_commit, end_commit):
+    """Get a dictionary of files and their changed lines between two commits where MPI_COMM_WORLD was added."""
+    cmd = ["git", "diff", "-U0", "--ignore-all-space", start_commit, end_commit]
+    result = subprocess.check_output(cmd).decode('utf-8')
+
+    return parse_diff_output(result)
+
+def print_occurences(changed_files):
+    print("Detected MPI_COMM_WORLD in the following files:")
+    for file_name, lines in changed_files.items():
+        print(f"File: {file_name}")
+        print("Changed Lines:", ', '.join(map(str, lines)))
+        print("-----")
+
 if __name__ == "__main__":
-    # In a GitHub action, the base commit and head commit can be specified as:
-    start_commit = os.environ.get("BASE_REF")
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--base", default="origin/develop", help="BASE commit (default: %(default)s)")
+    parser.add_argument("--head", default="HEAD", help="HEAD commit (default: %(default)s)")
+
+    start_commit = parser.parse_args().base
     print(f"Start commit: {start_commit}")
-    end_commit = os.environ.get("HEAD_REF")
+
+    end_commit = parser.parse_args().head
     print(f"End commit: {end_commit}")
 
-    changed_files = get_changed_files(start_commit, end_commit)
+    commited_occurences = get_changed_files(start_commit, end_commit)
+    uncommited_occurences = get_changed_files_uncommitted()
 
-    if changed_files:
-        print("Detected MPI_COMM_WORLD in the following files:")
-        for file_name, lines in changed_files.items():
-            print(f"File: {file_name}")
-            print("Changed Lines:", ', '.join(map(str, lines)))
-            print("-----")
+    mpi_comm_world_detected = commited_occurences or uncommited_occurences
+
+    if mpi_comm_world_detected:
+        if commited_occurences:
+            print_occurences(commited_occurences)
+        if uncommited_occurences:
+            print_occurences(uncommited_occurences)
+
         sys.exit(1)  # Exit with an error code to fail the GitHub Action
     else:
         print("No addition of MPI_COMM_WORLD detected.")

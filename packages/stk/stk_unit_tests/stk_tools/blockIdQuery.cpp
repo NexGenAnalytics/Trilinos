@@ -45,7 +45,6 @@ TEST_F(StkToolsB, GetBlockIdsForSpecifiedSideset)
   }
   for (int id : blockIds)
   {
-    MPI_COMM_WORLD
     outfile << "blockId: " << id << std::endl;
   }
 
