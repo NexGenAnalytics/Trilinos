@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: self-hosted
     strategy:
-      fail-fast: false
+      fail-fast: true
     steps:
       - uses: actions/checkout@v3
       - name: CI Variables
@@ -30,7 +30,7 @@ jobs:
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
           echo "DOCKER_TAG: ${{ env.DOCKER_TAG }}"
           echo "SCOPE_NAME  ${{ env.SCOPE_NAME }}"
-      - name: Build the Docker Image
+      - name: Build and test the Docker Image
         id: docker_build
         continue-on-error: false
         uses: docker/build-push-action@v3

@@ -33,7 +33,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_TESTS=ON \
     -D Trilinos_TEST_CATEGORIES=BASIC \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
-    -D Trilinos_VERBOSE_CONFIGURE=ON \
+    -D Trilinos_VERBOSE_CONFIGURE=OFF \
     -D BUILD_SHARED_LIBS:BOOL=ON \
     \
     -D Trilinos_WARNINGS_AS_ERRORS_FLAGS="-Wno-error" \
@@ -75,4 +75,4 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D Trilinos_ENABLE_Epetra=OFF \
     -S /opt/src/Trilinos -B /opt/build/Trilinos
-ninja -j6
+ninja -j 10
