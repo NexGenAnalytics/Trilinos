@@ -37,9 +37,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D BUILD_SHARED_LIBS:BOOL=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
-    -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.a" \
-    -D TPL_LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.a" \
+    -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
     -D TPL_ENABLE_LAPACK=ON \
+    -D TPL_LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.so" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
