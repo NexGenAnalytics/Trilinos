@@ -19,11 +19,6 @@ export MPIRUN="${MPI_ROOT}/bin/mpirun"
 export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
 export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 
-
-# install LAPACK
-apt-get install liblapack-dev
-
-
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
     -D CMAKE_BUILD_TYPE=DEBUG \
@@ -42,6 +37,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.a" \
+    -D TPL_LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.a" \
     -D TPL_ENABLE_LAPACK=ON \
     \
     -D TPL_ENABLE_Matio=OFF \

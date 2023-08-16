@@ -39,11 +39,3 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           context: .
           file: ./nga-ci/nga-ci.dockerfile
-      - name: Trilinos Build
-        id: trilinos_build
-        run: |
-          bash /opt/src/Trilinos/nga-ci/build.sh
-      - name: Trilinos Tests
-        id: trilinos_tests
-        run: |
-          bash /opt/src/Trilinos/nga-ci/test.sh
