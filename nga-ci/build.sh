@@ -9,14 +9,14 @@ cd /opt/build/Trilinos
 
 spack find -p
 
-export MPI_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openmpi-4.1.5-qjkxgt6ffv6shm6rgttbnwuerhchufq7"
+export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
 
+export MPI_ROOT="${CMAKE_PREFIX_PATH}/openmpi-4.1.5-qjkxgt6ffv6shm6rgttbnwuerhchufq7"
 export MPICC="${MPI_ROOT}/bin/mpicc"
 export MPICXX="${MPI_ROOT}/bin/mpicxx"
 export MPIF90="${MPI_ROOT}/bin/mpif90"
 export MPIRUN="${MPI_ROOT}/bin/mpirun"
 
-export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
 export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 export LAPACK_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 
@@ -35,6 +35,10 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
     -D Trilinos_VERBOSE_CONFIGURE=ON \
     -D BUILD_SHARED_LIBS:BOOL=ON \
+    \
+    -D Trilinos_WARNINGS_AS_ERRORS_FLAGS="-Wno-error" \
+    -D Trilinos_ENABLE_SEACAS=OFF \
+    -D Trilinos_ENABLE_Sacado=OFF \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
