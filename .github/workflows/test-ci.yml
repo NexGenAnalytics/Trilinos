@@ -43,9 +43,7 @@ jobs:
         id: trilinos_build
         run: |
           bash /opt/src/Trilinos/nga-ci/build.sh
-          bash /opt/src/Trilinos/nga-ci/test.sh
       - name: Trilinos Tests
         id: trilinos_tests
         run: |
-          bash /opt/src/Trilinos/nga-ci/build.sh
           bash /opt/src/Trilinos/nga-ci/test.sh
