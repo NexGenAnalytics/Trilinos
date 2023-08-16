@@ -37,5 +37,4 @@ jobs:
         with:
           push: false
           tags: ${{ env.DOCKER_TAG }}
-          context: .
           file: ./nga-ci/nga-ci.dockerfile
