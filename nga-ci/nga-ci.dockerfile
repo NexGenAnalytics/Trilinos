@@ -1,6 +1,10 @@
 # Choose a base image
 FROM calebschilly/trilinos-deps:main
 
+ARG USER=nga-ci
+ARG UID=1000
+USER nga-ci
+
 COPY . /opt/src/Trilinos
 RUN mkdir -p /opt/build/Trilinos
 
