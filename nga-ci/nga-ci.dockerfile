@@ -4,7 +4,7 @@ FROM calebschilly/trilinos-deps:main
 COPY . /opt/src/Trilinos
 RUN mkdir -p /opt/build/Trilinos
 
-RUN chmod +777 /opt/*
+RUN chmod 777 /opt/*
 
 RUN useradd -ms /bin/bash nga-ci
 
