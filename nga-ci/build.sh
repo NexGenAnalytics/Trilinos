@@ -16,12 +16,16 @@ export MPICXX="${MPI_ROOT}/bin/mpicxx"
 export MPIF90="${MPI_ROOT}/bin/mpif90"
 export MPIRUN="${MPI_ROOT}/bin/mpirun"
 
-export BLAS_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
+export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
+export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 
-# -D TPL_ENABLE_LAPACK=ON \
+
+# install LAPACK
+sudo apt-get install liblapack-dev
+
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
-    -D CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0" \
+    -D CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
     -D CMAKE_BUILD_TYPE=DEBUG \
     -D Trilinos_ENABLE_DEBUG=ON \
     -D Trilinos_PARALLEL_LINK_JOBS_LIMIT=2 \
@@ -38,6 +42,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.a" \
+    -D TPL_ENABLE_LAPACK=ON \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
