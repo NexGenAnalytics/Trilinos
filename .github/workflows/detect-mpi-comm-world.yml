@@ -1,0 +1,43 @@
+name: Check MPI_COMM_WORLD
+
+on:
+  pull_request:
+  pull_request_target:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0  # this line fetches the complete history
+
+    - name: Install dependencies
+      run: |
+        pip install gitpython
+
+    - name: Search for MPI_COMM_WORLD in modified lines
+      env:
+        BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+        HEAD_REF: ${{ github.event.pull_request.head.sha }}
+      run: |
+        python ./sampleScripts/check-mpi-comm-world-usage.py
+
+
+      # - name: Search for MPI_COMM_WORLD in modified lines
+      # run: |
+      #   target="origin/${{ github.event.pull_request.base.ref }}"
+      #   source="${{ github.event.pull_request.head.sha }}"
+      #   found=0
+      #   for file in $(git diff --name-only "$target..$source" | grep -vE 'example|test' | grep -E '\.c$|\.cpp$|\.h$|\.hpp$'); do
+      #       has_occurrence=$(git diff "$target..$source" -- "$file" | grep -n '^+' | grep "MPI_COMM_WORLD")
+      #       if [[ -n "$has_occurrence" ]]; then
+      #           echo "$file"
+      #           echo "$has_occurrence"
+      #           found=1
+      #       fi
+      #   done
+      #   exit $found
