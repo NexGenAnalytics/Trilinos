@@ -16,8 +16,7 @@ export MPICXX="${MPI_ROOT}/bin/mpicxx"
 export MPIF90="${MPI_ROOT}/bin/mpif90"
 export MPIRUN="${MPI_ROOT}/bin/mpirun"
 
-export OPENBLAS_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
-export BLAS_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two/lib"
+export BLAS_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 export LAPACK_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
@@ -38,6 +37,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_ENABLE_LAPACK=ON \
+    -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.a" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
