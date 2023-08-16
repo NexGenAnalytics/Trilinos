@@ -30,11 +30,22 @@ jobs:
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
           echo "DOCKER_TAG: ${{ env.DOCKER_TAG }}"
           echo "SCOPE_NAME  ${{ env.SCOPE_NAME }}"
-      - name: Build the Docker Image and Code
+      - name: Build the Docker Image
         id: docker_build
         continue-on-error: false
         uses: docker/build-push-action@v3
         with:
           push: false
           tags: ${{ env.DOCKER_TAG }}
+          context: .
           file: ./nga-ci/nga-ci.dockerfile
+      - name: Trilinos Build
+        id: trilinos_build
+        run: |
+          bash /opt/src/Trilinos/nga-ci/build.sh
+          bash /opt/src/Trilinos/nga-ci/test.sh
+      - name: Trilinos Tests
+        id: trilinos_tests
+        run: |
+          bash /opt/src/Trilinos/nga-ci/build.sh
+          bash /opt/src/Trilinos/nga-ci/test.sh
