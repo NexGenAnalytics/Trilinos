@@ -31,6 +31,7 @@ public:
     size_t xdim = 10, ydim = 11, zdim = 12;
 
     Teuchos::CommandLineProcessor cmdp(false, false);
+    MPI_COMM_WORLD
     cmdp.setOption("file", &matrixFileName,
                    "Name of the Matrix Market file to use");
     cmdp.setOption("xdim", &xdim,

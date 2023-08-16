@@ -39,6 +39,7 @@ AuxiliaryIntegralModelEvaluator(
   inArgs.setSupports(MEB::IN_ARG_beta);
   inArgs.set_Np(me_inArgs.Np());
   prototypeInArgs_ = inArgs;
+  MPI_COMM_WORLD // CHECK: ALLOW MPI_COMM_WORLD
 
   MEB::OutArgs<Scalar> me_outArgs = model_->createOutArgs();
   MEB::OutArgsSetup<Scalar> outArgs;
@@ -47,6 +48,7 @@ AuxiliaryIntegralModelEvaluator(
   outArgs.setSupports(MEB::OUT_ARG_f);
   outArgs.setSupports(MEB::OUT_ARG_W_op);
   prototypeOutArgs_ = outArgs;
+  MPI_COMM_WORLD
 }
 
 template <typename Scalar>

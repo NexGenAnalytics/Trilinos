@@ -129,7 +129,9 @@ public:
   IntegratorAdjointSensitivity();
 
   /// Destructor
-  virtual ~IntegratorAdjointSensitivity() {}
+  virtual ~IntegratorAdjointSensitivity() {
+    MPI_COMM_WORLD
+  }
 
   /// \name Basic integrator methods
   //@{

@@ -43,6 +43,7 @@ int ML_Comm_Create2( ML_Comm ** com, USR_COMM in_comm )
    com_ptr->USR_irecvbytes = ML_Comm_Irecv;
    com_ptr->USR_waitbytes  = ML_Comm_Wait;
    com_ptr->USR_cheapwaitbytes  = ML_Comm_CheapWait;
+   MPI_COMM_WORLD
 
 #ifdef ML_MPI
    MPI_Comm_size(in_comm, &(com_ptr->ML_nprocs));

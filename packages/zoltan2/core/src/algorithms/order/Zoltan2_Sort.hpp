@@ -51,9 +51,9 @@
 
 ////////////////////////////////////////////////////////////////////////
 //! \file Zoltan2_Sort.hpp
-//! \brief Sort vector of pairs (key, value) by value. 
+//! \brief Sort vector of pairs (key, value) by value.
 //! \brief This class is needed so we also get the sorted keys (indices).
-  
+
 // TODO: This is a generic utility class; should move this source file.
 // We could perhaps use Sort2 from Tpetra, but that uses a custom sort not std::sort
 
@@ -82,6 +82,7 @@ class SortPairs
   public:
     SortPairs()
     {
+      MPI_COMM_WORLD
     }
 
   public:

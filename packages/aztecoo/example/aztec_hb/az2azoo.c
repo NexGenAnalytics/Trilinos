@@ -1,13 +1,13 @@
 /*
 //@HEADER
 // ***********************************************************************
-// 
-//        AztecOO: An Object-Oriented Aztec Linear Solver Package 
+//
+//        AztecOO: An Object-Oriented Aztec Linear Solver Package
 //                 Copyright (2002) Sandia Corporation
-// 
+//
 // Under terms of Contract DE-AC04-94AL85000, there is a non-exclusive
 // license for use of this work by or on behalf of the U.S. Government.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -35,8 +35,8 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Questions? Contact Michael A. Heroux (maherou@sandia.gov) 
-// 
+// Questions? Contact Michael A. Heroux (maherou@sandia.gov)
+//
 // ***********************************************************************
 //@HEADER
 */
@@ -61,8 +61,8 @@
 #define double_quote '"'
 
 #ifdef __cplusplus
-extern "C" void AZOO_iterate(double * xsolve, double * b, 
-			     int * options, double * params, 
+extern "C" void AZOO_iterate(double * xsolve, double * b,
+			     int * options, double * params,
 			     double * status, int *proc_config,
 			     AZ_MATRIX * Amat);
 #endif
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 
   double *val_msr;
   int *bindx_msr;
-  
+
   double norm, d ;
 
   int matrix_type;
@@ -109,10 +109,11 @@ int main(int argc, char *argv[])
 
 #ifdef AZTEC_MPI
   MPI_Init(&argc,&argv);
+  MPI_COMM_WORLD
 #endif
 
   /* get number of processors and the name of this processor */
- 
+
 #ifdef AZTEC_MPI
   AZ_set_proc_config(proc_config,MPI_COMM_WORLD);
 #else
@@ -123,27 +124,27 @@ int main(int argc, char *argv[])
 	 proc_config[AZ_node],proc_config[AZ_N_procs]) ;
 
 #ifdef VBR
-  if(argc != 3) 
-    perror("error: enter name of data and partition file on command line") ; 
+  if(argc != 3)
+    perror("error: enter name of data and partition file on command line") ;
 #else
-  if(argc != 2) perror("error: enter name of data file on command line") ; 
+  if(argc != 2) perror("error: enter name of data file on command line") ;
 #endif
   /* Set exact solution to NULL */
   xexact = NULL;
 
-  /* Read matrix file and distribute among processors.  
-     Returns with this processor's set of rows */ 
+  /* Read matrix file and distribute among processors.
+     Returns with this processor's set of rows */
 
 #ifdef VBR
-  read_hb(argv[1], proc_config, &N_global, &n_nonzeros, 
+  read_hb(argv[1], proc_config, &N_global, &n_nonzeros,
 	  &val_msr,  &bindx_msr, &x, &b, &xexact);
-  
+
   create_vbr(argv[2], proc_config, &N_global, &N_blk_global,
 	     &n_nonzeros, &n_blk_nonzeros, &N_update, &update,
-	     bindx_msr, val_msr, &val, &indx, 
+	     bindx_msr, val_msr, &val, &indx,
 	     &rpntr, &cpntr, &bpntr, &bindx);
 
-  if(proc_config[AZ_node] == 0) 
+  if(proc_config[AZ_node] == 0)
     {
       free ((void *) val_msr);
       free ((void *) bindx_msr);
@@ -152,10 +153,10 @@ int main(int argc, char *argv[])
     matrix_type = AZ_VBR_MATRIX;
 
 
-  distrib_vbr_matrix( proc_config, N_global, N_blk_global, 
+  distrib_vbr_matrix( proc_config, N_global, N_blk_global,
 		      &n_nonzeros, &n_blk_nonzeros,
-		      &N_update, &update, 
-		      &val, &indx, &rpntr, &cpntr, &bpntr, &bindx, 
+		      &N_update, &update,
+		      &val, &indx, &rpntr, &cpntr, &bpntr, &bindx,
 		      &x, &b, &xexact);
 
 #else
@@ -169,7 +170,7 @@ int main(int argc, char *argv[])
 #endif
   /* convert matrix to a local distributed matrix */
   AZ_transform(proc_config, &external, bindx, val, update,
-	       &update_index, &extern_index, &data_org, 
+	       &update_index, &extern_index, &data_org,
 	       N_update, indx, bpntr, rpntr, &cpntr,
                matrix_type);
 
@@ -182,7 +183,7 @@ int main(int argc, char *argv[])
 #else
   N_local = N_update;
 #endif
- 
+
   Amat = AZ_matrix_create(N_local);
 
 #ifdef VBR
@@ -205,7 +206,7 @@ int main(int argc, char *argv[])
       N_external = data_org[AZ_N_external];
     }
 
-  xsolve  = (double *) calloc(N_local + N_external, 
+  xsolve  = (double *) calloc(N_local + N_external,
 			   sizeof(double)) ;
 
   for (i=0; i<N_local; i++) xsolve[i] = x[i];
@@ -218,7 +219,7 @@ int main(int argc, char *argv[])
     }
 
 #ifdef VBR
-  AZ_check_vbr(N_update, data_org[AZ_N_ext_blk], AZ_LOCAL, 
+  AZ_check_vbr(N_update, data_org[AZ_N_ext_blk], AZ_LOCAL,
 	       bindx, bpntr, cpntr, rpntr, proc_config);
 #else
   AZ_check_msr(bindx, N_update, N_external, AZ_LOCAL, proc_config);
@@ -320,7 +321,7 @@ int main(int argc, char *argv[])
 	     proc_config[AZ_node],sum/largest);
     }
 
-				       
+
   /*  NOTE:  This does not work because we need to use AZ_free for
       any arrays allocated by Aztec!!!
 
