@@ -13,7 +13,10 @@ def get_changed_files(start_commit, end_commit):
         f for f in files
         if f.endswith(('.c', '.cpp', '.h', '.hpp'))
         and 'test/' not in f
+        and 'tests/' not in f
+        and 'unit_test' not in f
         and 'example/' not in f
+        and 'examples/' not in f
     ]
 
     return c_cpp_files
