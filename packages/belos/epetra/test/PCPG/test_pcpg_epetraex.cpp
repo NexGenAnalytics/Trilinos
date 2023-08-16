@@ -236,11 +236,6 @@ int main(int argc, char *argv[]) {
     Mass->FillComplete();
     Mass->OptimizeStorage();
 
-    std::cout << "PRINTING STIFF MATRIX: " << std::endl;
-    Stiff->Print(std::cout);
-    std::cout << "PRINTING MASS MATRIX: " << std::endl;
-    Mass->Print(std::cout);
-
     double one = 1.0, hdt = .00005; // half time step
 
     RCP<Epetra_CrsMatrix> A = rcp(new Epetra_CrsMatrix(*Stiff) );// A = Mass+Stiff*dt/2
@@ -264,11 +259,6 @@ int main(int argc, char *argv[]) {
 
     B->FillComplete();
     B->OptimizeStorage();
-
-    std::cout << "PRINTING A: " << std::endl;
-    A->Print(std::cout);
-    std::cout << "PRINTING B: " << std::endl;
-    B->Print(std::cout);
 
     B->Multiply(false, *vecLHS, *vecRHS); // rhs_new := B*lhs_old,
 

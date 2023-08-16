@@ -115,7 +115,6 @@ int run(int argc, char *argv[]) {
 
     using toperator_t  = Tpetra::Operator<ST,LO,GO,NT>;
     using mtoperator_t = MueLu::TpetraOperator<ST,LO,GO,NT>;
-    // using boperator_t = Belos::MueLuOp<ST,LO,GO,NT>;
 
     using starray_t = Teuchos::Array<ST>;
     using goarray_t = Teuchos::Array<GO>;
@@ -195,11 +194,6 @@ int run(int argc, char *argv[]) {
         RCP<tvector_t> vecRHS   = rcp(new tvector_t(Map));
         RCP<tmultivector_t> LHS, RHS;
 
-        assert(4 == 4);
-        assert(!Stiff->isGloballyIndexed());
-
-        assert(!Stiff->isLocallyIndexed()); // because empty
-
         ST ko = 8.0 / 3.0, k1 = -1.0 / 3.0;
         starray_t k_arr(2);
         k_arr[0] = ko;
@@ -274,46 +268,14 @@ int run(int argc, char *argv[]) {
             }
         }
 
-        assert(Stiff->isGloballyIndexed()); // because non-empty
-        assert(Stiff->getRowMap()->isOneToOne());
-
-        assert(Stiff->isFillActive());
-
         Stiff->fillComplete();
         Mass->fillComplete();
 
-        assert(!Stiff->isFillActive());
-        assert(Stiff->isFillComplete());
+        ST one = 1.0, hdt = .00005; // A = Mass+Stiff*dt/2
+        RCP<tcrsmatrix_t> A = Tpetra::MatrixMatrix::add(one, false, *Mass, hdt, false, *Stiff);
 
-        assert(!Stiff->isGloballyIndexed()); // fails because fillComplete() turns global indicies into local
-
-        Teuchos::RCP<Teuchos::FancyOStream> outStream =
-            Teuchos::VerboseObjectBase::getDefaultOStream();
-        Teuchos::EVerbosityLevel v=Teuchos::VERB_EXTREME;
-
-        // std::cout << " ========================================== " << std::endl;
-        // std::cout << "DESCRIBING STIFF MATRIX: " << std::endl;
-        // Stiff->describe(*outStream,v);
-        // std::cout << "DESCRIBING MASS MATRIX: " << std::endl;
-        // Mass->describe(*outStream,v);
-        // std::cout << " ========================================== " << std::endl;
-
-        ST one = 1.0, hdt = .00005; // half time step
-        RCP<tcrsmatrix_t> A_add = rcp(new tcrsmatrix_t(*Stiff)); // A = Mass+Stiff*dt/2
-        RCP<tcrsmatrix_t> A = Tpetra::MatrixMatrix::add(one, false, *Mass, hdt, false, *A);
-        A->fillComplete();
-
-        hdt = -hdt;
-        RCP<tcrsmatrix_t> B_add = rcp(new tcrsmatrix_t(*Stiff)); // B = Mass-Stiff*dt/2
-        RCP<tcrsmatrix_t> B = Tpetra::MatrixMatrix::add(one, false, *Mass, hdt, false, *B);
-        B->fillComplete();
-
-        // std::cout << " ========================================== " << std::endl;
-        // std::cout << "DESCRIBING A: " << std::endl;
-        // A->describe(*outStream,v);
-        // std::cout << "DESCRIBING B: " << std::endl;
-        // B->describe(*outStream,v);
-        // std::cout << " ========================================== " << std::endl;
+        hdt = -hdt; // B = Mass-Stiff*dt/2
+        RCP<tcrsmatrix_t> B = Tpetra::MatrixMatrix::add(one, false, *Mass, hdt, false, *Stiff);
 
         B->apply(*vecLHS, *vecRHS); // rhs_new := B*lhs_old,
 
@@ -338,11 +300,6 @@ int run(int argc, char *argv[]) {
 #endif
         RCP<toperator_t> A_op = A;
         RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_op, MueLuList);
-
-        // Create the Belos preconditioned operator from the preconditioner.
-        // NOTE:  This is necessary because Belos expects an operator to apply the
-        //        preconditioner with Apply() NOT ApplyInverse().
-        // RCP<boperator_t> belosPrec = rcp(new boperator_t(Prec));
 
         ///////////////////////////////////////////////////
         //             Create Parameter List             //
