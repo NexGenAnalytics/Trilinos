@@ -17,7 +17,10 @@ export MPIF90="${MPI_ROOT}/bin/mpif90"
 export MPIRUN="${MPI_ROOT}/bin/mpirun"
 
 export BLAS_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
-export LAPACK_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
+
+
+# export LAPACK_ROOT="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
+apt-get install liblapacke-dev
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0" \
