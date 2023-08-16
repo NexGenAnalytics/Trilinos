@@ -216,7 +216,8 @@ DefaultComm<OrdinalType>::getComm ()
 #  if MPI_VERSION >= 2
 
     comm_ = new MpiComm<OrdinalType> (MPI_COMM_WORLD);
-
+    MPI_COMM_WORLD // CHECK: ALLOW MPI_COMM_WORLD
+    MPI_COMM_WORLD
     // We want comm_ to be deallocated when MPI_Finalize is called.
     // The standard idiom for this (look in the MPI standard) is to
     // register an attribute ((key,value) pair) with MPI_COMM_SELF,

@@ -1,41 +1,52 @@
 import sys
-import subprocess
 import os
+import subprocess
+import re
 
 def get_changed_files(start_commit, end_commit):
-    """Get list of files changed between two commits."""
-    cmd = ["git", "diff", "--name-only", start_commit, end_commit]
+    """Get a dictionary of files and their changed lines between two commits where MPI_COMM_WORLD was added."""
+    cmd = ["git", "diff", "-U0", "--ignore-all-space", start_commit, end_commit]
     result = subprocess.check_output(cmd).decode('utf-8')
-    files = result.splitlines()
 
-    # Filtering for C/C++ files and excluding ones with test/ or example/ anywhere in their paths
-    c_cpp_files = [
-        f for f in files
-        if f.endswith(('.c', '.cpp', '.h', '.hpp'))
-        and 'test/' not in f
-        and 'tests/' not in f
-        and 'unit_test' not in f
-        and 'example/' not in f
-        and 'examples/' not in f
-    ]
+    # Regex to capture filename and the line numbers of the changes
+    file_pattern = re.compile(r'^\+\+\+ b/(.*?)$', re.MULTILINE)
+    line_pattern = re.compile(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@', re.MULTILINE)
 
-    return c_cpp_files
+    files = {}
+    for match in file_pattern.finditer(result):
+        file_name = match.group(1)
 
+        # Filtering for C/C++ files and excluding certain directories
+        if file_name.endswith(('.c', '.cpp', '.h', '.hpp')) and all(
+            excluded not in file_name for excluded in ['test/', 'tests/', 'unit_test', 'example/', 'examples/']
+        ):
+            # Find the lines that changed for this file
+            lines_start_at = match.end()
+            next_file_match = file_pattern.search(result, pos=match.span(0)[1])
 
-def search_for_string_in_files(files, search_string):
-    """Search for a string in the list of files."""
-    matched_files = []
+            # Slice out the part of the diff that pertains to this file
+            file_diff = result[lines_start_at:next_file_match.span(0)[0] if next_file_match else None]
 
-    for file in files:
-        try:
-            with open(file, 'r') as f:
-                content = f.read()
-                if search_string in content:
-                    matched_files.append(file)
-        except Exception as e:
-            print(f"Error reading {file}: {e}")
+            # Extract line numbers of the changes
+            changed_lines = []
+            for line_match in line_pattern.finditer(file_diff):
+                start_line = int(line_match.group(1))
+                num_lines = int(line_match.group(2) or 1)
 
-    return matched_files
+                # The start and end positions for this chunk of diff
+                chunk_start = line_match.end()
+                next_chunk = line_pattern.search(file_diff, pos=line_match.span(0)[1])
+                chunk_diff = file_diff[chunk_start:next_chunk.span(0)[0] if next_chunk else None]
+
+                # Only include if "MPI_COMM_WORLD" is added and "CHECK: ALLOW MPI_COMM_WORLD" isn't present
+                if "MPI_COMM_WORLD" in chunk_diff and "CHECK: ALLOW MPI_COMM_WORLD" not in chunk_diff:
+                    changed_lines.extend(range(start_line, start_line + num_lines))
+
+            if changed_lines:
+                files[file_name] = changed_lines
+
+    return files
+
 
 if __name__ == "__main__":
     # In a GitHub action, the base commit and head commit can be specified as:
@@ -45,12 +56,13 @@ if __name__ == "__main__":
     print(f"End commit: {end_commit}")
 
     changed_files = get_changed_files(start_commit, end_commit)
-    matched_files = search_for_string_in_files(changed_files, "MPI_COMM_WORLD")
 
-    if matched_files:
+    if changed_files:
         print("Detected MPI_COMM_WORLD in the following files:")
-        for file in matched_files:
-            print(file)
+        for file_name, lines in changed_files.items():
+            print(f"File: {file_name}")
+            print("Changed Lines:", ', '.join(map(str, lines)))
+            print("-----")
         sys.exit(1)  # Exit with an error code to fail the GitHub Action
     else:
         print("No addition of MPI_COMM_WORLD detected.")
