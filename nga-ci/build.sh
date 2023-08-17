@@ -2,12 +2,11 @@
 
 set -e
 set -x
+
 . /opt/spack/share/spack/setup-env.sh
 spack env activate trilinos
 
 cd /opt/build/Trilinos
-
-spack find -p
 
 export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
 
@@ -62,6 +61,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D CMAKE_Fortran_COMPILER=${MPIF90} \
     -D TPL_ENABLE_MPI=ON \
     -D MPI_EXEC=${MPIRUN} \
+    -D MPI_EXEC_MAX_NUMPROCS=4 \
     \
     -D Trilinos_ENABLE_Rythmos=OFF \
     -D Trilinos_ENABLE_Pike=OFF \
