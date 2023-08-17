@@ -3,6 +3,8 @@ FROM calebschilly/trilinos-deps:main
 
 COPY . /opt/src/Trilinos
 
+RUN mkdir -p /opt/build/Trilinos
+
 RUN useradd -ms /bin/bash nga-ci
 
 # Build using the spack environment we created
