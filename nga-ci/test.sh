@@ -8,11 +8,11 @@ spack env activate trilinos
 pushd /opt/build/Trilinos
 ret_code=0
 ctest --output-on-failure || ret_code=$?
-# # We collect the test logs for exporting
-# echo "ctest returned: $ret_code"
-# mkdir -p /tmp/artifacts/
-# cp /opt/build/Trilinos/Testing/Temporary/LastTest.log /tmp/artifacts/
-# cp /opt/build/Trilinos/test/*/*/*.log /tmp/artifacts/
-# echo ${ret_code} > /tmp/artifacts/success_flag.txt
-# ls /tmp/artifacts
+# We collect the test logs for exporting
+echo "ctest returned: $ret_code"
+mkdir -p /tmp/artifacts/
+cp /opt/build/Trilinos/Testing/Temporary/LastTest.log /tmp/artifacts/
+cp /opt/build/Trilinos/test/*/*/*.log /tmp/artifacts/
+echo ${ret_code} > /tmp/artifacts/success_flag.txt
+ls /tmp/artifacts
 popd
