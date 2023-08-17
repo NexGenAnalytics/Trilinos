@@ -2,9 +2,7 @@
 FROM calebschilly/trilinos-deps:main
 
 COPY . /opt/src/Trilinos
-RUN mkdir -p /opt/build/Trilinos
-
-RUN chmod -R 777 /opt
+RUN mkdir -p -m777 /opt/build/Trilinos
 
 RUN useradd -ms /bin/bash nga-ci
 
