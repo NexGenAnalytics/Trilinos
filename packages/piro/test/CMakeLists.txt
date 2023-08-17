@@ -283,3 +283,16 @@ ENDIF(PIRO_HAVE_EPETRA_STACK)
 #   Main_EvalModel_Tpetra.cpp
 #   ...
 # ENDIF(PIRO_HAVE_TPETRA_STACK)
+
+IF (PIRO_HAVE_TPETRA_STACK)
+    TRIBITS_ADD_EXECUTABLE_AND_TEST(
+        EvalModel_Tpetra
+        SOURCES
+        Main_EvalModel_Tpetra.cpp
+        MockModelEval_A_Tpetra.cpp
+        MockModelEval_A_Tpetra.hpp
+        NUM_MPI_PROCS 1-4
+        ARGS -v
+        PASS_REGULAR_EXPRESSION "TEST PASSED"
+    )
+ENDIF(PIRO_HAVE_TPETRA_STACK)
