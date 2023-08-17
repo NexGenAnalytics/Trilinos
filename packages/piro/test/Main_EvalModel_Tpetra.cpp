@@ -54,8 +54,10 @@
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
-template<class ScalarType>
 int run(int argc, char *argv[]) {
+  // Model is currently supporting double
+  using ScalarType = double;
+
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
   using NT = typename Tpetra::Vector<>::node_type;
@@ -63,8 +65,8 @@ int run(int argc, char *argv[]) {
   using OP = typename Tpetra::Operator<ScalarType,LO,GO,NT>;
   using MV = typename Tpetra::MultiVector<ScalarType,LO,GO,NT>;
 
-  using tvector_t = Tpetra::Vector<ScalarType>;
-  using tcrsmatrix_t = Tpetra::CrsMatrix<ScalarType,LO,GO,NT>;
+  using Tpetra_Vector = Tpetra::Vector<ScalarType>;
+  using Tpetra_Matrix = Tpetra::CrsMatrix<ScalarType,LO,GO,NT>;
 
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -82,41 +84,41 @@ int run(int argc, char *argv[]) {
     const RCP<Thyra::ModelEvaluator<ScalarType>> Model = rcp(new MockModelEval_A_Tpetra(appComm));
 
     // Set input arguments to evalModel call
-    Thyra::ModelEvaluator::InArgs inArgs = Model.createInArgs();
-    RCP<tvector_t> x = rcp(new tvector_t(Teuchos::null));
+    Thyra::ModelEvaluatorBase::InArgs<ScalarType> inArgs = Model->createInArgs();
+    RCP<Tpetra_Vector> x = rcp(new Tpetra_Vector(Teuchos::null));
     inArgs.set_x(x);
     int num_p = inArgs.Np(); // Number of *vectors* of parameters 
-    RCP<tvector_t> p1;
+    RCP<Tpetra_Vector> p1;
     if (num_p > 0) {
-      p1 = rcp(new tvector_t(Teuchos::null));
+      p1 = rcp(new Tpetra_Vector(Teuchos::null));
       inArgs.set_p(0, p1);
     }
     int numParams = p1.getLocalLength(); // Number of parameters in p1 vector
 
     // Set output arguments to evalModel call
-    Thyra::ModelEvaluator::OutArgs outArgs = Model.createOutArgs();
-    RCP<tvector_t> f = rcp(new tvector_t(x.getMap()));
+    Thyra::ModelEvaluatorBase::OutArgs<ScalarType> outArgs = Model->createOutArgs();
+    RCP<Tpetra_Vector> f = rcp(new Tpetra_Vector(x.getMap()));
     outArgs.set_f(f);
     int num_g = outArgs.Ng(); // Number of *vectors* of responses
-    RCP<tvector_t> g1;
+    RCP<Tpetra_Vector> g1;
     if (num_g > 0) {
-      g1 = rcp(new tvector_t(Teuchos::null));
+      g1 = rcp(new Tpetra_Vector(Teuchos::null));
       outArgs.set_g(0, g1);
     }
 
     // Create a LinearOpWithSolveBase object for W to be evaluated
-    RCP<OP> W_op = Model.create_W();
+    RCP<OP> W_op = Model->create_W();
     outArgs.set_W(W_op);
 
     RCP<MV> dfdp = rcp(new MV(Teuchos::null, numParams));
     outArgs.set_DfDp(0, dfdp);
-    RCP<MV> dgdp = rcp(new MV(g1.getMap(), numParams));
+    RCP<MV> dgdp = rcp(new MV(g1->getMap(), numParams));
     outArgs.set_DgDp(0, 0, dgdp);
-    RCP<MV> dgdx = rcp(new MV(x.getMap(), g1.getLocalLength()));
+    RCP<MV> dgdx = rcp(new MV(x->getMap(), g1->getLocalLength()));
     outArgs.set_DgDx(0, dgdx);
 
     // Now, evaluate the model!
-    Model.evalModel(inArgs, outArgs);
+    Model->evalModel(inArgs, outArgs);
 
     // Print out everything
     if (Proc == 0)
@@ -124,10 +126,10 @@ int run(int argc, char *argv[]) {
         << "\n-----------------------------------------------------------------"
         << std::setprecision(9) << std::endl;
       x.print(std::cout << "\nSolution vector! {3,3,3,3}\n");
-      if (num_p>0) p1.print(std::cout << "\nParameters! {1,1}\n");
+      if (num_p>0) p1->print(std::cout << "\nParameters! {1,1}\n");
       f.print(std::cout << "\nResidual! {8,5,0,-7}\n");
-      if (num_g>0) g1.print(std::cout << "\nResponses! {2}\n");
-      RCP<tcrsmatrix_t> W = Teuchos::rcp_dynamic_cast<tcrsmatrix_t>(W_op, true);
+      if (num_g>0) g1->print(std::cout << "\nResponses! {2}\n");
+      RCP<Tpetra_Matrix> W = Teuchos::rcp_dynamic_cast<Tpetra_Matrix>(W_op, true);
       W.print(std::cout << "\nJacobian! {6 on diags}\n");
       dfdp.print(std::cout << "\nDfDp sensitivity MultiVector! {-1,0,0,0}{0,-4,-6,-8}\n");
       dgdp.print(std::cout << "\nDgDp response sensitivity MultiVector!{2,2}\n");
@@ -142,7 +144,11 @@ int run(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
+  // to change ScalarType we should also template the Model class
   // run with different scalar types
-  run<double>(argc, argv);
+  // run<double>(argc, argv);
   // run<float>(argc, argv);
+  
+  // run with double scalar type 
+  run();
 }
