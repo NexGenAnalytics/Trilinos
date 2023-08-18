@@ -13,7 +13,6 @@ ctest -j 14 --output-on-failure || ret_code=$?
 echo "ctest returned: $ret_code"
 mkdir -p /tmp/artifacts/
 cp /opt/build/Trilinos/Testing/Temporary/LastTest.log /tmp/artifacts/
-cp /opt/build/Trilinos/test/*/*/*.log /tmp/artifacts/
 echo ${ret_code} > /tmp/artifacts/success_flag.txt
 ls /tmp/artifacts
 popd
