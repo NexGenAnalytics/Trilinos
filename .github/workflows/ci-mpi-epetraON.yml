@@ -1,4 +1,4 @@
-name: MPI-EpetraOff
+name: MPI-EpetraON
 
 # Trigger the workflow on push or pull request
 on:
@@ -38,4 +38,4 @@ jobs:
           push: false
           tags: ${{ env.DOCKER_TAG }}
           context: .
-          file: ./nga-ci/nga-ci.dockerfile
+          file: ./nga-ci/mpi-epetraON.dockerfile

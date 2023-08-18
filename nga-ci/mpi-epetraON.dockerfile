@@ -4,15 +4,10 @@ FROM calebschilly/trilinos-deps:main AS build-stage
 COPY . /opt/src/Trilinos
 RUN mkdir -p /opt/build/Trilinos
 
-# RUN useradd -ms /bin/bash nga-ci
-
 # Build using the spack environment we created
-RUN bash /opt/src/Trilinos/nga-ci/build.sh
+RUN bash /opt/src/Trilinos/nga-ci/build-mpi-epetraON.sh
 
 FROM build-stage AS test-stage
-
-# RUN chown nga-ci /opt
-# USER nga-ci
 
 ARG OMPI_ALLOW_RUN_AS_ROOT=1
 ARG OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
