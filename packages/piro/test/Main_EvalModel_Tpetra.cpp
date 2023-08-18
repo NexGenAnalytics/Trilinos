@@ -87,7 +87,6 @@ int run(int argc, char *argv[]) {
 
     MEB::Evaluation<Thyra::VectorBase<double> > g = Thyra::createMember(*me->get_g_space(0));
     MEB::Evaluation<Thyra::VectorBase<double> > x = Thyra::createMember(*me->get_x_space());
-    // Thyra::assign(x.ptr(),Teuchos::null);
 
     MEB::InArgs<Scalar>  in_args = me->createInArgs();
     in_args.set_x(x);
@@ -164,12 +163,27 @@ int run(int argc, char *argv[]) {
     // Now, evaluate the model!
     // Model->evalModel(inArgs, outArgs);
 
+    Teuchos::RCP<Teuchos::ParameterList> nl_params = Teuchos::parameterList();
+
     // Print out everything
     if (Proc == 0)
       std::cout << "Finished Model Evaluation: Printing everything {Exact in brackets}" 
         << "\n-----------------------------------------------------------------"
         << std::setprecision(9) << std::endl;
-      
+
+      /*Teuchos::RCP<Teuchos::ParameterList> printParams = Teuchos::rcp(new Teuchos::ParameterList);
+      printParams.setParameter("MyPID", appComm.MyPID()); 
+      printParams.setParameter("GID", "??");
+      printParams.setParameter("Value", "??");
+      */
+      nl_params->sublist("Printing").sublist("Output Information").set("MyPID",appComm->getRank());
+      nl_params->sublist("Printing").print();
+
+      std::cout << "\nSolution vector! {3,3,3,3}\n";
+
+      //if (num_p > 0) p1->print(std::cout << "\nParameters! {1,1}\n");
+
+
       // Teuchos::RCP<Teuchos::ParameterList> BasisParams->print()
       /*x.print(std::cout << "\nSolution vector! {3,3,3,3}\n");
       if (num_p>0) p1->print(std::cout << "\nParameters! {1,1}\n");
@@ -186,6 +200,13 @@ int run(int argc, char *argv[]) {
   } // try
   TEUCHOS_STANDARD_CATCH_STATEMENTS(true, std::cerr, success);
   
+  if (Proc==0) {
+    if (status==0) 
+      std::cout << "TEST PASSED" << std::endl;
+    else 
+      std::cout << "TEST Failed" << std::endl;
+  }
+
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
