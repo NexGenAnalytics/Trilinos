@@ -22,6 +22,7 @@ def parse_diff_output(changed_files):
                 "test/",
                 "tests/",
                 "unit_test",
+                "perf_test",
                 "example/",
                 "examples/",
             ]
