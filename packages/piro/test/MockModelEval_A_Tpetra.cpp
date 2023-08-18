@@ -248,12 +248,6 @@ MockModelEval_A_Tpetra::createInArgs() const
   return this->createInArgsImpl();
 }
 
-Thyra::ModelEvaluatorBase::OutArgs<double>
-MockModelEval_A_Tpetra::createOutArgs() const
-{
-  return this->createOutArgsImpl();
-}
-
 void
 MockModelEval_A_Tpetra::reportFinalPoint(
     const Thyra::ModelEvaluatorBase::InArgs<double>& /* finalPoint */,

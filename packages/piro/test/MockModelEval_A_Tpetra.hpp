@@ -123,10 +123,6 @@ class MockModelEval_A_Tpetra
   createInArgs() const;
 
   /** \brief . */
-  Thyra::ModelEvaluatorBase::OutArgs<double>
-  createOutArgs() const;
-
-  /** \brief . */
   void
   reportFinalPoint(
       const Thyra::ModelEvaluatorBase::InArgs<double>& finalPoint,
