@@ -82,7 +82,7 @@ int run(int argc, char *argv[]) {
   auto appComm = Tpetra::getDefaultComm();
 
   try {
-
+    // TODO: Display like for Epetra version (currently minimal working)
     const RCP<Thyra::ModelEvaluator<Scalar>> me = rcp(new MockModelEval_A_Tpetra(appComm));
 
     MEB::Evaluation<Thyra::VectorBase<double> > g = Thyra::createMember(*me->get_g_space(0));
@@ -96,105 +96,14 @@ int run(int argc, char *argv[]) {
 
     me->evalModel(in_args, out_args);
 
-    // Set input arguments to evalModel call
-    /*Thyra::ModelEvaluatorBase::InArgs<Scalar> inArgs = Model->createInArgs();
-    RCP<Tpetra_Vector> x = rcp(new Tpetra_Vector(Teuchos::null));
-    inArgs.set_x(x);
-    
-    int num_p = inArgs.Np(); // Number of *vectors* of parameters 
-    RCP<Tpetra_Vector> p1;
-    if (num_p > 0) {
-      p1 = rcp(new Tpetra_Vector(Teuchos::null));
-      inArgs.set_p(0, p1);
-    }
-    int numParams = p1->getLocalLength(); // Number of parameters in p1 vector
-    */
-    // Thyra::ModelEvaluatorBase::OutArgs<Scalar> outArgs = Model->createOutArgs();
-
-    // Set output arguments to evalModel call
-    
-    // DOES NOT WORK
-    
-    /* epetra version:
-    RCP<Epetra_Vector> f = rcp(new Epetra_Vector(x->Map()));
-    outArgs.set_f(f);
-    */
-    // tpetra version
-    // Teuchos::RCP<const Thyra::VectorSpaceBase<Scalar>> x_space = Thyra::createVectorSpace<Scalar>(x->getMap());
-    // RCP<Thyra::VectorBase<Scalar>> f = Thyra::createMember(*x_space);
-    // outArgs.set_f(f);
-
-    /*
-    epetra version:
-    int num_g = outArgs.Ng(); // Number of *vectors* of responses
-    RCP<Tpetra_Vector> g1;
-    if (num_g > 0) {
-      g1 = rcp(new Tpetra_Vector(Teuchos::null));
-      outArgs.set_g(0, g1);
-    }
-    */
-    /*int num_g = outArgs.Ng();
-    Teuchos::RCP<Thyra::VectorBase<Scalar>  g1;
-    if (num_g > 0) {
-      RCP<Tpetra_Vector> v = rcp(new Tpetra_Vector(Teuchos::null));
-      Teuchos::RCP<const Thyra::VectorSpaceBase<Scalar>> g_space = Thyra::createVectorSpace<Scalar>(v->getMap());
-      g1 = Thyra::createMember(smodel->get_g_space(0));
-      Teuchos::RCP<DMVPV> dgdp = Teuchos::rcp_dynamic_cast<DMVPV>(G);
-      outArgs.set_g(0, g1);
-    }*/
-
-    // Create a LinearOpWithSolveBase object for W to be evaluated
-    /*RCP<OP> W_op = Model->create_W();
-    outArgs.set_W(W_op);
-    
-    RCP<MV> dfdp = rcp(new MV(Teuchos::null, numParams));*/
-    // outArgs.set_DfDp(0, dfdp);
-    //tpetra try
-    /*
-    RCP<Thyra::MultiVectorBase<double> > mv = Thyra::createMembers(model->get_f_space(),3);
-    MEB::Derivative<double> DfDp(mv);
-    outArgs.set_DfDp(0, dfdp);*/
-
-    /*RCP<MV> dgdp = rcp(new MV(g1->getMap(), numParams));
-    outArgs.set_DgDp(0, 0, dgdp);
-    RCP<MV> dgdx = rcp(new MV(x->getMap(), g1->getLocalLength()));
-    outArgs.set_DgDx(0, dgdx);*/
-
-    // Now, evaluate the model!
-    // Model->evalModel(inArgs, outArgs);
-
-    Teuchos::RCP<Teuchos::ParameterList> nl_params = Teuchos::parameterList();
-
     // Print out everything
     if (Proc == 0)
       std::cout << "Finished Model Evaluation: Printing everything {Exact in brackets}" 
         << "\n-----------------------------------------------------------------"
         << std::setprecision(9) << std::endl;
 
-      /*Teuchos::RCP<Teuchos::ParameterList> printParams = Teuchos::rcp(new Teuchos::ParameterList);
-      printParams.setParameter("MyPID", appComm.MyPID()); 
-      printParams.setParameter("GID", "??");
-      printParams.setParameter("Value", "??");
-      */
-      nl_params->sublist("Printing").sublist("Output Information").set("MyPID",appComm->getRank());
-      nl_params->sublist("Printing").print();
+      // TODO: Display like for Epetra version
 
-      std::cout << "\nSolution vector! {3,3,3,3}\n";
-
-      //if (num_p > 0) p1->print(std::cout << "\nParameters! {1,1}\n");
-
-
-      // Teuchos::RCP<Teuchos::ParameterList> BasisParams->print()
-      /*x.print(std::cout << "\nSolution vector! {3,3,3,3}\n");
-      if (num_p>0) p1->print(std::cout << "\nParameters! {1,1}\n");
-      f.print(std::cout << "\nResidual! {8,5,0,-7}\n");
-      if (num_g>0) g1->print(std::cout << "\nResponses! {2}\n");
-      RCP<Tpetra_Matrix> W = Teuchos::rcp_dynamic_cast<Tpetra_Matrix>(W_op, true);
-      W.print(std::cout << "\nJacobian! {6 on diags}\n");
-      dfdp.print(std::cout << "\nDfDp sensitivity MultiVector! {-1,0,0,0}{0,-4,-6,-8}\n");
-      dgdp.print(std::cout << "\nDgDp response sensitivity MultiVector!{2,2}\n");
-      dgdx.print(std::cout << "\nDgDx^T response gradient MultiVector! {-2,-2,-2,-2}\n");
-      */
       if (Proc == 0)
       std::cout << "\n-----------------------------------------------------------------\n";
   } // try
