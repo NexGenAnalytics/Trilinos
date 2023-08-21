@@ -2,7 +2,7 @@ name: MPI-EpetraOFF
 
 # Trigger the workflow on push or pull request
 on:
-  pull_request:
+  push:
     branches:
       - NGA-FY23-develop
   workflow_dispatch:
