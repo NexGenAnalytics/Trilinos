@@ -44,6 +44,8 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_LAPACK=ON \
     -D TPL_LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.so" \
     \
+    -D TPL_ENABLE_CUDA=OFF \
+    \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
     -D TPL_ENABLE_Pthread=OFF \
