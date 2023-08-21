@@ -99,5 +99,5 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_PyTrilinos=OFF \
     \
     -D Trilinos_ENABLE_Epetra=ON \
-    -S /home/nga-ci/Develop/Trilinos-Testing/Trilinos -B /home/nga-ci/Develop/Trilinos-Testing/GPU/build
+    -S /opt/src/Trilinos -B /opt/build/Trilinos
 ninja -j 5
