@@ -81,11 +81,11 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_SuperLU=OFF \
     -D TPL_ENABLE_Scotch=OFF \
     \
-    -D CMAKE_C_COMPILER=${MPICC} \
-    -D CMAKE_CXX_COMPILER=${MPICXX} \
-    -D CMAKE_Fortran_COMPILER=${MPIF90} \
     -D TPL_ENABLE_MPI=ON \
-    -D MPI_BIN_DIR=${MPIRUN} \
+    -D MPI_BIN_DIR="${MPIRUN}" \
+    -D MPI_C_COMPILER=${MPICC} \
+    -D MPI_CXX_COMPILER=${MPICXX} \
+    -D CMAKE_Fortran_COMPILER=${MPIF90} \
     -D MPI_EXEC=${MPIRUN} \
     \
     -D Trilinos_ENABLE_Rythmos=OFF \
