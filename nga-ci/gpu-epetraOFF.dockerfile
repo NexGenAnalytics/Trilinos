@@ -1,5 +1,5 @@
 # Choose a base image
-FROM calebschilly/trilinos-deps-GPU:main AS build-stage
+FROM calebschilly/trilinos-deps:main AS build-stage
 
 COPY . /opt/src/Trilinos
 RUN mkdir -p /opt/build/Trilinos
