@@ -442,7 +442,7 @@ int run(int argc, char *argv[]) {
       }
     }
   }
-  std::cout << "numberFailedTests = " << numberFailedTests << std::endl;
+
   if (numberFailedTests) {
     if (verbose && MyPID==0) {
       std::cout << std::endl << "End Result: TEST FAILED" << std::endl;
