@@ -46,7 +46,6 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map_fwd.hpp> // CWS: Epetra_Map.h
 #include <Tpetra_Vector_fwd.hpp> // CWS: Epetra_Vector.h
-#include <Tpetra_CrsMatrix_fwd.hpp> // CWS: Epetra_CrsMatrix.h
 
 // Teuchos
 #include <Teuchos_RCP.hpp>
@@ -62,7 +61,7 @@
 #include "AnasaziTpetraAdapter.hpp"
 #include "AnasaziBasicOrthoManager.hpp"
 
-#include "MySDMHelpers.hpp"
+#include "../../test/MVOPTester/MySDMHelpers.hpp"
 
 template<typename ScalarType>
 int run(int argc, char *argv[]) {
@@ -76,7 +75,6 @@ int run(int argc, char *argv[]) {
   using MV = Tpetra::MultiVector<ST,LO,GO,NT>;
 
   using tmap_t       = Tpetra::Map<LO,GO,NT>;
-  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
   using MVT     = Anasazi::MultiVecTraits<ST,MV>;
   using Utils   = Anasazi::SolverUtils<ST,MV,OP>;
@@ -463,6 +461,6 @@ int run(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-  run<double>(argc,argv[]);
-  // run<float>(argc,argv[]);
+  run<double>(argc,argv);
+  // run<float>(argc,argv);
 }
