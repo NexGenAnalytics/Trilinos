@@ -23,7 +23,7 @@ export PATH=/usr/local/cuda-12.2/bin:$PATH
 which nvcc
 export NVCC_WRAPPER_DEFAULT_COMPILER=${MPICXX}
 export CXX=${MPICXX}
-export OMPI_CXX=/opt/sr/Trilinos/packages/kokkos/bin/nvcc_wrapper
+export OMPI_CXX=/opt/src/Trilinos/packages/kokkos/bin/nvcc_wrapper
 export CUDA_ROOT=/usr/local/cuda-12.2
 export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 export CUDA_LAUNCH_BLOCKING=1
