@@ -21,16 +21,16 @@ export LAPACK_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3n
 
 export PATH=/usr/local/cuda-12.2/bin:$PATH
 which nvcc
-#export NVCC_WRAPPER_DEFAULT_COMPILER=/usr/bin/mpicxx
-#export CXX=/usr/bin/mpicxx
-export OMPI_CXX=/opt/source/Trilinos/packages/kokkos/bin/nvcc_wrapper
+export NVCC_WRAPPER_DEFAULT_COMPILER=${MPICXX}
+export CXX=${MPICXX}
+export OMPI_CXX=/opt/src/Trilinos/packages/kokkos/bin/nvcc_wrapper
 export CUDA_ROOT=/usr/local/cuda-12.2
 export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 export CUDA_LAUNCH_BLOCKING=1
 ENABLE_CUDA=ON
 
 
-cmake -G "${CMAKE_GENERATOR:-Ninja}" \
+/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/cmake-3.26.3-i2rly7piozdmkjrxo47ze6vpofe5iybx/bin/cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} \
     -D CMAKE_BUILD_TYPE=DEBUG \
     -D Trilinos_ENABLE_DEBUG=ON \
