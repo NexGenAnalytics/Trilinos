@@ -59,6 +59,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_MPI=ON \
     -D TPL_ENABLE_CUDA=ON \
     -D Kokkos_ENABLE_CUDA=ON \
+    -D Kokkos_ARCH_VOLTA70=ON \
+    -D Kokkos_ENABLE_CUDA_LAMBDA="${ENABLE_CUDA}" \
+    -D Kokkos_ENABLE_CUDA_UVM=OFF \
     \
     -D ShyLU_NodeTacho_ENABLE_CUDA=ON \
     -D ShyLU_NodeTacho_ENABLE_CUSOLVER=ON \
