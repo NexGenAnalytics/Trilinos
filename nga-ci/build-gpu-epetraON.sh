@@ -8,6 +8,8 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
+spack find -p
+
 export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
 
 export MPI_ROOT="${CMAKE_PREFIX_PATH}/openmpi-4.1.5-qjkxgt6ffv6shm6rgttbnwuerhchufq7"
@@ -19,18 +21,17 @@ export MPIRUN="${MPI_ROOT}/bin/mpirun"
 export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 export LAPACK_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 
-export PATH=/usr/local/cuda-12.2/bin:$PATH
-which nvcc
-export NVCC_WRAPPER_DEFAULT_COMPILER=${MPICXX}
-export CXX=${MPICXX}
+# export PATH=/usr/local/cuda-12.2/bin:$PATH
+# which nvcc
+# export NVCC_WRAPPER_DEFAULT_COMPILER=${MPICXX}
+# export CXX=${MPICXX}
 export OMPI_CXX=/opt/src/Trilinos/packages/kokkos/bin/nvcc_wrapper
-export CUDA_ROOT=/usr/local/cuda-12.2
-export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
+# export CUDA_ROOT=/usr/local/cuda-12.2
+# export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 export CUDA_LAUNCH_BLOCKING=1
 ENABLE_CUDA=ON
 
-
-/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0/cmake-3.26.3-i2rly7piozdmkjrxo47ze6vpofe5iybx/bin/cmake -G "${CMAKE_GENERATOR:-Ninja}" \
+cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} \
     -D CMAKE_BUILD_TYPE=DEBUG \
     -D Trilinos_ENABLE_DEBUG=ON \
@@ -50,15 +51,16 @@ ENABLE_CUDA=ON
     -D Trilinos_ENABLE_SEACAS=OFF \
     -D Trilinos_ENABLE_Sacado=OFF \
     \
-    -D TPL_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D Tpetra_INST_SERIAL=OFF \
-    -D Tpetra_INST_CUDA=ON \
-    -D Trilinos_ENABLE_Kokkos=ON \
-    -D Kokkos_ENABLE_OPENMP=OFF \
-    -D Kokkos_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D Kokkos_ARCH_VOLTA70=ON \
-    -D Kokkos_ENABLE_CUDA_LAMBDA="${ENABLE_CUDA}" \
-    -D Kokkos_ENABLE_CUDA_UVM=OFF \
+    -D CMAKE_CXX_COMPILER=${MPI_ROOT}/bin/mpicxx \
+    -D CMAKE_C_COMPILER=${MPI_ROOT}/bin/mpicc \
+    -D CMAKE_Fortran_COMPILER=${MPI_ROOT}/bin/mpif90 \
+    -D CMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe \
+    --diag_suppress=conversion_function_not_usable -Xcudafe \
+    --diag_suppress=cc_clobber_ignored -Xcudafe \
+    --diag_suppress=code_is_unreachable" \
+    -D TPL_ENABLE_MPI=ON \
+    -D TPL_ENABLE_CUDA=ON \
+    -D Kokkos_ENABLE_CUDA=ON \
     \
     -D ShyLU_NodeTacho_ENABLE_CUDA=ON \
     -D ShyLU_NodeTacho_ENABLE_CUSOLVER=ON \
