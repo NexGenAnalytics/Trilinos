@@ -44,8 +44,8 @@
 
 // Tpetra
 #include <Tpetra_Core.hpp>
-#include <Tpetra_Map_fwd.hpp> // CWS: Epetra_Map.h
-#include <Tpetra_Vector_fwd.hpp> // CWS: Epetra_Vector.h
+#include <Tpetra_Map_fwd.hpp>
+#include <Tpetra_Vector_fwd.hpp>
 
 // Teuchos
 #include <Teuchos_RCP.hpp>
@@ -74,10 +74,13 @@ int run(int argc, char *argv[]) {
   using OP = Tpetra::Operator<ST,LO,GO,NT>;
   using MV = Tpetra::MultiVector<ST,LO,GO,NT>;
 
-  using tmap_t       = Tpetra::Map<LO,GO,NT>;
+  using tmap_t = Tpetra::Map<LO,GO,NT>;
 
-  using MVT     = Anasazi::MultiVecTraits<ST,MV>;
-  using Utils   = Anasazi::SolverUtils<ST,MV,OP>;
+  using MVT   = Anasazi::MultiVecTraits<ST,MV>;
+  using Utils = Anasazi::SolverUtils<ST,MV,OP>;
+
+  using Teuchos::RCP;
+  using Teuchos::rcp;
 
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
   const auto comm = Tpetra::getDefaultComm();
@@ -95,15 +98,11 @@ int run(int argc, char *argv[]) {
 
   //  Dimension of the multivector
   int NumGlobalElements = 99;
-  int NumColumns = 7;
+  const int NumColumns = 7;
 
   // Construct a Map that puts approximately the same number of
   // equations on each processor.
-  tmap_t Map(NumGlobalElements, 0, comm);
-
-  // int localNumElements = Map.getLocalNumElements();
-  // std::vector<int> MyGlobalElements(localNumElements);
-  // Map.MyGlobalElements(&MyGlobalElements[0]); // CWS: figure out
+  RCP<tmap_t> Map = rcp(new tmap_t(NumGlobalElements, 0, comm));
 
   //--------------------------------------------------------------------------
   //  test Householder code
@@ -120,7 +119,8 @@ int run(int argc, char *argv[]) {
     Anasazi::BasicOrthoManager<ST,MV,OP> orthman;
 
     // generate random multivector V and orthonormalize it
-    MV V(Map,NumColumns), VQ(Map,NumColumns);
+    MV V(Map,NumColumns);
+    MV VQ(Map,NumColumns);
     MVT::MvRandom(V);
     orthman.normalize(V,Teuchos::null);
 
@@ -195,7 +195,6 @@ int run(int argc, char *argv[]) {
   //--------------------------------------------------------------------------
   //  test directSolver, permuteVectors
   //--------------------------------------------------------------------------
-
   {
     if (verbose && MyPID == 0) {
       std::cout << std::endl << "************* DirectSolver Test *************" << std::endl << std::endl;
@@ -443,7 +442,7 @@ int run(int argc, char *argv[]) {
       }
     }
   }
-
+  std::cout << "numberFailedTests = " << numberFailedTests << std::endl;
   if (numberFailedTests) {
     if (verbose && MyPID==0) {
       std::cout << std::endl << "End Result: TEST FAILED" << std::endl;
