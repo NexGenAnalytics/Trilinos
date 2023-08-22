@@ -56,12 +56,13 @@
 #include <Teuchos_SerialDenseMatrix.hpp>
 
 // Anasazi
-// #include <MySDMHelpers.hpp>
-#include <AnasaziBasicSort.hpp>
-#include <AnasaziConfigDefs.hpp>
-#include <AnasaziSolverUtils.hpp>
-#include <AnasaziTpetraAdapter.hpp>
-#include <AnasaziBasicOrthoManager.hpp>
+#include "AnasaziBasicSort.hpp"
+#include "AnasaziConfigDefs.hpp"
+#include "AnasaziSolverUtils.hpp"
+#include "AnasaziTpetraAdapter.hpp"
+#include "AnasaziBasicOrthoManager.hpp"
+
+#include "MySDMHelpers.hpp"
 
 template<typename ScalarType>
 int run(int argc, char *argv[]) {
@@ -79,7 +80,6 @@ int run(int argc, char *argv[]) {
 
   using MVT     = Anasazi::MultiVecTraits<ST,MV>;
   using Utils   = Anasazi::SolverUtils<ST,MV,OP>;
-  using orthman = Anasazi::BasicOrthoManager<ST,MV,OP>;
 
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
   const auto comm = Tpetra::getDefaultComm();
@@ -117,6 +117,9 @@ int run(int argc, char *argv[]) {
     if (verbose && MyPID == 0) {
       std::cout << std::endl << "************* Householder Apply Test *************" << std::endl << std::endl;
     }
+
+    // initialize an OrthoManager
+    Anasazi::BasicOrthoManager<ST,MV,OP> orthman;
 
     // generate random multivector V and orthonormalize it
     MV V(Map,NumColumns), VQ(Map,NumColumns);
@@ -194,6 +197,7 @@ int run(int argc, char *argv[]) {
   //--------------------------------------------------------------------------
   //  test directSolver, permuteVectors
   //--------------------------------------------------------------------------
+
   {
     if (verbose && MyPID == 0) {
       std::cout << std::endl << "************* DirectSolver Test *************" << std::endl << std::endl;
