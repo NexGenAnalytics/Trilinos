@@ -66,7 +66,6 @@
 
 // Belos
 #include <BelosPCPGSolMgr.hpp>
-// #include <BelosMueLuAdapter.hpp>
 #include <BelosLinearProblem.hpp>
 #include <BelosTpetraAdapter.hpp>
 
@@ -94,7 +93,7 @@
 #include <Teuchos_CommandLineProcessor.hpp>
 
 
-template<class ScalarType>
+template<typename ScalarType>
 int run(int argc, char *argv[]) {
     using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
     using LO = typename Tpetra::Vector<>::local_ordinal_type;
