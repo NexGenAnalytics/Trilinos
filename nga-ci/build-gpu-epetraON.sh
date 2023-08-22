@@ -57,15 +57,17 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     --diag_suppress=cc_clobber_ignored -Xcudafe \
     --diag_suppress=code_is_unreachable" \
     -D TPL_ENABLE_MPI=ON \
-    -D TPL_ENABLE_CUDA=ON \
-    -D Kokkos_ENABLE_CUDA=ON \
-    -D Kokkos_ARCH_VOLTA70=ON \
+    -D TPL_ENABLE_CUDA="${ENABLE_CUDA}" \
+    -D Kokkos_ENABLE_CUDA="${ENABLE_CUDA}" \
+    -D Kokkos_ARCH_VOLTA70="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA_LAMBDA="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA_UVM=OFF \
+    -D Tpetra_INST_SERIAL:BOOL=ON \
+    -D Tpetra_INST_CUDA="${ENABLE_CUDA}" \
     \
-    -D ShyLU_NodeTacho_ENABLE_CUDA=ON \
-    -D ShyLU_NodeTacho_ENABLE_CUSOLVER=ON \
-    -D ShyLU_NodeTacho_ENABLE_CUSPARSE=ON \
+    -D ShyLU_NodeTacho_ENABLE_CUDA="${ENABLE_CUDA}" \
+    -D ShyLU_NodeTacho_ENABLE_CUSOLVER="${ENABLE_CUDA}" \
+    -D ShyLU_NodeTacho_ENABLE_CUSPARSE="${ENABLE_CUDA}" \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
@@ -83,13 +85,6 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_Netcdf=OFF \
     -D TPL_ENABLE_SuperLU=OFF \
     -D TPL_ENABLE_Scotch=OFF \
-    \
-    -D TPL_ENABLE_MPI=ON \
-    -D MPI_BIN_DIR="${MPIRUN}" \
-    -D MPI_C_COMPILER=${MPICC} \
-    -D MPI_CXX_COMPILER=${MPICXX} \
-    -D CMAKE_Fortran_COMPILER=${MPIF90} \
-    -D MPI_EXEC=${MPIRUN} \
     \
     -D Trilinos_ENABLE_Rythmos=OFF \
     -D Trilinos_ENABLE_Pike=OFF \
