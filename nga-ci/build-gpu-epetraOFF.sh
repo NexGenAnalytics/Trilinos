@@ -8,8 +8,6 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-spack find -p
-
 export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
 
 export MPI_ROOT="${CMAKE_PREFIX_PATH}/openmpi-4.1.5-qjkxgt6ffv6shm6rgttbnwuerhchufq7"
@@ -26,8 +24,8 @@ export LAPACK_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3n
 # export NVCC_WRAPPER_DEFAULT_COMPILER=${MPICXX}
 # export CXX=${MPICXX}
 export OMPI_CXX=/opt/src/Trilinos/packages/kokkos/bin/nvcc_wrapper
-# export CUDA_ROOT=/usr/local/cuda-12.2
-# export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
+export CUDA_ROOT=/usr/local/cuda-12.2
+export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 export CUDA_LAUNCH_BLOCKING=1
 ENABLE_CUDA=ON
 
