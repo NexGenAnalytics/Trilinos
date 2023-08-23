@@ -328,9 +328,9 @@ int run(int argc, char *argv[])
 {
   // Get default Tpetra template types
   using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
-  using LO = typename Tpetra::Vector<>::local_ordinal_type;
-  using GO = typename Tpetra::Vector<>::global_ordinal_type;
-  using NT = typename Tpetra::Vector<>::node_type;
+  using LO = typename Tpetra::MultiVector<>::local_ordinal_type;
+  using GO = typename Tpetra::MultiVector<>::global_ordinal_type;
+  using NT = typename Tpetra::MultiVector<>::node_type;
 
   // Init Tpetra types
   using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
