@@ -49,25 +49,18 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_SEACAS=OFF \
     -D Trilinos_ENABLE_Sacado=OFF \
     \
-    -D CMAKE_CXX_COMPILER=${MPI_ROOT}/bin/mpicxx \
-    -D CMAKE_C_COMPILER=${MPI_ROOT}/bin/mpicc \
-    -D CMAKE_Fortran_COMPILER=${MPI_ROOT}/bin/mpif90 \
-    -D CMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe \
-    --diag_suppress=conversion_function_not_usable -Xcudafe \
-    --diag_suppress=cc_clobber_ignored -Xcudafe \
-    --diag_suppress=code_is_unreachable" \
-    -D TPL_ENABLE_MPI=ON \
     -D TPL_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D CUDA_TOOLKIT_ROOT_DIR="${CUDA_ROOT}" \
+    -D Tpetra_INST_SERIAL=OFF \
+    -D Tpetra_INST_CUDA=ON \
+    -D Trilinos_ENABLE_Kokkos=ON \
+    -D Kokkos_ENABLE_OPENMP=OFF \
     -D Kokkos_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D Kokkos_ARCH_AMPERE86="${ENABLE_CUDA}" \
+    -D Kokkos_ARCH_AMPERE86=ON \
     -D Kokkos_ENABLE_CUDA_LAMBDA="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA_UVM=OFF \
-    -D Tpetra_INST_SERIAL:BOOL=ON \
-    -D Tpetra_INST_CUDA="${ENABLE_CUDA}" \
     \
-    -D TPL_ENABLE_CUSOLVER="${ENABLE_CUDA}" \
-    -D TPL_ENABLE_CUSPARSE="${ENABLE_CUDA}" \
+    -D TPL_ENABLE_CUSOLVER=ON \
+    -D TPL_ENABLE_CUSPARSE=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
@@ -86,6 +79,13 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_SuperLU=OFF \
     -D TPL_ENABLE_Scotch=OFF \
     \
+    -D CMAKE_C_COMPILER=${MPICC} \
+    -D CMAKE_CXX_COMPILER=${MPICXX} \
+    -D CMAKE_Fortran_COMPILER=${MPIF90} \
+    -D TPL_ENABLE_MPI=ON \
+    -D MPI_BIN_DIR=${MPIRUN} \
+    -D MPI_EXEC=${MPIRUN} \
+    \
     -D Trilinos_ENABLE_Rythmos=OFF \
     -D Trilinos_ENABLE_Pike=OFF \
     -D Trilinos_ENABLE_Komplex=OFF \
@@ -98,4 +98,4 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D Trilinos_ENABLE_Epetra=OFF \
     -S /opt/src/Trilinos -B /opt/build/Trilinos
-ninja -j 5
+ninja -j 7
