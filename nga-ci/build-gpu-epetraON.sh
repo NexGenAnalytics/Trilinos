@@ -59,7 +59,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_MPI=ON \
     -D TPL_ENABLE_CUDA="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D Kokkos_ARCH_VOLTA70="${ENABLE_CUDA}" \
+    -D Kokkos_ARCH_AMPERE86="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA_LAMBDA="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA_UVM=OFF \
     -D Tpetra_INST_SERIAL:BOOL=ON \
