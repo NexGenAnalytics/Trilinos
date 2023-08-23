@@ -52,7 +52,7 @@
 
 #define  INITIALIZE_DH(argc, argv, help) \
             MPI_Init(&argc,&argv);  \
-            comm_dh = get_global_comm();    \
+            comm_dh = ifpack_get_global_comm();    \
             MPI_Errhandler_set(comm_dh, MPI_ERRORS_RETURN); \
             EuclidInitialize(argc, argv, help); \
             dh_StartFunc(__FUNC__, __FILE__, __LINE__, 1); \

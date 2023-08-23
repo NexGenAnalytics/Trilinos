@@ -51,21 +51,21 @@
 extern "C" {
 #endif
 
-static pthread_mutex_t global_comm_lock;
-static MPI_Comm Global_MPI_Comm = MPI_COMM_WORLD;
+static pthread_mutex_t ifpack_global_comm_lock;
+static MPI_Comm Ifpack_Global_MPI_Comm = MPI_COMM_WORLD;
 
 /* Function to set the default communicator */
-static void initialize_global_comm(MPI_Comm comm) {
-  pthread_mutex_lock(&global_comm_lock);
-  Global_MPI_Comm = comm;
-  pthread_mutex_unlock(&global_comm_lock);
+static void ifpack_initialize_global_comm(MPI_Comm comm) {
+  pthread_mutex_lock(&ifpack_global_comm_lock);
+  Ifpack_Global_MPI_Comm = comm;
+  pthread_mutex_unlock(&ifpack_global_comm_lock);
 }
 
 /* Function to get the default communicator */
-static MPI_Comm get_global_comm() {
-  pthread_mutex_lock(&global_comm_lock);
-  MPI_Comm comm = Global_MPI_Comm;
-  pthread_mutex_unlock(&global_comm_lock);
+static MPI_Comm ifpack_get_global_comm() {
+  pthread_mutex_lock(&ifpack_global_comm_lock);
+  MPI_Comm comm = Ifpack_Global_MPI_Comm;
+  pthread_mutex_unlock(&ifpack_global_comm_lock);
   return comm;
 }
 
