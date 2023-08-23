@@ -53,42 +53,13 @@
 // -\Delta u + \lambda e^u = 0  in \Omega = (0,1) \times (0,1)
 //                       u = 0  on \partial \Omega
 //
-// for use as a driver for various nox-epetra tests
+// for use as a driver for various nox-tpetra tests
 
-#include "Tpetra_Map.hpp"
-#include "Tpetra_Vector.hpp"
-#include "Tpetra_CrsMatrix.hpp"
+// Tpetra support
 #include "NOX_TpetraTypedefs.hpp"
-#include "NOX.H"
-// #include "NOX_Epetra_Interface_Required.H"
-// #include "NOX_Epetra_Interface_Jacobian.H"
-// #include "NOX_Epetra_Interface_Preconditioner.H"
-// #include "NOX_Epetra_LinearSystem_AztecOO.H"
-
-// Typedefs
-
-// typedef Tpetra::Vector<>::scalar_type Scalar;
-// typedef Tpetra::Vector<>::local_ordinal_type LO;
-// typedef Tpetra::Vector<>::global_ordinal_type GO;
-// typedef Tpetra::Vector<>::node_type Node;
-typedef NOX::Scalar Scalar;
-typedef NOX::LocalOrdinal LO;
-typedef NOX::GlobalOrdinal GO;
-typedef NOX::NodeType Node;
-
-typedef Tpetra::Map<LO,GO,Node> Tpetra_Map;
-typedef Tpetra::Vector<Scalar,LO,GO,Node> Tpetra_Vector;
-typedef Tpetra::MultiVector<Scalar,LO,GO,Node> Tpetra_MultiVector;
-typedef Tpetra::CrsMatrix<NOX::ScalarScalar,LO,GO,Node> Tpetra_CsrMatrix;
-typedef Tpetra::Operator<Scalar,LO,GO,Node> Tpetra_Operator
-// typedef Thyra::VectorSpaceBase<Scalar> TVSB;
-// typedef Thyra::VectorBase<Scalar> TVB;
-// typedef Thyra::MultiVectorBase<Scalar> TMVB;
-// typedef Thyra::LinearOpBase<Scalar> TLOB;
-// typedef Thyra::TpetraOperatorVectorExtraction<Scalar,LO,GO,Node> TOVE;
-// typedef NOX::Thyra::Vector NTV;
-// typedef NOX::Thyra::MultiVector NTMV;
-// typedef typename TMV::mag_type mag_type;
+#include "NOX_Tpetra_Interface_Jacobian.hpp"
+#include "NOX_Tpetra_Interface_Preconditioner.hpp"
+#include "NOX_Tpetra_Interface_Required.hpp"
 
 namespace Laplace2D {
 
@@ -109,7 +80,7 @@ get_myNeighbours( const int i, const int nx, const int ny,
 // all the nodes in the matrix are internal nodes (Dirichlet
 // boundary nodes are supposed to have been already condensated)
 
-Tpetra_CsrMatrix *
+TCsrMatrix *
 CreateLaplacian( const int nx, const int ny, const Teuchos::RCP<const Teuchos::Comm<int> >& comm);
 
 // ==========================================================================
@@ -134,7 +105,7 @@ class PDEProblem
 public:
 
   // constructor. Requires the number of nodes along the x-axis
-  // and y-axis, the value of lambda, and the Epetra_Communicator
+  // and y-axis, the value of lambda, and the communicator
   // (to define a Map, which is a linear map in this case)
   PDEProblem(const int nx, const int ny, const double lambda,
          const Teuchos::RCP<const Teuchos::Comm<int> >& comm);
@@ -143,22 +114,22 @@ public:
   ~PDEProblem();
 
   // compute F(x)
-  void ComputeF(const TV & x, TV & f);
+  void computeF(const TVector & x, TVector & f);
 
   // update the Jacobian matrix for a given x
-  void UpdateJacobian(const TV & x);
+  void updateJacobian(const TVector & x);
 
   // returns a pointer to the internally stored matrix
-  Tpetra_CsrMatrix * GetMatrix()
+  TCsrMatrix * getMatrix()
   {
-    return Matrix_;
+    return matrix_;
   }
 
 private:
 
   int nx_, ny_;
   double hx_, hy_;
-  Tpetra_CsrMatrix * Matrix_;
+  TCsrMatrix * matrix_;
   double lambda_;
 
 }; /* class PDEProblem */
@@ -172,9 +143,9 @@ private:
 // crude: For instance, no PrecMatrix nor Preconditioner is specified.
 // ==========================================================================
 
-class SimpleProblemInterface : public NOX::Epetra::Interface::Required      , // TODO: no tpetra alternaative create it
-                               public NOX::Epetra::Interface::Jacobian      , // TODO: no tpetra alternaative create it
-                               public NOX::Epetra::Interface::Preconditioner // TODO: no tpetra alternaative create it
+class SimpleProblemInterface : public NOX::Tpetra::Interface::Required      , // TODO: no tpetra alternaative create it
+                               public NOX::Tpetra::Interface::Jacobian      , // TODO: no tpetra alternaative create it
+                               public NOX::Tpetra::Interface::Preconditioner // TODO: no tpetra alternaative create it
 {
 
 public:
@@ -188,28 +159,28 @@ public:
   {
   };
 
-  bool computeF(const Tpetra_Vector & x, Tpetra_Vector & f,
-                NOX::Epetra::Interface::Required::FillType F )
+  bool computeF(const TVector & x, TVector & f,
+                NOX::Tpetra::Interface::Required::FillType F )
   {
-    Problem_->ComputeF(x,f);
+    problem_->computeF(x,f);
     return true;
   };
 
-  bool computeJacobian(const Tpetra_Vector & x, Tpetra_Operator & Jac)
+  bool computeJacobian(const TVector & x, TOperator & Jac)
   {
 
-    Problem_->UpdateJacobian(x);
+    problem_->updateJacobian(x);
     return true;
   }
 
-  bool computePreconditioner(const Tpetra_Vector & x, Tpetra_Operator & Op, Teuchos::ParameterList *)
+  bool computePreconditioner(const TVector & x, TOperator & Op, Teuchos::ParameterList *)
   {
 
-    Problem_->UpdateJacobian(x);
+    problem_->updateJacobian(x);
     return true;
   }
 
-  bool computePrecMatrix(const Tpetra_Vector & x, Tpetra_RowMatrix & M)
+  bool computePrecMatrix(const TVector & x, TRowMatrix & M)
   {
     std::cout << "*ERR* SimpleProblem::preconditionVector()\n";
     std::cout << "*ERR* don't use explicit preconditioning" << std::endl;
@@ -218,7 +189,7 @@ public:
 
 private:
 
-  PDEProblem * Problem_;
+  PDEProblem * problem_;
 
 }; /* class SimpleProblemInterface */
 
