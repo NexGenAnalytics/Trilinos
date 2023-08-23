@@ -56,49 +56,37 @@
 #include <Teuchos_Assert.hpp>
 
 // Ifpack2
-#include <Ifpack2_IlukGraph.hpp>
+#include <Ifpack2_IlukGraph.hpp> // AM: issue circular dependency
 //#include <Ifpack_CrsRiluk.h> // AM: todo, finds an equivalent
 
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
-#include "BelosPseudoBlockTFQMRSolMgr.hpp"
-#include "BelosTpetraTestFramework.hpp"
+#include "BelosTFQMRSolMgr.hpp"
+//#include "BelosEpetraUtils.h" // AM: to remove
 
-template<typename ScalarType>
-int run(int argc, char *argv[]) {
-  // Teuchos
-  using SCT = typename Teuchos::ScalarTraits<ScalarType>;
-  using MT = typename SCT::magnitudeType;
+int main(int argc, char *argv[]) {
+  
+  // AM: todo
+  
+  //
+  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
+  //
+  typedef double                            ST;
+  typedef Teuchos::ScalarTraits<ST>        SCT;
+  typedef SCT::magnitudeType                MT;
+  typedef Epetra_MultiVector                MV;
+  typedef Epetra_Operator                   OP;
+  typedef Belos::MultiVecTraits<ST,MV>     MVT;
+  typedef Belos::OperatorTraits<ST,MV,OP>  OPT;
+
   using Teuchos::ParameterList;
   using Teuchos::RCP;
   using Teuchos::rcp;
 
-  // Tpetra
-  using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
-  using LO = typename Tpetra::MultiVector<>::local_ordinal_type;
-  using GO = typename Tpetra::MultiVector<>::global_ordinal_type;
-  using NT = typename Tpetra::MultiVector<>::node_type;
-
-  using OP = Tpetra::Operator<ST,LO,GO,NT>;
-  using MV = Tpetra::MultiVector<ST,LO,GO,NT>;
-
-  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
-  using tmap_t = Tpetra::Map<LO,GO,NT>;
-
-  // Belos
-  using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
-  using MVT = typename Belos::MultiVecTraits<ST,MV>;
-
-  // MPI session
-  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
-  RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
-  int MyPID = rank(*comm);
-  
   bool success = false;
   bool verbose = false;
-  
   try {
     bool proc_verbose = false;
     bool leftprec = true; // use left preconditioning to solve these linear systems
@@ -123,14 +111,18 @@ int run(int argc, char *argv[]) {
     }
     if (!verbose)
       frequency = -1;  // reset frequency if test is not verbose
-    
+    //
     // Get the problem
-    Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
-    RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
-    RCP<const tmap_t> map = A->getDomainMap();
+    //
+    int MyPID;
+    RCP<Epetra_CrsMatrix> A;
+    int return_val =Belos::Util::createEpetraProblem(filename,NULL,&A,NULL,NULL,&MyPID);
+    const Epetra_Map &Map = A->RowMap();
+    if(return_val != 0) return return_val;
     proc_verbose = verbose && (MyPID==0); /* Only print on zero processor */
-    
+    //
     // *****Construct the Preconditioner*****
+    //
     if (proc_verbose) std::cout << std::endl << std::endl;
     if (proc_verbose) std::cout << "Constructing ILU preconditioner" << std::endl;
     int Lfill = 2;
@@ -145,23 +137,20 @@ int run(int argc, char *argv[]) {
     double Rthresh = 1.0;
     // if (argc >5) Rthresh = atof(argv[5]);
     if (proc_verbose) std::cout << "Using Relative Threshold Value of " << Rthresh << std::endl;
-    
-    // Init Ifpack2 classes
-    RCP<Ifpack2::IlukGraph> ilukGraph;
-    //RCP<Ifpack::CrsRiluk> ilukFactors;
-    
-    // AM: todo 
+    //
+    Teuchos::RCP<Ifpack_IlukGraph> ilukGraph;
+    Teuchos::RCP<Ifpack_CrsRiluk> ilukFactors;
+    //
     if (Lfill > -1) {
-      ilukGraph = rcp(new Ifpack2::IlukGraph(A->getGraph(), Lfill, Overlap));
-      /*int info = ilukGraph->ConstructFilledGraph();
+      ilukGraph = Teuchos::rcp(new Ifpack_IlukGraph(A->Graph(), Lfill, Overlap));
+      int info = ilukGraph->ConstructFilledGraph();
       TEUCHOS_ASSERT( info == 0 );
-      ilukFactors = rcp(new Ifpack_CrsRiluk(*ilukGraph));
+      ilukFactors = Teuchos::rcp(new Ifpack_CrsRiluk(*ilukGraph));
       int initerr = ilukFactors->InitValues(*A);
       if (initerr != 0) std::cout << "InitValues error = " << initerr;
       info = ilukFactors->Factor();
-      TEUCHOS_ASSERT( info == 0 );*/
+      TEUCHOS_ASSERT( info == 0 );
     }
-    /*
     //
     bool transA = false;
     double Cond_Est;
@@ -170,7 +159,7 @@ int run(int argc, char *argv[]) {
       std::cout << "Condition number estimate for this preconditoner = " << Cond_Est << std::endl;
       std::cout << std::endl;
     }
-  
+
     //
     // Create the Belos preconditioned operator from the Ifpack preconditioner.
     // NOTE:  This is necessary because Belos expects an operator to apply the
@@ -178,17 +167,17 @@ int run(int argc, char *argv[]) {
     RCP<Belos::EpetraPrecOp> Prec = rcp( new Belos::EpetraPrecOp( ilukFactors ) );
 
     //
-    // ********Other information used by block solver***********
+    // ********Other information used by solver***********
     // *****************(can be user specified)******************
     //
     const int NumGlobalElements = Map.NumGlobalElements();
     if (maxiters == -1)
-      maxiters = NumGlobalElements - 1; // maximum number of iterations to run
+      maxiters = NumGlobalElements; // maximum number of iterations to run
     //
     ParameterList belosList;
     belosList.set( "Maximum Iterations", maxiters );       // Maximum number of iterations allowed
     belosList.set( "Convergence Tolerance", tol );         // Relative convergence tolerance requested
-    belosList.set( "Explicit Residual Test", explicit_test );       // Need to check for the explicit residual before returning
+    belosList.set( "Explicit Residual Test", explicit_test );     // Need to check for the explicit residual before returning
     if (verbose) {
       belosList.set( "Verbosity", Belos::Errors + Belos::Warnings +
           Belos::TimingDetails + Belos::StatusTestDetails );
@@ -220,11 +209,11 @@ int run(int argc, char *argv[]) {
     }
     //
     // *******************************************************************
-    // ************Start the Pseudo Block TFQMR iteration*****************
+    // *****************Start the TFQMR iteration*************************
     // *******************************************************************
     //
-    Teuchos::RCP< Belos::PseudoBlockTFQMRSolMgr<double,MV,OP> > solver =
-      Teuchos::rcp( new Belos::PseudoBlockTFQMRSolMgr<double,MV,OP>( rcp(&problem,false), rcp(&belosList,false) ) );
+    Teuchos::RCP< Belos::TFQMRSolMgr<double,MV,OP> > solver =
+      Teuchos::rcp( new Belos::TFQMRSolMgr<double,MV,OP>( rcp(&problem,false), rcp(&belosList,false) ) );
     //
     // **********Print out information about problem*******************
     //
@@ -232,7 +221,7 @@ int run(int argc, char *argv[]) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numrhs << std::endl;
-      std::cout << "Max number of Pseudo Block TFQMR iterations: " << maxiters << std::endl;
+      std::cout << "Max number of TFQMR iterations: " << maxiters << std::endl;
       std::cout << "Relative residual tolerance: " << tol << std::endl;
       std::cout << std::endl;
     }
@@ -259,8 +248,8 @@ int run(int argc, char *argv[]) {
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > tol ) badRes = true;
       }
-    }*/
-    
+    }
+
     success = ret==Belos::Converged && !badRes;
 
     if (success) {
@@ -276,7 +265,3 @@ int run(int argc, char *argv[]) {
   return ( success ? EXIT_SUCCESS : EXIT_FAILURE );
 } // end test_ptfqmr.cpp
 
-int main(int argc, char *argv[]) {
-  run<double>(argc,argv);
-  // run<float>(argc,argv);
-}
