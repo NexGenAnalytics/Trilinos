@@ -44,20 +44,23 @@
 // NOTE: No preconditioner is used in this case.
 //
 
-#include <BelosConfigDefs.hpp>
-#include <BelosLinearProblem.hpp>
-#include <BelosTpetraAdapter.hpp>
-#include <BelosTpetraOperator.hpp>
-#include <BelosTFQMRSolMgr.hpp>
-
+// Teuchos
 #include <Teuchos_Time.hpp>
 #include <Teuchos_StandardCatchMacros.hpp>
 
+// Tpetra
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+
+// Belos
+#include "BelosConfigDefs.hpp"
+#include "BelosLinearProblem.hpp"
+#include "BelosTpetraAdapter.hpp"
+#include "BelosTpetraOperator.hpp"
+#include "BelosTFQMRSolMgr.hpp"
 
 using namespace Belos;
 
@@ -264,7 +267,7 @@ Iterative_Inverse_Operator<OP, ST, MP, MV>::Iterative_Inverse_Operator(int n_in,
 {
   int n_global = n_in;
   
-  // AM : Could be replaced by: pComm = Tpetra::getDefaultComm();
+  // AM: Could be replaced by: pComm = Tpetra::getDefaultComm();
 #ifdef HAVE_TPETRA_MPI
   MPI_Allreduce(&n_in, &n_global, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
   pComm = Teuchos::rcp (new Teuchos::MpiComm<int> (MPI_COMM_WORLD));
