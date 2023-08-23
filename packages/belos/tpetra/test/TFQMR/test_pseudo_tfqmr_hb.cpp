@@ -66,7 +66,6 @@
 #include "BelosTFQMRSolMgr.hpp"
 #include "BelosPseudoBlockTFQMRSolMgr.hpp"
 #include "BelosTpetraTestFramework.hpp"
-//#include "BelosEpetraUtils.h" // old to remove
 
 template<typename ScalarType>
 int run(int argc, char *argv[]) {  
@@ -101,9 +100,7 @@ int run(int argc, char *argv[]) {
   bool verbose = false;
   
   try {
-    //
     // Get test parameters from command-line processor
-    //
     bool proc_verbose = false;
     bool explicit_test = false;
     bool pseudo = false;
@@ -128,9 +125,7 @@ int run(int argc, char *argv[]) {
     if (!verbose)
       frequency = -1;  // reset frequency if test is not verbose
 
-    //
     // Get the problem
-    //
     Belos::Tpetra::HarwellBoeingReader<Tpetra::CrsMatrix<ST> > reader( comm );
     RCP<Tpetra::CrsMatrix<ST> > A = reader.readFromFile( filename );
     RCP<const Tpetra::Map<> > map = A->getDomainMap();
