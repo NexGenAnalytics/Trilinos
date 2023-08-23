@@ -65,9 +65,8 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Tpetra_INST_SERIAL:BOOL=ON \
     -D Tpetra_INST_CUDA="${ENABLE_CUDA}" \
     \
-    -D ShyLU_NodeTacho_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D ShyLU_NodeTacho_ENABLE_CUSOLVER="${ENABLE_CUDA}" \
-    -D ShyLU_NodeTacho_ENABLE_CUSPARSE="${ENABLE_CUDA}" \
+    -D TPL_ENABLE_CUSOLVER="${ENABLE_CUDA}" \
+    -D TPL_ENABLE_CUSPARSE="${ENABLE_CUDA}" \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
