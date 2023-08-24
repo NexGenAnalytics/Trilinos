@@ -127,6 +127,11 @@ int main(int argc, char *argv[])
     {
       cerr << "Caught exception: ";
       rhs.Print();
+
+#ifdef HAVE_MPI
+      MPI_Finalize();
+#endif
+      return (EXIT_FAILURE);
     }
   }
 
