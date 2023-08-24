@@ -66,8 +66,6 @@ int run(int argc, char *argv[])
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
   using NT = typename Tpetra::Vector<>::node_type;
 
-  using SCT = typename Teuchos::ScalarTraits<ST>;
-  using MT = typename SCT::magnitudeType;
   using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
@@ -94,7 +92,7 @@ int run(int argc, char *argv[])
     int frequency = -1;        // frequency of status test output.
     int numrhs = 1;            // number of right-hand sides to solve for
     int maxiters = -1;         // maximum number of iterations allowed per linear system
-    MT tol = 1.0e-8;           // relative residual tolerance
+    ST tol = sqrt(std::numeric_limits<ST>::epsilon()); // relative residual tolerance
 
     // Define command-line arguments
     CommandLineProcessor cmdp(false,true);

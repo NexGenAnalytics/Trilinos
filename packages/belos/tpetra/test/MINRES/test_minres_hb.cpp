@@ -97,7 +97,7 @@ int run(int argc, char *argv[]) {
     int numRHS = 1;  // total number of right-hand sides to solve for
     int maxIters = 13000;  // maximum number of iterations for solver to use
     std::string filename ("bcsstk14.hb");
-    double tol = 1.0e-5; // relative residual tolerance
+    ST tol = sqrt(std::numeric_limits<ST>::epsilon()); // relative residual tolerance
     
     //
     // Read in command-line arguments
