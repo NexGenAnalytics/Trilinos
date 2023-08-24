@@ -349,6 +349,8 @@ int run(int argc, char *argv[])
 
   bool verbose = false;
   bool success = true;
+
+  ST tol = sqrt(std::numeric_limits<ST>::epsilon());
   
   try {
     int n(10);
@@ -409,7 +411,7 @@ int run(int argc, char *argv[])
     if (pid==0)
       std::cout << "Two-norm of std::vector (Y-1.0) : "<< norm_Y[0] << std::endl;
 
-    success = (norm_Y[0] < 1e-10 && !Teuchos::ScalarTraits<ST>::isnaninf( norm_Y[0] ) );
+    success = (norm_Y[0] < tol && !Teuchos::ScalarTraits<ST>::isnaninf( norm_Y[0] ) );
     
     if (success) {
       if (pid==0)
@@ -427,5 +429,7 @@ int run(int argc, char *argv[])
 
 int main(int argc, char *argv[]) {
   run<double>(argc, argv);
+
+  // wrapped with a check: CMake option Trilinos_ENABLE_FLOAT=ON
   // run<float>(argc, argv);
 }

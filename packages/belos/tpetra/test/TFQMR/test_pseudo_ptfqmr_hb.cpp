@@ -276,5 +276,7 @@ int run(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   run<double>(argc,argv);
+
+  // wrapped with a check: CMake option Trilinos_ENABLE_FLOAT=ON
   // run<float>(argc,argv);
 }
