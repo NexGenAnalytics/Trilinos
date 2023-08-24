@@ -69,8 +69,6 @@
 template<typename ScalarType>
 int run(int argc, char *argv[]) {
   // Teuchos
-  using SCT = typename Teuchos::ScalarTraits<ScalarType>;
-  using MT = typename SCT::magnitudeType;
   using Teuchos::ParameterList;
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -107,7 +105,7 @@ int run(int argc, char *argv[]) {
     int numrhs = 1;
     int maxiters = -1;    // maximum iterations allowed
     std::string filename("orsirr1.hb");
-    MT tol = 1.0e-5;  // relative residual tolerance
+    ST tol = sqrt(std::numeric_limits<ST>::epsilon()); // relative residual tolerance
 
     Teuchos::CommandLineProcessor cmdp(false,true);
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");

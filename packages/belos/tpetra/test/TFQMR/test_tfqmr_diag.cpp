@@ -283,7 +283,7 @@ Iterative_Inverse_Operator<OP, ST, MP, MV>::Iterative_Inverse_Operator(int n_in,
   pProb->setOperator( pPE );
 
   int max_iter = 100;
-  double tol = 1.0e-10;
+  ST tol = sqrt(std::numeric_limits<ST>::epsilon());
   int verbosity = Belos::Errors + Belos::Warnings;
   if (print)
     verbosity += Belos::TimingDetails + Belos::StatusTestDetails;
