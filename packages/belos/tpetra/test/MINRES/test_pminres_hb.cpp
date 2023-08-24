@@ -170,10 +170,10 @@ int run(int argc, char *argv[]){
     innerProblem.setLabel( "Belos Preconditioner Solve" );
 
     //  
-    // *****Create the inner block Gmres iteration********
+    // *****Create the inner Minres iteration********
     //  
     RCP<Belos::TpetraOperator<ST>> innerSolver;
-    innerSolver = rcp( new Belos::TpetraOperator<ST>( rcpFromRef(innerProblem), rcpFromRef(innerBelosList), "Block Gmres", true ) );
+    innerSolver = rcp( new Belos::TpetraOperator<ST>( rcpFromRef(innerProblem), rcpFromRef(innerBelosList), "Minres", true ) );
 
     //
     // Construct a linear problem instance with GMRES as preconditoner.
