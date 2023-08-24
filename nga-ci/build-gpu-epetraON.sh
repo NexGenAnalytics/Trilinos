@@ -50,6 +50,8 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_Sacado=OFF \
     \
     -D TPL_ENABLE_CUDA="${ENABLE_CUDA}" \
+    -D TPL_ENABLE_CUSOLVER=ON \
+    -D TPL_ENABLE_CUSPARSE=ON \
     -D Tpetra_INST_SERIAL=OFF \
     -D Tpetra_INST_CUDA=ON \
     -D Trilinos_ENABLE_Kokkos=ON \
@@ -58,9 +60,6 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Kokkos_ARCH_AMPERE86=ON \
     -D Kokkos_ENABLE_CUDA_LAMBDA="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA_UVM=OFF \
-    \
-    -D TPL_ENABLE_CUSOLVER=ON \
-    -D TPL_ENABLE_CUSPARSE=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
