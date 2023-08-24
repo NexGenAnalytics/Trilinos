@@ -49,7 +49,6 @@ CRSM * Laplace2D::createLaplacian(const int nx, const int ny, const Teuchos::RCP
 
   // Create Tpetra vectors
   Teuchos::RCP<const Map> map = Teuchos::rcp(new const Map(numGlobalElements, numLocalElements, 0, comm));
-  Teuchos::RCP<TV> x = Teuchos::rcp(new TV(map));
   
   // get update list
   Tpetra::global_size_t globalElements = map->getGlobalNumElements();
