@@ -6,6 +6,13 @@
 #include "Teuchos_RCP.hpp"
 #include "Tpetra_Laplace2D.hpp"
 
+#if defined HAVE_TPETRACORE_CUDA
+#define NUM_LOCAL 10000
+#else
+#define NUM_LOCAL 100
+#endif
+const std::size_t numLocalElements = NUM_LOCAL;
+
 // Laplace2D implementation
 void Laplace2D::getMyNeighbours(const int i, const int nx, const int ny,
                   int &left, int &right,
@@ -39,10 +46,11 @@ CRSM * Laplace2D::createLaplacian(const int nx, const int ny, const Teuchos::RCP
 {
   int numGlobalElements = nx * ny;
   int numLocalElements = 5; // TD: added
-  // create a map
-  Teuchos::RCP<const Map> map = Teuchos::rcp(new const Map(numGlobalElements, 5, 0, comm));
-  // local number of rows
-  numLocalElements = map->getLocalNumElements();
+
+  // Create Tpetra vectors
+  Teuchos::RCP<const Map> map = Teuchos::rcp(new const Map(numGlobalElements, numLocalElements, 0, comm));
+  Teuchos::RCP<TV> x = Teuchos::rcp(new TV(map));
+  
   // get update list
   Tpetra::global_size_t globalElements = map->getGlobalNumElements();
 
