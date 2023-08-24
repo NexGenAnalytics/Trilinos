@@ -47,9 +47,6 @@
 #include "Teuchos_DefaultComm.hpp"
 #include "Teuchos_ParameterList.hpp"
 
-#include "Tpetra_ApplyOp.hpp"
-#include "Tpetra_Operator.hpp"
-
 #ifndef GALERI_TEST_USE_LONGLONG_GO
 #define GO int
 #else
