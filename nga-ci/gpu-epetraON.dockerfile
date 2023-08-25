@@ -12,7 +12,7 @@ FROM build-stage AS test-stage
 ARG OMPI_ALLOW_RUN_AS_ROOT=1
 ARG OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
-RUN bash /opt/src/Trilinos/nga-ci/test.sh
+RUN bash /opt/src/Trilinos/nga-ci/test-gpu.sh
 
 FROM scratch AS export-stage
 COPY --from=test-stage /tmp/artifacts /tmp/artifacts
