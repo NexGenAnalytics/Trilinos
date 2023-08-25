@@ -54,7 +54,6 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_Kokkos=ON \
     -D Kokkos_ENABLE_OPENMP=OFF \
     -D Kokkos_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D Kokkos_ARCH_AMPERE86=ON \
     -D Kokkos_ENABLE_CUDA_LAMBDA="${ENABLE_CUDA}" \
     -D Kokkos_ENABLE_CUDA_UVM=OFF \
     \
