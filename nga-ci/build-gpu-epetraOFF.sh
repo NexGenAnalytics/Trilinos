@@ -97,4 +97,4 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D Trilinos_ENABLE_Epetra=OFF \
     -S /opt/src/Trilinos -B /opt/build/Trilinos
-ninja -j 7
+ninja -j 4
