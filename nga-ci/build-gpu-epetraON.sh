@@ -19,8 +19,7 @@ export MPIRUN="${MPI_ROOT}/bin/mpirun"
 export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 export LAPACK_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
 
-# export PATH=/usr/local/cuda-12.2/bin:$PATH
-# which nvcc
+export PATH=/usr/local/cuda-12.2/bin:$PATH
 # export NVCC_WRAPPER_DEFAULT_COMPILER=${MPICXX}
 # export CXX=${MPICXX}
 export OMPI_CXX=/opt/src/Trilinos/packages/kokkos/bin/nvcc_wrapper
