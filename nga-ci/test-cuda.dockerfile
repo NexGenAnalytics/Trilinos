@@ -1,11 +1,6 @@
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 RUN apt-get update && apt-get install -y git
 
-# Get information using Driver Utility
-RUN apt-get install nvidia-utils -y
-RUN apt-get install nvidia-utils-515 -y
-RUN nvidia-smi
-
 # Retrieve CUDA samples
 WORKDIR /opt
 RUN git clone https://github.com/NVIDIA/cuda-samples.git
