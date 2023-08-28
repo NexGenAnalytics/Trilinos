@@ -9,6 +9,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  check_requirements:  
+    runs-on: nvidia/cuda:12.2.0-devel-ubuntu22.04
+    steps:
+    - name: Check Cuda Requirements
+      run: |
+        apt-get update && apt-get install -y git \
+        cd /opt
+        git clone https://github.com/NVIDIA/cuda-samples.git
+        cd /opt/cuda-samples/Samples/1_Utilities/deviceQuery
+        make dbg=1 TARGET_ARCH=x86_64 HOST_COMPILER=g++
   build:
     runs-on: self-hosted
     strategy:
