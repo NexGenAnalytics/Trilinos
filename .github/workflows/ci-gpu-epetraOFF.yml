@@ -43,6 +43,7 @@ jobs:
           file: ./nga-ci/test-cuda.dockerfile
 
   build:
+    needs: check_requirements
     runs-on: self-hosted
     strategy:
       fail-fast: true
