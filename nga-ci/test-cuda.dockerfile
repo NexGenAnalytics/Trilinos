@@ -7,7 +7,7 @@ RUN git clone https://github.com/NVIDIA/cuda-samples.git
 
 # build sample
 WORKDIR /opt/cuda-samples/Samples/1_Utilities/deviceQuery
-RUN make dbg=1 TARGET_ARCH=x86_64 HOST_COMPILER=g++
+RUN make dbg=1 TARGET_ARCH=x86_64 HOST_COMPILER=g++ CUDA_PATH=/usr/local/cuda-12.2
 
 # Run sample
 WORKDIR /opt/cuda-samples/bin/x86_64/linux/debug
