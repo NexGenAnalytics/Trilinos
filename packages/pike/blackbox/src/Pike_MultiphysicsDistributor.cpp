@@ -274,7 +274,7 @@ namespace pike {
     MPI_Comm_group(myRawMpiComm,&myGroup);
 
     MPI_Group worldGroup;
-    MPI_Comm_group(get_global_comm(),&worldGroup);
+    MPI_Comm_group(pike::get_global_comm(),&worldGroup);
 
     MPI_Group_translate_ranks(myGroup,1,&myRank,worldGroup,&worldRank);
    
