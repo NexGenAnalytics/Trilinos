@@ -161,7 +161,7 @@ void NOX::Utils::reset(Teuchos::ParameterList& p)
     MPI_Initialized(&mpiIsRunning);
     if (mpiIsRunning)
       {
-        MPI_Comm_rank(get_global_comm(), &myPID);
+        MPI_Comm_rank(NOX::get_global_comm(), &myPID);
       }
     else
       {
