@@ -1,9 +1,17 @@
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 RUN apt-get update && apt-get install -y git
 
-# retrieve CUDA samples
+# get information
+RUN nvidia-smi
+
+# Retrieve CUDA samples
 WORKDIR /opt
 RUN git clone https://github.com/NVIDIA/cuda-samples.git
-# build deviceQuery sample
+
+# build sample
 WORKDIR /opt/cuda-samples/Samples/1_Utilities/deviceQuery
 RUN make dbg=1 TARGET_ARCH=x86_64 HOST_COMPILER=g++
+
+# Run sample
+WORKDIR /opt/cuda-samples/bin/x86_64/linux/debug
+RUN ./deviceQuery
