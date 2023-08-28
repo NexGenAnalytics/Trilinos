@@ -75,7 +75,7 @@ namespace panzer {
 
   inline void pauseToAttach()
   {
-    pauseToAttach(get_global_comm());
+    pauseToAttach(panzer::get_global_comm());
   }
 
   

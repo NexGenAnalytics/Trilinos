@@ -61,7 +61,7 @@ class Quad8ToQuad4MeshFactory : public STK_MeshFactory {
 public:
 
   Quad8ToQuad4MeshFactory(const std::string& quad8MeshFileName,
-                          stk::ParallelMachine mpi_comm = get_global_comm(),
+                          stk::ParallelMachine mpi_comm = panzer::get_global_comm(),
                           const bool print_debug = false);
 
   Quad8ToQuad4MeshFactory(const Teuchos::RCP<panzer_stk::STK_Interface>& quad8Mesh,
