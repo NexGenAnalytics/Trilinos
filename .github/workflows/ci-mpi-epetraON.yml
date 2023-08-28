@@ -7,6 +7,7 @@ on:
       - NGA-FY23-develop
   workflow_dispatch:
 
+# Cancel any existing jobs
 concurrency:
   group: ${{ github.event.repository.name }}-${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
