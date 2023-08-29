@@ -9,41 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  check_requirements:  
-    runs-on: self-hosted
-    strategy:
-      fail-fast: true
-    steps:
-      - uses: actions/checkout@v3
-      - name: CI Variables
-        id: vars
-        run: echo "DOCKER_TAG=$(echo ${{ github.ref }} | cut -d'/' -f3- | sed 's/[^a-z0-9_-]/__/gi')" >> $GITHUB_ENV
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          buildkitd-flags: --debug
-      - name: Inspect Builder
-        run: |
-          echo "Name:      ${{ steps.buildx.outputs.name }}"
-          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
-          echo "Status:    ${{ steps.buildx.outputs.status }}"
-          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
-          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
-          echo "DOCKER_TAG: ${{ env.DOCKER_TAG }}"
-          echo "SCOPE_NAME  ${{ env.SCOPE_NAME }}"
-      - name: Build and test the Docker Image
-        id: docker_build
-        continue-on-error: false
-        uses: docker/build-push-action@v3
-        with:
-          push: false
-          tags: ${{ env.DOCKER_TAG }}
-          context: .
-          file: ./nga-ci/test-cuda.dockerfile
-
   build:
-    needs: check_requirements
     runs-on: self-hosted
     strategy:
       fail-fast: true
@@ -75,3 +41,5 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           context: .
           file: ./nga-ci/gpu-epetraOFF.dockerfile
+      - name: Run Docker container
+        run: docker run --gpus all ${{ env.DOCKER_TAG }} /opt/src/Trilinos/nga-ci/test-gpu.sh
