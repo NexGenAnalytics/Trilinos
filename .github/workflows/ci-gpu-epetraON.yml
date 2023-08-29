@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  check_requirements:  
+  check_requirements:
     runs-on: self-hosted
     strategy:
       fail-fast: true
@@ -72,3 +72,5 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           context: .
           file: ./nga-ci/gpu-epetraON.dockerfile
+      - name: Run Docker container
+        run: docker run --gpus all ${{ env.DOCKER_TAG }} /opt/src/Trilinos/nga-ci/test-gpu.sh
