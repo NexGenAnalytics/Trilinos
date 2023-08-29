@@ -53,7 +53,7 @@
 #include "macros.h"
 #include "pcomm.h"
 #include "mytime.h"
-
+#include "global_comm.h"
 
 extern int myrow;
 extern int mycol;
@@ -165,7 +165,7 @@ factor(DATA_TYPE *seg)
   MPI_Status msgstatus;
   /* Distribution for the matrix on me */
 
-  MPI_Comm_size(MPI_COMM_WORLD,&numprocs);
+  MPI_Comm_size(get_pliris_global_comm(),&numprocs);
   if ( (numprocs/nprocs_row) * nprocs_row != numprocs )
   {
      if (me == 0)
@@ -173,7 +173,7 @@ factor(DATA_TYPE *seg)
        printf("nprocs_row must go into numprocs perfectly!\n");
        printf("Try a different value of nprocs_row.\n");
      }
-     MPI_Barrier(MPI_COMM_WORLD);
+     MPI_Barrier(get_pliris_global_comm());
      exit(0);
   }
 #ifdef TIMING0
@@ -232,7 +232,7 @@ factor(DATA_TYPE *seg)
     if (me == c_owner) {
       if (col_len > 0) {
 
-#ifndef OVERLAP	
+#ifndef OVERLAP
 	if (colcnt != 0){ /* update current column with saved columns */
 #ifdef TIMING0
 	  t1 = MPI_Wtime();
@@ -343,7 +343,7 @@ factor(DATA_TYPE *seg)
 	if (rowplus(rdist) == c_owner) break;
         bytes = sizeof(gpivot_row);
         MPI_Send(&gpivot_row,bytes,MPI_BYTE,rowplus(rdist),
-                 LUPIVROWTYPE+j,MPI_COMM_WORLD);
+                 LUPIVROWTYPE+j,get_pliris_global_comm());
 
       }
 #ifdef TIMING0
@@ -356,7 +356,7 @@ factor(DATA_TYPE *seg)
 	if (rowplus(rdist) == c_owner) break;
         bytes=sizeof(DATA_TYPE)*col_len;
         MPI_Send(sav_col_ptr,bytes,MPI_BYTE,
-                 rowplus(rdist),LUROWTYPE+j,MPI_COMM_WORLD);
+                 rowplus(rdist),LUROWTYPE+j,get_pliris_global_comm());
       }
 #ifdef TIMING0
       bcastcolstime += (MPI_Wtime()-t1);
@@ -374,7 +374,7 @@ factor(DATA_TYPE *seg)
 
      bytes=col_len*sizeof(DATA_TYPE);
        MPI_Irecv(sav_col_ptr,bytes,MPI_BYTE,
-                MPI_ANY_SOURCE,LUROWTYPE+j,MPI_COMM_WORLD,&msgrequest);
+                MPI_ANY_SOURCE,LUROWTYPE+j,get_pliris_global_comm(),&msgrequest);
 
 
 #ifdef TIMING0
@@ -383,13 +383,13 @@ factor(DATA_TYPE *seg)
       bytes = 0; dest = -1; type = LUPIVROWTYPE+j;
       bytes=4;
       bytes = sizeof(gpivot_row);
-      MPI_Recv(&gpivot_row,bytes,MPI_BYTE,MPI_ANY_SOURCE,type,MPI_COMM_WORLD,&msgstatus);
+      MPI_Recv(&gpivot_row,bytes,MPI_BYTE,MPI_ANY_SOURCE,type,get_pliris_global_comm(),&msgstatus);
 #ifdef TIMING0
       bcastpivrtime += (MPI_Wtime()-t1);
 #endif
  /*      bytes=col_len*sizeof(DATA_TYPE);
           MPI_Recv(sav_col_ptr,bytes,MPI_BYTE,
-         MPI_ANY_SOURCE,LUROWTYPE+j,MPI_COMM_WORLD,&msgstatus);  */
+         MPI_ANY_SOURCE,LUROWTYPE+j,get_pliris_global_comm(),&msgstatus);  */
       /* if necessary forward column and pivot */
 
       if ((ringdist % MAXDIST) == 0) {
@@ -400,7 +400,7 @@ factor(DATA_TYPE *seg)
 	  if (rowplus(rdist) == c_owner) break;
           bytes = sizeof(gpivot_row);
           MPI_Send(&gpivot_row,bytes,MPI_BYTE,rowplus(rdist),
-                  LUPIVROWTYPE+j,MPI_COMM_WORLD);
+                  LUPIVROWTYPE+j,get_pliris_global_comm());
 	}
 #ifdef TIMING0
 	bcastpivstime += (MPI_Wtime()-t1);
@@ -419,7 +419,7 @@ factor(DATA_TYPE *seg)
 	  if (rowplus(rdist) == c_owner) break;
           bytes=col_len*sizeof(DATA_TYPE);
           MPI_Send(sav_col_ptr,bytes,MPI_BYTE,
-                   rowplus(rdist),LUROWTYPE+j,MPI_COMM_WORLD);
+                   rowplus(rdist),LUROWTYPE+j,get_pliris_global_comm());
 	}
 #ifdef TIMING0
 	bcastcolstime += (MPI_Wtime()-t1);
@@ -478,7 +478,7 @@ factor(DATA_TYPE *seg)
                  act_piv_row_ptr, &col1_stride,
                  act_row_ptr+(cols_in_blk_owned*blksz), &blksz, &d_one,
                  piv_row_ptr+(cols_in_blk_owned*mat_stride), &mat_stride);
-#endif	
+#endif
 #ifdef TIMING0
 	rowupdtime += (MPI_Wtime()-t1);
 #endif
@@ -528,7 +528,7 @@ factor(DATA_TYPE *seg)
 #endif
             bytes=(row_len+colcnt)*sizeof(DATA_TYPE);
 	    MPI_Send(sav_row_ptr,bytes,MPI_BYTE,pivot_owner,
-                     LUSENDTYPE+j,MPI_COMM_WORLD);
+                     LUSENDTYPE+j,get_pliris_global_comm());
 #ifdef TIMING0
 	    sendrowtime += (MPI_Wtime()-t1);
 #endif
@@ -542,7 +542,7 @@ factor(DATA_TYPE *seg)
 	if (me != r_owner) {
           bytes=(row_len+colcnt)*sizeof(DATA_TYPE);
           MPI_Recv(sav_row_ptr,bytes,MPI_BYTE,r_owner,
-                   LUSENDTYPE+j,MPI_COMM_WORLD,&msgstatus);
+                   LUSENDTYPE+j,get_pliris_global_comm(),&msgstatus);
         }
 #ifdef TIMING0
 	recvrowtime += (MPI_Wtime()-t1);
@@ -632,7 +632,7 @@ factor(DATA_TYPE *seg)
 	/* reset active matrix pointers */
 
 	colcnt = 0;
-	act_col_ptr = sav_col_ptr = col1 + rows_used;	
+	act_col_ptr = sav_col_ptr = col1 + rows_used;
 	act_row_ptr = sav_piv_row_ptr = row1;
       }
 #ifdef PRINT_STATUS

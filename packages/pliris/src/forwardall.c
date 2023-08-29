@@ -68,6 +68,7 @@ jdkotul@sandia.gov
 #include "permute_rhs.h"
 #include "forward.h"
 #include "exchange_pivots.h"
+#include "global_comm.h"
 
 extern int myrow;
 extern int mycol;
@@ -123,7 +124,7 @@ forwardall(DATA_TYPE *mat, int *permutations, DATA_TYPE *rhs_copy,
 
   int numprocs;
 
-  MPI_Comm_size(MPI_COMM_WORLD,&numprocs);
+  MPI_Comm_size(get_pliris_global_comm(),&numprocs);
   if ( (numprocs/nprocs_row) * nprocs_row != numprocs )
   {
      if (me == 0)
@@ -131,7 +132,7 @@ forwardall(DATA_TYPE *mat, int *permutations, DATA_TYPE *rhs_copy,
        printf("nprocs_row must go into numprocs perfectly!\n");
        printf("Try a different value of nprocs_row.\n");
      }
-     MPI_Barrier(MPI_COMM_WORLD);
+     MPI_Barrier(get_pliris_global_comm());
      exit(0);
   }
   colcnt = 0;           /* number of column's currently saved for update */
@@ -164,6 +165,6 @@ forwardall(DATA_TYPE *mat, int *permutations, DATA_TYPE *rhs_copy,
   permute_mat(mat,permutations);
   permute_rhs(rhs,permutations);
   forward(mat, rhs);
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(get_pliris_global_comm());
 
 }/* End of function forwardall */

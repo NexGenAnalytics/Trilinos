@@ -47,6 +47,7 @@
 double  seconds(double );
 double  timing(double , int );
 #include "mytime.h"
+#include "global_comm.h"
 
 double
 seconds(double start)
@@ -81,9 +82,9 @@ timing(double secs, int type)
 
     max_in.val = secs;
     max_in.proc = me;
-    MPI_Allreduce(&max_in,&max_out,1,MPI_DOUBLE_INT,MPI_MAXLOC,MPI_COMM_WORLD);
+    MPI_Allreduce(&max_in,&max_out,1,MPI_DOUBLE_INT,MPI_MAXLOC,get_pliris_global_comm());
 
-    MPI_Allreduce(&secs,&avgtime,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&secs,&avgtime,1,MPI_DOUBLE,MPI_SUM,get_pliris_global_comm());
     avgtime /= nprocs_cube;
 
     if (me == 0) {
@@ -108,12 +109,12 @@ void showtime(char *label, double *value)
     } max_in, max_out, min_in, min_out;
     max_in.val = *value;
     max_in.proc = me;
-    MPI_Allreduce(&max_in,&max_out,1,MPI_DOUBLE_INT,MPI_MAXLOC,MPI_COMM_WORLD);
+    MPI_Allreduce(&max_in,&max_out,1,MPI_DOUBLE_INT,MPI_MAXLOC,get_pliris_global_comm());
     min_in.val = *value;
     min_in.proc = me;
-    MPI_Allreduce(&min_in,&min_out,1,MPI_DOUBLE_INT,MPI_MINLOC,MPI_COMM_WORLD);
+    MPI_Allreduce(&min_in,&min_out,1,MPI_DOUBLE_INT,MPI_MINLOC,get_pliris_global_comm());
 
-    MPI_Allreduce(value,&avgtime,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(value,&avgtime,1,MPI_DOUBLE,MPI_SUM,get_pliris_global_comm());
 
     avgtime /= nprocs_cube;
 

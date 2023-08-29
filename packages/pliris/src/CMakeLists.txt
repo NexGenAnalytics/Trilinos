@@ -71,6 +71,7 @@ IF (TPL_ENABLE_MPI)
     x_factor.h
     x_solve.h
     xlu_solve.h
+    global_comm.h
     )
 
   APPEND_SET(SOURCES
@@ -87,6 +88,7 @@ IF (TPL_ENABLE_MPI)
     x_factor.c
     xlu_solve_new.c
     x_solve.c
+    global_comm.c
     )
 
   #

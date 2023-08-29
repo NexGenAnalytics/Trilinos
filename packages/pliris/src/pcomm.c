@@ -46,6 +46,7 @@
 #include <mpi.h>
 #include "defines.h"
 #include "macros.h"
+#include "global_comm.h"
 
 #define DEBUG1 0
 /*  define variables to avoid compiler error    */
@@ -126,7 +127,7 @@ max_all(double buf, int type)
 
     maxval = buf;
 
-    MPI_Allreduce(&buf,&maxval,1,MPI_DATA_TYPE,MPI_MAX,MPI_COMM_WORLD);
+    MPI_Allreduce(&buf,&maxval,1,MPI_DATA_TYPE,MPI_MAX,get_pliris_global_comm());
 
     return maxval;
 }

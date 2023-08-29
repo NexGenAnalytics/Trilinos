@@ -50,6 +50,7 @@
 #include "solve.h"
 #include "macros.h"
 #include "pcomm.h"
+#include "global_comm.h"
 
 extern int me;
 
@@ -232,33 +233,33 @@ back_solve6(DATA_TYPE *fseg, DATA_TYPE *rhs)
         bytes[1] = 0;
         type[1] = SOHSTYPE+j;
 
-        MPI_Send((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],MPI_COMM_WORLD);
+        MPI_Send((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],get_pliris_global_comm());
 
         dest[1] = dest_left;
         bytes[1] = 0;
         type[1] = SOHSTYPE+j;
 
-	 MPI_Recv((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],MPI_COMM_WORLD,&msgstatus);
+	 MPI_Recv((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],get_pliris_global_comm(),&msgstatus);
 
          */
 
 	/*   dest[1] = dest_left;
         bytes[1] = n_rhs_this * sizeof(DATA_TYPE) * my_rows;
         type[1] = SOROWTYPE+j;
-        MPI_Send((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],MPI_COMM_WORLD); */
+        MPI_Send((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],get_pliris_global_comm()); */
 
         bytes[0] = max_bytes;
         type[0] = SOROWTYPE+j;
 
-        MPI_Irecv((char *) row2, bytes[0], MPI_CHAR, MPI_ANY_SOURCE,type[0],MPI_COMM_WORLD,&msgrequest);
+        MPI_Irecv((char *) row2, bytes[0], MPI_CHAR, MPI_ANY_SOURCE,type[0],get_pliris_global_comm(),&msgrequest);
 
-	/*   MPI_Recv((char *)rhs,bytes[0],MPI_CHAR,MPI_ANY_SOURCE,type[0],MPI_COMM_WORLD,&msgstatus); */
+	/*   MPI_Recv((char *)rhs,bytes[0],MPI_CHAR,MPI_ANY_SOURCE,type[0],get_pliris_global_comm(),&msgstatus); */
         n_rhs_this = bytes[0]/sizeof(DATA_TYPE)/my_rows;
 
         dest[1] = dest_left;
         bytes[1] = n_rhs_this * sizeof(DATA_TYPE) * my_rows;
         type[1] = SOROWTYPE+j;
-        MPI_Send((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],MPI_COMM_WORLD);
+        MPI_Send((char *) rhs, bytes[1], MPI_CHAR, dest[1], type[1],get_pliris_global_comm());
 
         MPI_Wait(&msgrequest,&msgstatus);
 
@@ -307,7 +308,7 @@ void collect_vector(DATA_TYPE *vec)
                 bytes = sizeof(DATA_TYPE);
                 type = PERMTYPE + j + k;
                 MPI_Send((vec+end_row-1),bytes,MPI_BYTE,
-                   dest,type,MPI_COMM_WORLD);
+                   dest,type,get_pliris_global_comm());
               }
             }
           }
@@ -323,7 +324,7 @@ void collect_vector(DATA_TYPE *vec)
           bytes = sizeof(DATA_TYPE);
           type = PERMTYPE + j;
           MPI_Recv((vec+end_row-1),bytes,MPI_BYTE,dest,
-                   type,MPI_COMM_WORLD,&msgstatus);
+                   type,get_pliris_global_comm(),&msgstatus);
         }
       }
     }

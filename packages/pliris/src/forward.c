@@ -65,7 +65,6 @@ jdkotul@sandia.gov
 #include "macros.h"
 #include "pcomm.h"
 
-
 extern int myrow;
 extern int mycol;
 
@@ -103,8 +102,8 @@ forward(DATA_TYPE *mat, DATA_TYPE *rhs)
 
 
   int istart;			/* Starting row index for pivot column */
-		
-  int index; 			
+
+  int index;
   int count_row;		/* dummy index */
   DATA_TYPE *piv_col;		/* portion of pivot column I am sending */
   DATA_TYPE ck;			/* rhs corresponding to current column
@@ -166,15 +165,15 @@ forward(DATA_TYPE *mat, DATA_TYPE *rhs)
 		tmpi =  ((piv_col[count_row]).r) * ck.i +
 			((piv_col[count_row]).i) * ck.r;
 		(rhs[i]).r = (rhs[i]).r - tmpr;
-		(rhs[i]).i = (rhs[i]).i - tmpi;	
+		(rhs[i]).i = (rhs[i]).i - tmpi;
 /*                rhs[i] = rhs[i] - piv_col[count_row] * ck; */
                 count_row++;
           }
 #endif
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(get_pliris_global_comm());
   }/* end of for (k=0; k<= nrows_matrix-2; k++) */
   free(piv_col);
-	
+
 
 }/* End of function forward */

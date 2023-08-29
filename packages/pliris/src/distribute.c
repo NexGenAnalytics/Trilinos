@@ -69,6 +69,7 @@ jdkotul@sandia.gov
 
 #include <mpi.h>
 #include "distribute.h"
+#include "global_comm.h"
 
 void distmat_(
                 int *nprocsr,
@@ -89,9 +90,9 @@ void distmat_(
 
 /*  Determine who I am and the number of processors that are being used    */
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &me) ;
+    MPI_Comm_rank(get_pliris_global_comm(), &me) ;
 
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_size(get_pliris_global_comm(), &nprocs);
 
     nrows = *ncols;
 

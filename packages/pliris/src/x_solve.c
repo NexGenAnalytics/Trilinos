@@ -69,7 +69,7 @@ jdkotul@sandia.gov
 #include "exchange_pivots.h"
 #include "perm1.h"
 #include "mytime.h"
-
+#include "global_comm.h"
 
 
 
@@ -94,7 +94,7 @@ void  X_SOLVE_ (DATA_TYPE *mat, int *permutations,
    double permtime, f_solve,b_solve, t1;
 
 #endif
-    MPI_Comm_rank(MPI_COMM_WORLD, &me);
+    MPI_Comm_rank(get_pliris_global_comm(), &me);
 
 
     my_first_col = mesh_col(me);
@@ -142,7 +142,7 @@ void  X_SOLVE_ (DATA_TYPE *mat, int *permutations,
 #endif
 
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(get_pliris_global_comm());
 
 #ifdef TIMING0
 
@@ -159,13 +159,13 @@ void  X_SOLVE_ (DATA_TYPE *mat, int *permutations,
 
 #endif
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(get_pliris_global_comm());
 
   /* Permute the answer -- torus map inverse */
 
   perm1_((rhs),&my_rhs);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(get_pliris_global_comm());
 
 #ifdef TIMING0
 
