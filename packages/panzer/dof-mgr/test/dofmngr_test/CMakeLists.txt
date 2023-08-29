@@ -56,6 +56,20 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   )
 ENDIF()
 
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  tUniqueGlobalIndexerUtilities_tpetra
+  SOURCES tGlobalIndexerUtilities_tpetra.cpp UnitTest_GlobalIndexer.cpp ${UNIT_TEST_DRIVER}
+  NUM_MPI_PROCS 2
+  COMM mpi
+  )
+
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  tBlockedDOFManager_tpetra
+  SOURCES tBlockedDOFManager_tpetra.cpp UnitTest_ConnManager.cpp UnitTest_ConnManager.hpp ${UNIT_TEST_DRIVER}
+  NUM_MPI_PROCS 2
+  COMM mpi
+  )
+
 #TRIBITS_ADD_EXECUTABLE_AND_TEST(
 #  tBlockedDOFManager_fei
 #  SOURCES tBlockedDOFManager_fei.cpp UnitTest_ConnManager.cpp UnitTest_ConnManager.hpp ${UNIT_TEST_DRIVER}
