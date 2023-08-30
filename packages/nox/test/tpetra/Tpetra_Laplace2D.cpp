@@ -1,10 +1,18 @@
+#include "Tpetra_Laplace2D.hpp"
+#include "NOX_Utils.H"
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_ScalarTraits.hpp"
+#include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_UnitTestHarness.hpp"
 
 #include "Teuchos_Comm.hpp"
 #include "Teuchos_RCP.hpp"
-#include "Tpetra_Laplace2D.hpp"
+
+#include <Tpetra_CrsMatrix_def.hpp>
+#include <Tpetra_Map_def.hpp>
+#include <Tpetra_Vector_def.hpp>
+
+#include <array>
 
 #if defined HAVE_TPETRACORE_CUDA
 #define NUM_LOCAL 10000
@@ -20,8 +28,13 @@ static constexpr bool NOX_HAVE_MPI = true;
 #endif // HAVE_MPI
 
 // Laplace2D implementation
-void Laplace2D::getMyNeighbours(const int i, const int nx, const int ny,
-                                int &left, int &right, int &lower, int &upper) {
+void Laplace2D::getMyNeighbours(const NOX::GlobalOrdinal i,
+                                const NOX::GlobalOrdinal nx,
+                                const NOX::GlobalOrdinal ny,
+                                NOX::GlobalOrdinal &left,
+                                NOX::GlobalOrdinal &right,
+                                NOX::GlobalOrdinal &lower,
+                                NOX::GlobalOrdinal &upper) {
   int ix, iy;
   ix = i % nx;
   iy = (i - ix) / nx;
@@ -46,40 +59,38 @@ void Laplace2D::getMyNeighbours(const int i, const int nx, const int ny,
   return;
 }
 
-CRSM *
+Teuchos::RCP<NOX::TCrsMatrix>
 Laplace2D::createLaplacian(const int nx, const int ny,
                            const Teuchos::RCP<const Teuchos::Comm<int>> &comm) {
   int numGlobalElements = nx * ny;
-  int numLocalElements = 5; // TD: added
+  int numLocalElements = 5;
 
   // Create Tpetra vectors
-  Teuchos::RCP<const Map> map =
-      Teuchos::rcp(new const Map(numGlobalElements, numLocalElements, 0, comm));
+  auto map =
+      Teuchos::rcp(new NOX::TMap(numGlobalElements, numLocalElements, 0, comm));
 
   // get update list
-  Tpetra::global_size_t globalElements = map->getGlobalNumElements();
+  const auto myGlobalElements = map->getMyGlobalIndices();
 
-  double hx = 1.0 / (nx - 1);
-  double hy = 1.0 / (ny - 1);
-  double off_left = -1.0 / (hx * hx);
-  double off_right = -1.0 / (hx * hx);
-  double off_lower = -1.0 / (hy * hy);
-  double off_upper = -1.0 / (hy * hy);
-  double diag = 2.0 / (hx * hx) + 2.0 / (hy * hy);
+  NOX::Scalar hx = 1.0 / (nx - 1);
+  NOX::Scalar hy = 1.0 / (ny - 1);
+  NOX::Scalar off_left = -1.0 / (hx * hx);
+  NOX::Scalar off_right = -1.0 / (hx * hx);
+  NOX::Scalar off_lower = -1.0 / (hy * hy);
+  NOX::Scalar off_upper = -1.0 / (hy * hy);
+  NOX::Scalar diag = 2.0 / (hx * hx) + 2.0 / (hy * hy);
 
-  int left, right, lower, upper;
+  NOX::GlobalOrdinal left, right, lower, upper;
 
   // a bit overestimated the nonzero per row
+  auto a = Teuchos::rcp(new NOX::TCrsMatrix(map, numLocalElements));
 
-  Teuchos::RCP<CRSM> A = Teuchos::rcp(new CRSM(map, 5));
-  // Add  rows one-at-a-time
+  std::array<NOX::Scalar, 4> values;
+  std::array<NOX::GlobalOrdinal, 4> indices;
 
-  double *values = new double[4];
-  int *indices = new int[4];
-
-  for (int i = 0; i < numMyElements; ++i) {
+  for (NOX::LocalOrdinal i = 0; i < numLocalElements; ++i) {
     int numEntries = 0;
-    getMyNeighbours(globalElements[i], nx, ny, left, right, lower, upper);
+    getMyNeighbours(myGlobalElements[i], nx, ny, left, right, lower, upper);
     if (left != -1) {
       indices[numEntries] = left;
       values[numEntries] = off_left;
@@ -101,17 +112,15 @@ Laplace2D::createLaplacian(const int nx, const int ny,
       ++numEntries;
     }
     // put the off-diagonal entries
-    a->insertGlobalValues(myGlobalElements[i], numEntries, values, indices);
+    a->insertGlobalValues(myGlobalElements[i], numEntries, values.data(),
+                          indices.data());
     // Put in the diagonal entry
-    a->insertGlobalValues(myGlobalElements[i], 1, &diag, myGlobalElements + i);
+    a->insertGlobalValues(myGlobalElements[i], 1, &diag,
+                          myGlobalElements.data() + i);
   }
 
   // put matrix in local ordering
   a->fillComplete();
-
-  delete[] indices;
-  delete[] values;
-  delete map;
 
   return a;
 
@@ -141,179 +150,174 @@ PDEProblem::PDEProblem(const int nx, const int ny, const double lambda,
   matrix_ = Laplace2D::createLaplacian(nx_, ny_, comm);
 }
 
-// destructor
-PDEProblem::~PDEProblem() { delete matrix_; }
-
 // compute F(x)
-void PDEProblem::computeF(const TV &x, TV &f) {
+void PDEProblem::computeF(const NOX::TVector &x, NOX::TVector &f) {
   // reset diagonal entries
   double diag = 2.0 / (hx_ * hx_) + 2.0 / (hy_ * hy_);
 
   int numMyElements = matrix_->getMap()->getLocalNumElements();
   // get update list
-  int *myGlobalElements = matrix_->getMap()->getLocalElementList();
+  auto myGlobalElements = matrix_->getMap()->getLocalElementList();
 
   for (int i = 0; i < numMyElements; ++i) {
     // Put in the diagonal entry
     matrix_->replaceGlobalValues(myGlobalElements[i], 1, &diag,
-                                 myGlobalElements + i);
+                                 myGlobalElements.data() + i);
   }
   // matrix-vector product (intra-processes communication occurs in this call)
-  matrix_->multiply(false, x, f);
+  matrix_->apply(x, f);
 
-  // add diagonal contributions
-  for (int i = 0; i < numMyElements; ++i) {
+  auto fValues = f.getLocalViewHost(Tpetra::Access::ReadWrite);
+  auto xValues = x.getLocalViewHost(Tpetra::Access::ReadOnly);
+
+  // add diagonal contributions (extent(1)?)
+  for (size_t i = 0; i < fValues.extent(1); ++i) {
     // Put in the diagonal entry
-    f[i] += lambda_ * exp(x[i]);
+    fValues(0, i) += lambda_ * exp(xValues(0, i));
   }
 }
 
 // update the Jacobian matrix for a given x
-void PDEProblem::updateJacobian(const TV &x) {
+void PDEProblem::updateJacobian(const NOX::TVector &x) {
   double diag = 2.0 / (hx_ * hx_) + 2.0 / (hy_ * hy_);
 
-  int numMyElements = matrix_->getMap().numMyElements();
+  auto numMyElements = matrix_->getMap()->getLocalNumElements();
   // get update list
-  int *myGlobalElements = matrix_->getMap().myGlobalElements();
+  auto myGlobalElements = matrix_->getMap()->getLocalElementList();
 
-  for (int i = 0; i < NumMyElements; ++i) {
+  auto xValues = x.getLocalViewHost(Tpetra::Access::ReadOnly);
+
+  for (size_t i = 0; i < numMyElements; ++i) {
     // Put in the diagonal entry
-    double newdiag = diag + lambda_ * exp(x[i]);
+    double newdiag = diag + lambda_ * exp(xValues(0, i));
     matrix_->replaceGlobalValues(myGlobalElements[i], 1, &newdiag,
-                                 myGlobalElements + i);
+                                 myGlobalElements.data() + i);
   }
 }
 
 TEUCHOS_UNIT_TEST(Tpetra_Laplace2D, Laplace2D) {
-  bool success = true;
-  try {
-    bool verbose = Teuchos::UnitTestRepository::verboseUnitTests();
+  bool verbose = Teuchos::UnitTestRepository::verboseUnitTests();
 
-    // // Get the process ID and the total number of processors
-    // int myPID = comm.getRank();
-    // if constexpr (NOX_HAVE_MPI) {
-    //   int numProc = comm.getSize();
-    // }
+  auto comm = Tpetra::getDefaultComm();
 
-    // // define the parameters of the nonlinear PDE problem
-    // int nx = 5;
-    // int ny = 6;
-    // double lambda = 1.0;
+  // Get the process ID and the total number of processors
+  int myPID = comm->getRank();
+  int numProc = comm->getSize();
 
-    // PDEProblem problem(nx, ny, lambda, &comm);
+  // define the parameters of the nonlinear PDE problem
+  int nx = 5;
+  int ny = 6;
+  double lambda = 1.0;
 
-    // // starting solution, here a zero vector
-    // TV initialGuess(problem.getMatrix()->getMap());
-    // initialGuess.putScalar(0.0);
+  PDEProblem problem(nx, ny, lambda, comm);
 
-    // // random vector upon which to apply each operator being tested
-    // TV directionVec(problem.getMatrix()->getMap());
-    // directionVec.random();
+  // starting solution, here a zero vector
+  NOX::TVector initialGuess(problem.getMatrix()->getMap());
+  initialGuess.putScalar(0.0);
 
-    // // Set up the problem interface
-    // auto interface = Teuchos::rcp(new SimpleProblemInterface(&problem));
+  // random vector upon which to apply each operator being tested
+  NOX::TVector directionVec(problem.getMatrix()->getMap());
+  directionVec.randomize();
 
-    // // Set up theolver options parameter list
-    // auto noxParamsPtr = Teuchos::rcp(new Teuchos::ParameterList);
-    // auto& noxParams = *(noxParamsPtr.get());
+  // Set up the problem interface
+  auto interface = Teuchos::rcp(new SimpleProblemInterface(&problem));
 
-    // // Set the nonlinear solver method
-    // noxParams.set("Nonlinear Solver", "Line Search Based");
+  // Set up theolver options parameter list
+  auto noxParamsPtr = Teuchos::rcp(new Teuchos::ParameterList);
+  auto &noxParams = *(noxParamsPtr.get());
 
-    // // Set up the printing utilities
-    // // Only print output if the "-v" flag is set on the command line
-    // Teuchos::ParameterList &printParams = noxParams.sublist("Printing");
-    // printParams.set("MyPID", myPID);
-    // printParams.set("Output Precision", 5);
-    // printParams.set("Output Processor", 0);
-    // if (verbose)
-    //   printParams.set("Output Information",
-    //                   NOX::Utils::OuterIteration +
-    //                       NOX::Utils::OuterIterationStatusTest +
-    //                       NOX::Utils::InnerIteration + NOX::Utils::Parameters +
-    //                       NOX::Utils::Details + NOX::Utils::Warning +
-    //                       NOX::Utils::TestDetails);
-    // else
-    //   printParams.set("Output Information",
-    //                   NOX::Utils::Error + NOX::Utils::TestDetails);
+  // Set the nonlinear solver method
+  noxParams.set("Nonlinear Solver", "Line Search Based");
 
-    // NOX::Utils printing(printParams);
+  // Set up the printing utilities
+  // Only print output if the "-v" flag is set on the command line
+  Teuchos::ParameterList &printParams = noxParams.sublist("Printing");
+  printParams.set("MyPID", myPID);
+  printParams.set("Output Precision", 5);
+  printParams.set("Output Processor", 0);
+  if (verbose)
+    printParams.set("Output Information",
+                    NOX::Utils::OuterIteration +
+                        NOX::Utils::OuterIterationStatusTest +
+                        NOX::Utils::InnerIteration + NOX::Utils::Parameters +
+                        NOX::Utils::Details + NOX::Utils::Warning +
+                        NOX::Utils::TestDetails);
+  else
+    printParams.set("Output Information",
+                    NOX::Utils::Error + NOX::Utils::TestDetails);
 
-    // // Identify the test problem
-    // if (printing.isPrintType(NOX::Utils::TestDetails))
-    //   printing.out() << "Starting tpetra/NOX_Operators/NOX_Operators.exe"
-    //                  << std::endl;
+  NOX::Utils printing(printParams);
 
-    // // Identify processor information
-    // if constexpr (NOX_HAVE_MPI) {
-    //   if (printing.isPrintType(NOX::Utils::TestDetails)) {
-    //     printing.out() << "Parallel Run" << std::endl;
-    //     printing.out() << "Number of processors = " << numProc << std::endl;
-    //     printing.out() << "Print Process = " << myPID << std::endl;
-    //   }
-    //   comm.barrier();
-    //   if (printing.isPrintType(NOX::Utils::TestDetails))
-    //     printing.out() << "Process " << myPID << " is alive!" << std::endl;
-    //   comm.barrier();
-    // } else {
-    //   if (printing.isPrintType(NOX::Utils::TestDetails))
-    //     printing.out() << "Serial Run" << std::endl;
-    // }
+  // Identify the test problem
+  if (printing.isPrintType(NOX::Utils::TestDetails))
+    printing.out() << "Starting tpetra/NOX_Operators/NOX_Operators.exe"
+                   << std::endl;
 
-    // int status = 0;
-
-    // Teuchos::RCP<NOX::Tpetra::Interface::Required> iReq = interface;
-
-    // NOX::Tpetra::Vector noxInitGuess(initialGuess, NOX::DeepCopy);
-
-    // // Analytic matrix
-    // auto A = Teuchos::rcp(problem.getMatrix(), false);
-
-    // TV A_resultVec(problem.getMatrix()->getMap());
-    // interface->computeJacobian(initialGuess, *A);
-    // A->Apply(directionVec, A_resultVec);
-
-    // // FD operator
-    // auto graph = Teuchos::rcp(const_cast<CSRG *>(&A->getGraph()), false);
-    // auto FD = Teuchos::rcp(new NOX::Epetra::FiniteDifference(
-    //     printParams, iReq, noxInitGuess, graph));
-
-    // TV FD_resultVec(problem.getMatrix()->getMap());
-    // FD->computeJacobian(initialGuess, *FD);
-    // FD->Apply(directionVec, FD_resultVec);
-
-    // // Matrix-Free operator
-    // auto MF = Teuchos::rcp( new NOX::Epetra::MatrixFree(printParams, iReq, noxInitGuess));
-
-    // TV MF_resultVec(problem.getMatrix()->getMap());
-    // MF->computeJacobian(initialGuess, *MF);
-    // MF->apply(directionVec, MF_resultVec);
-
-    // // Need NOX::Epetra::Vectors for tests
-    // NOX::Epetra::Vector noxAvec(A_resultVec, NOX::DeepCopy);
-    // NOX::Epetra::Vector noxFDvec(FD_resultVec, NOX::DeepCopy);
-    // NOX::Epetra::Vector noxMFvec(MF_resultVec, NOX::DeepCopy);
-
-    // // Create a TestCompare class
-    // NOX::TestCompare tester(printing.out(), printing);
-    // double abstol = 1.e-4;
-    // double reltol = 1.e-4;
-    // // NOX::TestCompare::CompareType aComp = NOX::TestCompare::Absolute;
-
-    // status += tester.testVector(noxFDvec, noxAvec, reltol, abstol,
-    //                             "Finite-Difference Operator Apply Test");
-    // status += tester.testVector(noxMFvec, noxAvec, reltol, abstol,
-    //                             "Matrix-Free Operator Apply Test");
-
-    // success = status == 0;
-
-    // Summarize test results
-    if (success)
-      printing.out() << "Test passed!" << std::endl;
-    else
-      printing.out() << "Test failed!" << std::endl;
+  // Identify processor information
+  if constexpr (NOX_HAVE_MPI) {
+    if (printing.isPrintType(NOX::Utils::TestDetails)) {
+      printing.out() << "Parallel Run" << std::endl;
+      printing.out() << "Number of processors = " << numProc << std::endl;
+      printing.out() << "Print Process = " << myPID << std::endl;
+    }
+    comm->barrier();
+    if (printing.isPrintType(NOX::Utils::TestDetails))
+      printing.out() << "Process " << myPID << " is alive!" << std::endl;
+    comm->barrier();
+  } else {
+    if (printing.isPrintType(NOX::Utils::TestDetails))
+      printing.out() << "Serial Run" << std::endl;
   }
-  TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
-  return -1;
+  int status = 0;
+
+  auto iReq = interface;
+
+  // Analytic matrix
+  auto A = problem.getMatrix();
+
+  NOX::TVector A_resultVec(problem.getMatrix()->getMap());
+  interface->computeJacobian(initialGuess, *A);
+  A->apply(directionVec, A_resultVec);
+
+  // FD operator
+  auto graph = A->getGraph();
+  auto FD = Teuchos::rcp(new NOX::Tpetra::FiniteDifference(
+      printParams, iReq, noxInitGuess, graph));
+
+  NOX::TVector FD_resultVec(problem.getMatrix()->getMap());
+  FD->computeJacobian(initialGuess, *FD);
+  FD->apply(directionVec, FD_resultVec);
+
+  // // Matrix-Free operator
+  // auto MF = Teuchos::rcp( new NOX::Epetra::MatrixFree(printParams, iReq,
+  // noxInitGuess));
+
+  // NOX::TVector MF_resultVec(problem.getMatrix()->getMap());
+  // MF->computeJacobian(initialGuess, *MF);
+  // MF->apply(directionVec, MF_resultVec);
+
+  // // Need NOX::Epetra::Vectors for tests
+  // NOX::Epetra::Vector noxAvec(A_resultVec, NOX::DeepCopy);
+  // NOX::Epetra::Vector noxFDvec(FD_resultVec, NOX::DeepCopy);
+  // NOX::Epetra::Vector noxMFvec(MF_resultVec, NOX::DeepCopy);
+
+  // // Create a TestCompare class
+  // NOX::TestCompare tester(printing.out(), printing);
+  // double abstol = 1.e-4;
+  // double reltol = 1.e-4;
+  // // NOX::TestCompare::CompareType aComp = NOX::TestCompare::Absolute;
+
+  // status += tester.testVector(noxFDvec, noxAvec, reltol, abstol,
+  //                             "Finite-Difference Operator Apply Test");
+  // status += tester.testVector(noxMFvec, noxAvec, reltol, abstol,
+  //                             "Matrix-Free Operator Apply Test");
+
+  // success = status == 0;
+
+  // Summarize test results
+  if (success)
+    printing.out() << "Test passed!" << std::endl;
+  else
+    printing.out() << "Test failed!" << std::endl;
 }

@@ -1,17 +1,5 @@
 #include "NOX_TpetraTypedefs.hpp"
 
-using Scalar = Tpetra::MultiVector<>::scalar_type;
-using LO = Tpetra::MultiVector<>::local_ordinal_type;
-using GO = Tpetra::MultiVector<>::global_ordinal_type;
-using Node = Tpetra::MultiVector<>::node_type;
-
-using Map = Tpetra::Map<LO, GO, Node>;
-using TV = Tpetra::Vector<Scalar, LO, GO, Node>;
-using CRSM = Tpetra::CrsMatrix<Scalar, LO, GO, Node>;
-using TRM = Tpetra::RowMatrix<Scalar, LO, GO, Node>;
-using TO = Tpetra::Operator<Scalar, LO, GO, Node>;
-using CSRG = Tpetra::CrsGraph<LO, GO, Node>;
-
 // Interfaces
 namespace NOX::Tpetra::Interface {
 
@@ -28,7 +16,7 @@ public:
   /*! Compute Jacobian given the specified input vector x.  Returns
     true if computation was successful.
    */
-  virtual bool computeJacobian(const TV &x, TO &Jac) = 0;
+  virtual bool computeJacobian(const NOX::TVector &x, NOX::TOperator &Jac) = 0;
 };
 
 /*! \brief Used by NOX::Tpetra to provide a link to the
@@ -41,9 +29,10 @@ class Preconditioner {
 public:
   virtual ~Preconditioner() = default;
 
-      //! Computes a user defined preconditioner.
-      virtual bool computePreconditioner(
-          const TV &x, TO &M, Teuchos::ParameterList *precParams = 0) = 0;
+  //! Computes a user defined preconditioner.
+  virtual bool
+  computePreconditioner(const NOX::TVector &x, NOX::TOperator &M,
+                        Teuchos::ParameterList *precParams = 0) = 0;
 };
 
 /*!
@@ -92,8 +81,10 @@ public:
 
   //! Compute the function, F, given the specified input vector x.  Returns true
   //! if computation was successful.
-  virtual bool computeF(const TV &x, TV &F, const FillType fillFlag) = 0;
+  virtual bool computeF(const TVector &x, TVector &F,
+                        const FillType fillFlag) = 0;
 };
+
 } // namespace NOX::Tpetra::Interface
 
 namespace Laplace2D {
@@ -101,8 +92,10 @@ namespace Laplace2D {
 // node for each node of the Cartesian grid (composed by nx \timex ny
 // elements)
 
-void getMyNeighbours(const int i, const int nx, const int ny, int &left,
-                     int &right, int &lower, int &upper);
+void getMyNeighbours(const NOX::GlobalOrdinal i, const NOX::GlobalOrdinal nx,
+                     const NOX::GlobalOrdinal ny, NOX::GlobalOrdinal &left,
+                     NOX::GlobalOrdinal &right, NOX::GlobalOrdinal &lower,
+                     NOX::GlobalOrdinal &upper);
 
 // This function creates a CrsMatrix, whose elements corresponds
 // to the discretization of a Laplacian over a Cartesian grid,
@@ -111,8 +104,9 @@ void getMyNeighbours(const int i, const int nx, const int ny, int &left,
 // all the nodes in the matrix are internal nodes (Dirichlet
 // boundary nodes are supposed to have been already condensated)
 
-CRSM *createLaplacian(const int nx, const int ny,
-                      const Teuchos::RCP<const Teuchos::Comm<int>> &comm);
+Teuchos::RCP<NOX::TCrsMatrix>
+createLaplacian(const int nx, const int ny,
+                const Teuchos::RCP<const Teuchos::Comm<int>> &comm);
 
 // ==========================================================================
 // This class contians the main definition of the nonlinear problem at
@@ -138,22 +132,19 @@ public:
   PDEProblem(const int nx, const int ny, const double lambda,
              const Teuchos::RCP<const Teuchos::Comm<int>> &comm);
 
-  // destructor
-  ~PDEProblem();
-
   // compute F(x)
-  void computeF(const TV &x, TV &f);
+  void computeF(const NOX::TVector &x, NOX::TVector &f);
 
   // update the Jacobian matrix for a given x
-  void updateJacobian(const TV &x);
+  void updateJacobian(const NOX::TVector &x);
 
   // returns a pointer to the internally stored matrix
-  CRSM *getMatrix() { return matrix_; }
+  Teuchos::RCP<NOX::TCrsMatrix> getMatrix() { return matrix_; }
 
 private:
   int nx_, ny_;
   double hx_, hy_;
-  CRSM *matrix_;
+  Teuchos::RCP<NOX::TCrsMatrix> matrix_;
   double lambda_;
 
 }; /* class PDEProblem */
@@ -174,26 +165,21 @@ class SimpleProblemInterface : public NOX::Tpetra::Interface::Required,
 public:
   SimpleProblemInterface(PDEProblem *problem) : problem_(problem){};
 
-  bool computeF(const TV &x, TV &f,
-                NOX::Tpetra::Interface::Required::FillType F) {
+  bool computeF(const NOX::TVector &x, NOX::TVector &f,
+                NOX::Tpetra::Interface::Required::FillType F) override {
     problem_->computeF(x, f);
     return true;
   };
 
-  bool computeJacobian(const TV &x, TV &Jac) {
+  bool computeJacobian(const NOX::TVector &x, NOX::TOperator &Jac) override {
     problem_->updateJacobian(x);
     return true;
   }
 
-  bool computePreconditioner(const TV &x, TO &Op, Teuchos::ParameterList *) {
+  bool computePreconditioner(const NOX::TVector &x, NOX::TOperator &M,
+                             Teuchos::ParameterList *precParams = 0) override {
     problem_->updateJacobian(x);
     return true;
-  }
-
-  bool computePrecMatrix(const TV &x, TRM &M) {
-    std::cout << "*ERR* SimpleProblem::preconditionVector()\n";
-    std::cout << "*ERR* don't use explicit preconditioning" << std::endl;
-    throw 1;
   }
 
 private:
