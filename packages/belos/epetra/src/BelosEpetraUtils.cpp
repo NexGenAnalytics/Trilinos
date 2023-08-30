@@ -99,7 +99,7 @@ int createEpetraProblem( std::string             &filename,
 
   RCP<Epetra_Comm> epetraComm;
 #ifdef EPETRA_MPI	
-  epetraComm = rcp(new Epetra_MpiComm( get_global_comm() ) );
+  epetraComm = rcp(new Epetra_MpiComm( Belos::get_global_comm() ) );
 #else	
   epetraComm = rcp(new Epetra_SerialComm());
 #endif
@@ -274,7 +274,7 @@ namespace Test {
 
       if (comm_.is_null()) {
 #ifdef EPETRA_MPI
-        comm_ = rcp (new Epetra_MpiComm (get_global_comm()));
+        comm_ = rcp (new Epetra_MpiComm (Belos::get_global_comm()));
 #else
         comm_ = rcp (new Epetra_SerialComm);
 #endif // EPETRA_MPI
