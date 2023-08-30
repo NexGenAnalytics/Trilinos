@@ -49,6 +49,7 @@
 #include "zoltan_types.h"
 #include "zoltan_util.h"
 #include "zoltan_mem.h"
+#include "zoltan_comm.h"
 
 #ifdef VAMPIR
 #include <VT.h>
