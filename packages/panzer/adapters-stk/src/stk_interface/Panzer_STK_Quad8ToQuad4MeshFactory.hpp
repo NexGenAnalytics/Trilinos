@@ -45,6 +45,7 @@
 
 #include <Panzer_STK_MeshFactory.hpp>
 #include <Panzer_STK_Interface.hpp>
+#include <Panzer_GlobalComm.hpp>
 #include <vector>
 #include <string>
 
