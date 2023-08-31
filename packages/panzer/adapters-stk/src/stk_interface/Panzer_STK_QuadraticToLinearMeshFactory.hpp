@@ -45,6 +45,7 @@
 
 #include <Panzer_STK_MeshFactory.hpp>
 #include <Panzer_STK_Interface.hpp>
+#include <Panzer_GlobalComm.hpp>
 #include <vector>
 #include <string>
 
@@ -60,7 +61,7 @@ class QuadraticToLinearMeshFactory : public STK_MeshFactory {
 public:
 
   QuadraticToLinearMeshFactory(const std::string& quadMeshFileName,
-                          stk::ParallelMachine mpi_comm = MPI_COMM_WORLD,
+                          stk::ParallelMachine mpi_comm = panzer::get_global_comm(),
                           const bool print_debug = false);
 
   QuadraticToLinearMeshFactory(const Teuchos::RCP<panzer_stk::STK_Interface>& quadMesh,
