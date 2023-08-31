@@ -64,6 +64,8 @@
 
 // Adapted from test_pcpg_epetraex.cpp by David M. Day (with original comments)
 
+// All preconditioning has been commented out
+
 // Belos
 #include <BelosPCPGSolMgr.hpp>
 #include <BelosLinearProblem.hpp>
@@ -77,8 +79,8 @@
 #include <TpetraExt_MatrixMatrix.hpp>
 
 // MueLu
-#include <MueLu_TpetraOperator.hpp>
-#include <MueLu_CreateTpetraPreconditioner.hpp>
+// #include <MueLu_TpetraOperator.hpp>
+// #include <MueLu_CreateTpetraPreconditioner.hpp>
 
 // Teuchos
 #include <Teuchos_RCP.hpp>
@@ -113,7 +115,7 @@ int run(int argc, char *argv[]) {
     using tmultivector_t = Tpetra::MultiVector<ST,LO,GO,NT>;
 
     using toperator_t  = Tpetra::Operator<ST,LO,GO,NT>;
-    using mtoperator_t = MueLu::TpetraOperator<ST,LO,GO,NT>;
+    // using mtoperator_t = MueLu::TpetraOperator<ST,LO,GO,NT>;
 
     using starray_t = Teuchos::Array<ST>;
     using goarray_t = Teuchos::Array<GO>;
@@ -287,18 +289,18 @@ int run(int argc, char *argv[]) {
         //            Construct Preconditioner            //
         ////////////////////////////////////////////////////
 
-        ParameterList MueLuList; // Set MueLuList for Smoothed Aggregation
+//         ParameterList MueLuList; // Set MueLuList for Smoothed Aggregation
 
-        MueLuList.set("smoother: type", "CHEBYSHEV");
-        MueLuList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
+//         MueLuList.set("smoother: type", "CHEBYSHEV");
+//         MueLuList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
 
-#ifdef HAVE_MUELU_AMESOS2
-        MueLuList.set("coarse: type", "KLU2");
-#else
-        MueLuList.set("coarse: type", "none")
-#endif
-        RCP<toperator_t> A_op = A;
-        RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_op, MueLuList);
+// #ifdef HAVE_MUELU_AMESOS2
+//         MueLuList.set("coarse: type", "KLU2");
+// #else
+//         MueLuList.set("coarse: type", "none")
+// #endif
+//         RCP<toperator_t> A_op = A;
+//         RCP<mtoperator_t> Prec = MueLu::CreateTpetraPreconditioner(A_op, MueLuList);
 
         ///////////////////////////////////////////////////
         //             Create Parameter List             //
@@ -336,7 +338,7 @@ int run(int argc, char *argv[]) {
         RCP<Belos::LinearProblem<ST,MV,OP> > problem
             = rcp( new Belos::LinearProblem<ST,MV,OP>( A, LHS, RHS ) );
 
-        problem->setLeftPrec( Prec ); // for Preconditioned Problem
+        // problem->setLeftPrec( Prec ); // for Preconditioned Problem
 
         bool set = problem->setProblem();
         if (set == false) {
