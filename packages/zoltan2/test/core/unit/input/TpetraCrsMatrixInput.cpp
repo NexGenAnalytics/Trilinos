@@ -125,6 +125,7 @@ void TestMatrixIds(adapter_t &ia, matrix_t &matrix) {
   localInds_t localColInds("localColInds", maxNumEntries);
   localVals_t localVals("localVals", maxNumEntries);
 
+  int unused;
   for (size_t r = 0; r < nrows; r++) {
     size_t numEntries = 0;
     matrix.getLocalRowCopy(r, localColInds, localVals, numEntries);;

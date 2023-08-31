@@ -1,0 +1,63 @@
+name: Static analysis
+
+on:
+    pull_request:
+      branches:
+        - NGA-FY23-develop
+
+jobs:
+  static_analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run static analysis
+      uses: JacobDomagala/StaticAnalysis@master
+      with:
+        comment_title: "Code quality check"
+        verbose: true
+        use_cmake: true
+        cmake_args: >
+          -D CMAKE_BUILD_TYPE="DEBUG"
+          -D Trilinos_ENABLE_ALL_PACKAGES=ON
+          -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=ON
+          -D Trilinos_ALLOW_NO_PACKAGES=ON
+          -D Trilinos_DISABLE_ENABLED_FORWARD_DEP_PACKAGES=ON
+          -D Trilinos_IGNORE_MISSING_EXTRA_REPOSITORIES=ON
+          -D Trilinos_ENABLE_TESTS=ON
+          -D Trilinos_TEST_CATEGORIES=BASIC
+          -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON
+          -D Trilinos_VERBOSE_CONFIGURE=OFF
+          -D BUILD_SHARED_LIBS:BOOL=ON
+          -D Trilinos_WARNINGS_AS_ERRORS_FLAGS="-Wno-error"
+          -D Trilinos_ENABLE_SEACAS=OFF
+          -D Trilinos_ENABLE_Sacado=OFF
+          -D TPL_ENABLE_BLAS=ON
+          -D TPL_ENABLE_LAPACK=ON
+          -D TPL_ENABLE_CUDA=OFF
+          -D TPL_ENABLE_Matio=OFF
+          -D TPL_ENABLE_X11=OFF
+          -D TPL_ENABLE_Pthread=OFF
+          -D TPL_ENABLE_Boost=OFF
+          -D TPL_ENABLE_BoostLib=OFF
+          -D TPL_ENABLE_ParMETIS=OFF
+          -D TPL_ENABLE_Zlib=OFF
+          -D TPL_ENABLE_HDF5=OFF
+          -D TPL_ENABLE_Netcdf=OFF
+          -D TPL_ENABLE_SuperLU=OFF
+          -D TPL_ENABLE_Scotch=OFF
+          -D TPL_ENABLE_MPI=ON
+          -D Trilinos_ENABLE_Rythmos=OFF
+          -D Trilinos_ENABLE_Pike=OFF
+          -D Trilinos_ENABLE_Komplex=OFF
+          -D Trilinos_ENABLE_TriKota=OFF
+          -D Trilinos_ENABLE_Moertel=OFF
+          -D Trilinos_ENABLE_Domi=OFF
+          -D Trilinos_ENABLE_FEI=OFF
+          -D Trilinos_ENABLE_PyTrilinos=OFF
+          -D Trilinos_ENABLE_Fortran=OFF
+          -D TeuchosCore_ENABLE_TESTS=OFF
+        report_pr_changes_only: true
+        apt_pckgs: libblas-dev liblapack-dev mpich
+        cppcheck_args: --enable=all -DMPI_VERSION=3 -D__GNUC__=10
+        clang_tidy_args: -checks='*,fuchsia-*,google-*,zircon-*,abseil-*,modernize-use-trailing-return-type,llvm*,hicpp-uppercase-literal-suffix,readability-uppercase-literal-suffix'
