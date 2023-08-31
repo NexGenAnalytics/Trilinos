@@ -37,22 +37,22 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils)
   #  SOURCES test_ptfqmr_hb.cpp 
   #  COMM serial mpi
   #  ARGS
-  #    "--verbose --left-prec"
-  #    "--verbose --left-prec --num-rhs=10"
-  #    "--verbose --right-prec"
-  #    "--verbose --right-prec --num-rhs=10"
+  #    "--verbose --not-pseudo --left-prec"
+  #    "--verbose --not-pseudo --left-prec --num-rhs=10"
+  #    "--verbose --not-pseudo --right-prec"
+  #    "--verbose --not-pseudo --right-prec --num-rhs=10"
   #  STANDARD_PASS_OUTPUT 
   #)
 
   #TRIBITS_ADD_EXECUTABLE_AND_TEST(
   #  Tpetra_pseudo_ptfqmr_hb
-  #  SOURCES test_pseudo_ptfqmr_hb.cpp 
+  #  SOURCES test_ptfqmr_hb.cpp 
   #  COMM serial mpi
   #  ARGS
-  #    "--verbose --left-prec"
-  #    "--verbose --left-prec --num-rhs=10"
-  #    "--verbose --right-prec"
-  #    "--verbose --right-prec --num-rhs=10"
+  #    "--verbose --pseudo --left-prec"
+  #    "--verbose --pseudo --left-prec --num-rhs=10"
+  #    "--verbose --pseudo --right-prec"
+  #    "--verbose --pseudo --right-prec --num-rhs=10"
   #  STANDARD_PASS_OUTPUT 
   #)
 
