@@ -161,7 +161,7 @@ namespace Belos {
     // Initialize MPI
     int mpiStarted = 0;
     MPI_Initialized(&mpiStarted);
-    if (mpiStarted) MPI_Comm_rank(get_global_comm(), &MyPID);
+    if (mpiStarted) MPI_Comm_rank(Belos::get_global_comm(), &MyPID);
     else MyPID=0;
 #else 
     MyPID = 0;
