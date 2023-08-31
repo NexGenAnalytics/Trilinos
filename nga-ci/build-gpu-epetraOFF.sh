@@ -49,7 +49,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_Sacado=OFF \
     \
     -D TPL_ENABLE_CUDA="${ENABLE_CUDA}" \
-    -D Tpetra_INST_SERIAL=OFF \
+    -D Tpetra_INST_SERIAL=ON \
     -D Tpetra_INST_CUDA=ON \
     -D Trilinos_ENABLE_Kokkos=ON \
     -D Kokkos_ARCH_AMPERE86=ON \
