@@ -1180,7 +1180,7 @@ buildTpetraGhostedGraph(int i,int j) const
 
    // finish filling the graph: Make sure the colmap and row maps coincide to
    //                           minimize calls to LID lookups
-   graph->fillComplete(getColMap(j),getMap(i));
+   graph->fillComplete(map_j, map_i);
 
    return graph;
 }
@@ -1210,7 +1210,7 @@ getGhostedTpetraMatrix(int i,int j) const
 
    Teuchos::RCP<const CrsGraphType> tGraph = getGhostedGraph(i,j);
    Teuchos::RCP<CrsMatrixType> mat = Teuchos::rcp(new CrsMatrixType(tGraph));
-   mat->fillComplete(getColMap(j),getMap(i));
+   mat->fillComplete(map_j,map_i);
 
    return mat;
 }
