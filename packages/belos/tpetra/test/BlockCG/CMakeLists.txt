@@ -1,7 +1,7 @@
 ASSERT_DEFINED(Anasazi_SOURCE_DIR)
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  pseudo_cg_indefinite
+  Tpetra_pseudo_cg_indefinite
   SOURCES test_pseudo_cg_indefinite.cpp   
   COMM serial mpi
   ARGS
