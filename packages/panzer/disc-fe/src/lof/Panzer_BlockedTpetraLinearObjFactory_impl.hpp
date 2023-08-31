@@ -1268,7 +1268,7 @@ getBlockColCount() const
       return gidProviders_[0]->getFieldBlocks();
    }
 
-   return gidProviders_[1]->getFieldBlocks();
+   return gidProviders_.back()->getFieldBlocks();
 }
 
 template <typename Traits,typename ScalarT,typename LocalOrdinalT,typename GlobalOrdinalT,typename NodeT>
