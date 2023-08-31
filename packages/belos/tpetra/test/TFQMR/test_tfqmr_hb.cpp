@@ -118,7 +118,7 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("explicit","implicit-only",&explicit_test,"Compute explicit residuals.");
     cmdp.setOption("recursive","native",&comp_recursive,"Compute recursive residuals.");
     cmdp.setOption("pseudo","not-pseudo",&pseudo,"Use pseudo-block TFQMR solver.");
-    cmdp.setOption("tol",&tol,"Relative residual tolerance used by pseudo-block TFQMR solver.");
+    cmdp.setOption("tol",&tol,"Relative residual tolerance used by TFQMD or pseudo-block TFQMR solver.");
     cmdp.setOption("filename",&filename,"Filename for Harwell-Boeing test matrix.");
     cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
     cmdp.setOption("max-iters",&maxiters,"Maximum number of iterations per linear system (-1 := adapted to problem/block size).");
@@ -145,7 +145,7 @@ int run(int argc, char *argv[]) {
     // Solve using Belos
     const int NumGlobalElements = B->getGlobalLength();
     if (maxiters == -1)
-      maxiters = NumGlobalElements - 1; // maximum number of iterations to run
+      maxiters = NumGlobalElements; // maximum number of iterations to run
     
     //
     ParameterList belosList;
