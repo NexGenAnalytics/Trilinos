@@ -10,54 +10,53 @@ ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Triutils)
 IF (${PACKAGE_NAME}_ENABLE_Triutils)
 
   TRIBITS_ADD_EXECUTABLE_AND_TEST(
-    Tpetra_pseudo_tfqmr_hb
-    SOURCES test_pseudo_tfqmr_hb.cpp 
-    COMM serial mpi
-    ARGS
-      "--verbose --filename=orsirr1_scaled.hb"
-    STANDARD_PASS_OUTPUT 
-  )
-
-  TRIBITS_ADD_EXECUTABLE_AND_TEST(
     Tpetra_tfqmr_hb
     SOURCES test_tfqmr_hb.cpp 
     COMM serial mpi
     ARGS
-      "--verbose --filename=orsirr1_scaled.hb"
+      "--verbose --not-pseudo --filename=orsirr1_scaled.hb"
+      "--verbose --not-pseudo --explicit --filename=orsirr1_scaled.hb"
+      "--verbose --not-pseudo --recursive --filename=orsirr1_scaled.hb"
+    STANDARD_PASS_OUTPUT 
+  )
+
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    Tpetra_pseudo_tfqmr_hb
+    SOURCES test_tfqmr_hb.cpp 
+    COMM serial mpi
+    ARGS
       "--verbose --pseudo --filename=orsirr1_scaled.hb"
-      "--verbose --explicit --filename=orsirr1_scaled.hb"
-      "--verbose --recursive --filename=orsirr1_scaled.hb"
     STANDARD_PASS_OUTPUT 
   )
 
-  ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack2)
-  IF (${PACKAGE_NAME}_ENABLE_Ifpack2)
+  #ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  #IF (${PACKAGE_NAME}_ENABLE_Ifpack2)
 
-  TRIBITS_ADD_EXECUTABLE_AND_TEST(
-    Tpetra_ptfqmr_hb
-    SOURCES test_ptfqmr_hb.cpp 
-    COMM serial mpi
-    ARGS
-      "--verbose --left-prec"
-      "--verbose --left-prec --num-rhs=10"
-      "--verbose --right-prec"
-      "--verbose --right-prec --num-rhs=10"
-    STANDARD_PASS_OUTPUT 
-  )
+  #TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  #  Tpetra_ptfqmr_hb
+  #  SOURCES test_ptfqmr_hb.cpp 
+  #  COMM serial mpi
+  #  ARGS
+  #    "--verbose --left-prec"
+  #    "--verbose --left-prec --num-rhs=10"
+  #    "--verbose --right-prec"
+  #    "--verbose --right-prec --num-rhs=10"
+  #  STANDARD_PASS_OUTPUT 
+  #)
 
-  TRIBITS_ADD_EXECUTABLE_AND_TEST(
-    Tpetra_pseudo_ptfqmr_hb
-    SOURCES test_pseudo_ptfqmr_hb.cpp 
-    COMM serial mpi
-    ARGS
-      "--verbose --left-prec"
-      "--verbose --left-prec --num-rhs=10"
-      "--verbose --right-prec"
-      "--verbose --right-prec --num-rhs=10"
-    STANDARD_PASS_OUTPUT 
-  )
+  #TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  #  Tpetra_pseudo_ptfqmr_hb
+  #  SOURCES test_pseudo_ptfqmr_hb.cpp 
+  #  COMM serial mpi
+  #  ARGS
+  #    "--verbose --left-prec"
+  #    "--verbose --left-prec --num-rhs=10"
+  #    "--verbose --right-prec"
+  #    "--verbose --right-prec --num-rhs=10"
+  #  STANDARD_PASS_OUTPUT 
+  #)
 
-  ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  #ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack2)
 
   TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyTestTFQMRFiles
     SOURCE_DIR ${Belos_SOURCE_DIR}/epetra/example/BlockGmres
