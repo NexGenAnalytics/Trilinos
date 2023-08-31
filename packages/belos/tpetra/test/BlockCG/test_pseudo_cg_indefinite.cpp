@@ -51,15 +51,16 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
-using Teuchos::ParameterList;
-using Teuchos::RCP;
-using Teuchos::rcp;
-
-using Tpetra::Map;
-
 //
 int main(int argc, char *argv[])
 {
+  using Teuchos::CommandLineProcessor;
+  using Teuchos::GlobalMPISession;
+  using Teuchos::ParameterList;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
+  using Teuchos::rcp_implicit_cast;
+
   typedef Tpetra::MultiVector<>::scalar_type ST;
   typedef Teuchos::ScalarTraits<ST>         SCT;
   typedef SCT::magnitudeType                 MT;
@@ -70,16 +71,14 @@ int main(int argc, char *argv[])
   typedef Belos::OperatorTraits<ST,MV,OP>   OPT;
   typedef Tpetra::Map<>                     MAP;
 
-  
-  Teuchos::GlobalMPISession mpisess(&argc,&argv,&std::cout);
+
+  GlobalMPISession mpisess(&argc,&argv,&std::cout);
 
   bool success = false;
   bool verbose = false;
 
   try
   {
-    int MyPID = 0;
-
     Teuchos::RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
 
     // Get test parameters from command-line processor
@@ -90,14 +89,14 @@ int main(int argc, char *argv[])
     int maxiters = -1;         // maximum number of iterations allowed per linear system
     MT tol = 1.0e-10;           // relative residual tolerance
 
-    Teuchos::CommandLineProcessor cmdp(false,true);
+    CommandLineProcessor cmdp(false,true);
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
     cmdp.setOption("debug","nodebug",&debug,"Print debugging information from the solver.");
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
     cmdp.setOption("tol",&tol,"Relative residual tolerance used by GMRES solver.");
     cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
     cmdp.setOption("max-iters",&maxiters,"Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
-    if (cmdp.parse(argc,argv) != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
+    if (cmdp.parse(argc,argv) != CommandLineProcessor::PARSE_SUCCESSFUL) {
       return -1;
     }
     if (!verbose)
@@ -110,15 +109,17 @@ int main(int argc, char *argv[])
     // Create diagonal matrix with n-m positive and m negative eigenvalues.
     RCP<const MAP > tpetraMap = rcp(new MAP(numGlobalElements, 0, comm));
 
-    Teuchos::RCP<MAT> A = Teuchos::rcp( new MAT(tpetraMap, 1) ); // DATA_Access::copy, , 1
-    for ( int k=0; k<tpetraMap->getLocalNumElements(); k++ )
+    RCP<MAT> A = rcp( new MAT(tpetraMap, 1) ); // DATA_Access::copy, , 1
+    for ( size_t k=0; k<tpetraMap->getLocalNumElements(); k++ )
     {
       int GIDk = tpetraMap->getGlobalElement(k);
       ST val = 2*(GIDk-m) + 1;
-      TEUCHOS_ASSERT_EQUALITY( 0, A->insertGlobalValues( GIDk, 1, &val, &GIDk ) );
+
+      A->insertGlobalValues( GIDk, 1, &val, &GIDk );
     }
-    TEUCHOS_ASSERT_EQUALITY( 0, A->fillComplete() );
-    TEUCHOS_ASSERT_EQUALITY( 0, A->optimizeStorage() );
+
+    A->fillComplete();
+    TEUCHOS_ASSERT(A->isStorageOptimized());
 
     // create initial guess and right-hand side
     RCP<MV> vecX = rcp( new MV( tpetraMap, numrhs ) );
@@ -139,8 +140,8 @@ int main(int argc, char *argv[])
       X->putScalar( 0.0 );
     }
     else {
-      X = Teuchos::rcp_implicit_cast<MV>(vecX);
-      B = Teuchos::rcp_implicit_cast<MV>(vecB);
+      X = rcp_implicit_cast<MV>(vecX);
+      B = rcp_implicit_cast<MV>(vecB);
       B->putScalar( 1.0 );
     }
     //
@@ -171,8 +172,8 @@ int main(int argc, char *argv[])
     Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     bool set = problem.setProblem();
     if (set == false) {
-    if (proc_verbose)
-      std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
+      if (proc_verbose)
+        std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
     //
