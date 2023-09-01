@@ -79,6 +79,7 @@ int run(int argc, char *argv[])
   using Teuchos::ParameterList;
   using Teuchos::RCP;
   using Teuchos::rcp;
+  using Teuchos::tuple;
 
   MPI_Init(&argc,&argv);
   const auto comm = Tpetra::getDefaultComm();
@@ -129,9 +130,9 @@ int run(int argc, char *argv[])
     RCP<tcrsmatrix_t> A = rcp( new tcrsmatrix_t(map, 1));
     for ( size_t k=0; k<map->getLocalNumElements(); k++ )
     {
-      GO GIDk = map->getGlobalElement(k);
-      double val = 2*(GIDk-m) + 1;
-      A->insertGlobalValues(GIDk, tuple(1), tuple(val));
+      GO gid = map->getGlobalElement(k);
+      const ST val = static_cast<ST> (2 * (gid-m) + 1);
+      A->insertGlobalValues(gid, tuple<GO> (gid), tuple<ST> (val));
     }
     A->fillComplete();
     TEUCHOS_ASSERT( A->isFillComplete() );
