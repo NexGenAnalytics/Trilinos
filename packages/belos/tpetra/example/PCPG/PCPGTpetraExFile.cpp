@@ -73,12 +73,11 @@
 #include "Tpetra_Map.hpp"
 #include "Tpetra_Vector.hpp"
 #include "Tpetra_CrsMatrix.hpp"
-#include <MueLu_CreateTpetraPreconditioner.hpp>
+// #include "MueLu_CreateTpetraPreconditioner.hpp"
 //#include "ml_MultiLevelPreconditioner.h" // ML
 
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
-#include "BelosEpetraAdapter.hpp"
 #include "BelosPCPGSolMgr.hpp"
 
 #include "Teuchos_CommandLineProcessor.hpp"
@@ -100,6 +99,7 @@ int main(int argc, char *argv[]) {
 
   using Teuchos::RCP;
   using Teuchos::rcp;
+  using Teuchos::tuple;
   using std::cout;
   using std::endl;
 
@@ -176,60 +176,63 @@ int main(int argc, char *argv[]) {
     RCP<V> vecRHS = rcp( new V(map) );
 
     RCP<MV> LHS, RHS;
-    double ko = 8.0/3.0, k1 = -1.0/3.0;
-    double h = 1.0/(double) numElePerDirection;  // x=(iX,iY)h
-    double mo = h*h*4.0/9.0, m1 = h*h/9.0, m2 = h*h/36.0;
-    double pi = 4.0*atan(1.0), valueLHS;
+    Scalar ko = static_cast<Scalar>(8.0/3.0);
+    Scalar k1 = static_cast<Scalar>(-1.0/3.0);
+    Scalar h =  static_cast<Scalar>(1.0/(double) numElePerDirection);  // x=(iX,iY)h
+    Scalar mo = static_cast<Scalar>(h*h*4.0/9.0);
+    Scalar m1 = static_cast<Scalar>(h*h/9.0);
+    Scalar m2 = static_cast<Scalar>(h*h/36.0);
+    double pi = 4.0 * atan(1.0), valueLHS;
     int lid, node, pos, iX, iY;
     for(lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex(); lid++){
-      node = map->getGlobalElement(lid);
+      GO node = map->getGlobalElement(lid);
       iX  = node  % (numElePerDirection-1);
       iY  = ( node - iX )/(numElePerDirection-1);
       pos = node;
-      stiff->insertGlobalValues(node, 1, &ko, &pos);
-      mass->insertGlobalValues(node, 1, &mo, &pos); // init guess violates hom Dir bc
+      stiff->insertGlobalValues(node, tuple(node), tuple(ko));
+      mass->insertGlobalValues(node, tuple(node), tuple(mo)); // init guess violates hom Dir bc
       valueLHS = sin( pi*h*((double) iX+1) )*cos( 2.0 * pi*h*((double) iY+1) );
       vecLHS->replaceGlobalValue( 1, valueLHS);
       if (iY > 0) {
         pos = iX + (iY-1)*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, 1, &k1, &pos); //North
-        mass->insertGlobalValues(node, 1, &m1, &pos);
+        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); //North
+        mass->insertGlobalValues(node, tuple(node), tuple(m1));
       }
       if (iY < numElePerDirection-2) {
         pos = iX + (iY+1)*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, 1, &k1, &pos); //South
-        mass->insertGlobalValues(node, 1, &m1, &pos);
+        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); //South
+        mass->insertGlobalValues(node, tuple(node), tuple(m1));
       }
 
       if (iX > 0) {
         pos = iX-1 + iY*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, 1, &k1, &pos); // West
-        mass->insertGlobalValues(node, 1, &m1, &pos);
+        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // West
+        mass->insertGlobalValues(node, tuple(node), tuple(m1));
         if (iY > 0) {
           pos = iX-1 + (iY-1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, 1, &k1, &pos); // North West
-          mass->insertGlobalValues(node, 1, &m2, &pos);
+          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // North West
+          mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
         if (iY < numElePerDirection-2) {
           pos = iX-1 + (iY+1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, 1, &k1, &pos); // South West
-          mass->insertGlobalValues(node, 1, &m2, &pos);
+          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // South West
+          mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
       }
 
       if (iX < numElePerDirection - 2) {
         pos = iX+1 + iY*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, 1, &k1, &pos); // East
-        mass->insertGlobalValues(node, 1, &m1, &pos);
+        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // East
+        mass->insertGlobalValues(node, tuple(node), tuple(m1));
         if (iY > 0) {
           pos = iX+1 + (iY-1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, 1, &k1, &pos); // North East
-          mass->insertGlobalValues(node, 1, &m2, &pos);
+          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // North East
+          mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
         if (iY < numElePerDirection-2) {
           pos = iX+1 + (iY+1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, 1, &k1, &pos); // South East
-          mass->insertGlobalValues(node, 1, &m2, &pos);
+          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // South East
+          mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
       }
     }
@@ -274,30 +277,34 @@ int main(int argc, char *argv[]) {
     MLList.set("smoother: sweeps",3);
     MLList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
 
-#ifdef HAVE_ML_AMESOS
-    MLList.set("coarse: type","Amesos-KLU"); // solve with serial direct solver KLU
-#else
-    MLList.set("coarse: type","Jacobi");     // not recommended
-    puts("Warning: Iterative coarse grid solve");
-#endif
+// TD: For Tpetra What this code is doing (Tpetra alternative to Amesos/KLU seems to be Amesos2/KLU2)
+// 
+// #ifdef HAVE_ML_AMESOS
+//     MLList.set("coarse: type","Amesos-KLU"); // solve with serial direct solver KLU
+// #else
+//     MLList.set("coarse: type","Jacobi");     // not recommended
+//     puts("Warning: Iterative coarse grid solve");
+// #endif
+    MLList.set("coarse: type","Jacobi");
+
     //
     //ML_Epetra::MultiLevelPreconditioner* Prec = new ML_Epetra::MultiLevelPreconditioner(*A, MLList);
-    RCP<OP> Prec = MueLu::CreateTpetraPreconditioner(A, *MLList );
-    assert(Prec != Teuchos::null);
+    // RCP<OP> prec = MueLu::CreateTpetraPreconditioner(A, MLList );
+    // assert(prec != Teuchos::null);
 
     // Create the Belos preconditioned operator from the preconditioner.
     // NOTE:  This is necessary because Belos expects an operator to apply the
     //        preconditioner with Apply() NOT ApplyInverse().
     
     // RCP<Belos::EpetraPrecOp> belosPrec = rcp( new Belos::EpetraPrecOp( Prec ) );
-    RCP<Belos::TpetraOperator> belosPrec = rcp( new Belos::TpetraOperator( Prec ) );
+    // RCP<Belos::TpetraOperator> belosPrec = rcp( new Belos::TpetraOperator( prec ) );
 
     //
     // *****Create parameter list for the PCPG solver manager*****
     //
-    const int NumGlobalElements = RHS->getGlobalLength();
+    const int numGlobalElements = RHS->getGlobalLength();
     if (maxiters == -1)
-      maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
+      maxiters = numGlobalElements/blocksize - 1; // maximum number of iterations to run
     //
     Teuchos::ParameterList belosList;
     belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
@@ -323,7 +330,8 @@ int main(int argc, char *argv[]) {
     //
     RCP<Belos::LinearProblem<double,MV,OP> > problem
       = rcp( new Belos::LinearProblem<double,MV,OP>( A, LHS, RHS ) );
-    problem->setLeftPrec( belosPrec );
+    
+    //problem->setLeftPrec( belosPrec );
 
     bool set = problem->setProblem();
     if (set == false) {
@@ -345,7 +353,7 @@ int main(int argc, char *argv[]) {
     //
     if (proc_verbose) {
       std::cout << std::endl << std::endl;
-      std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
+      std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numrhs << std::endl;
       std::cout << "Block size used by solver: " << blocksize << std::endl;
       std::cout << "Maximum number of iterations allowed: " << maxiters << std::endl;
