@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
   typedef Belos::MultiVecTraits<ST,MV>      MVT;
   typedef Belos::OperatorTraits<ST,MV,OP>   OPT;
   typedef Tpetra::Map<>                     MAP;
+  typedef Tpetra::Map<>::global_ordinal_type GO;
 
   GlobalMPISession mpisess(&argc,&argv,&std::cout);
 
@@ -110,14 +111,27 @@ int main(int argc, char *argv[])
     RCP<const MAP > map = rcp(new MAP(numGlobalElements, 0, comm));
 
     RCP<MAT> A = rcp( new MAT(map, 1) ); // DATA_Access::copy, , 1
-    for ( size_t k=0; k < map->getLocalNumElements(); k++ )
+
+    
+
+    if (proc_verbose)
+        std::cout << "TD: Start Loop" << std::endl;
+
+    for ( size_t k = 0; k < map->getLocalNumElements(); k++ )
     {
-      ST val = 2*(GIDk-m) + 1;
-      A->insertGlobalValues(map->getGlobalElement(k), tuple(1), tuple<ST>(val));
+      GO gid = map->getGlobalElement(k);
+      const ST val = static_cast<ST> (2 * (gid-m) + 1);
+      A->insertGlobalValues(gid, tuple<GO> (gid), tuple<ST> (val));
     }
+
+    if (proc_verbose)
+        std::cout << "TD: End Loop" << std::endl;
 
     A->fillComplete();
     TEUCHOS_ASSERT(A->isStorageOptimized());
+
+    if (proc_verbose)
+        std::cout << "TD: Storage is optimized" << std::endl;
 
     // create initial guess and right-hand side
     RCP<MV> vecX = rcp( new MV( map, numrhs ) );
