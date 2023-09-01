@@ -131,11 +131,11 @@ int run(int argc, char *argv[])
     {
       int GIDk = Map->getGlobalElement(k);
       double val = 2*(GIDk-m) + 1;
-      A->insertGlobalValues( GIDk, 1, &val, &GIDk );
+      A->insertGlobalValues(GIDk, tuple(1), tuple(val));
     }
     A->fillComplete();
-    TEUCHOS_ASSERT_EQUALITY( true, A->isFillComplete() );
-    TEUCHOS_ASSERT_EQUALITY( true, A->isStorageOptimized() );
+    TEUCHOS_ASSERT( A->isFillComplete() );
+    TEUCHOS_ASSERT( A->isStorageOptimized() );
 
     //
     // Make some (multi)vectors, for use in testing: an exact solution,
