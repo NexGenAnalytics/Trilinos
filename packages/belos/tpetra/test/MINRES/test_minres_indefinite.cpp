@@ -120,16 +120,16 @@ int run(int argc, char *argv[])
     // **********************************************************************
     // ******************Set up the problem to be solved*********************
     // construct diagonal matrix
-    const int NumGlobalElements = 100;
+    const int numGlobalElements = 100;
     const int m = 4; // number of negative eigenvalues
 
     // Create diagonal matrix with n-m positive and m negative eigenvalues.
-    RCP<tmap_t> Map = rcp(new tmap_t(NumGlobalElements, 0, comm));
+    RCP<tmap_t> map = rcp(new tmap_t(numGlobalElements, 0, comm));
 
-    RCP<tcrsmatrix_t> A = rcp( new tcrsmatrix_t(Map, 1));
-    for ( size_t k=0; k<Map->getLocalNumElements(); k++ )
+    RCP<tcrsmatrix_t> A = rcp( new tcrsmatrix_t(map, 1));
+    for ( size_t k=0; k<map->getLocalNumElements(); k++ )
     {
-      int GIDk = Map->getGlobalElement(k);
+      GO GIDk = map->getGlobalElement(k);
       double val = 2*(GIDk-m) + 1;
       A->insertGlobalValues(GIDk, tuple(1), tuple(val));
     }
@@ -143,7 +143,7 @@ int run(int argc, char *argv[])
     //
 
     // Make a random exact solution.
-    RCP<tmultivector_t> X_exact (new tmultivector_t (Map, numrhs));
+    RCP<tmultivector_t> X_exact (new tmultivector_t (map, numrhs));
     MVT::MvRandom (*X_exact);
 
     // Compute the right-hand side as B = A*X.
@@ -163,7 +163,7 @@ int run(int argc, char *argv[])
     // maxiters=numGlobalElements-1 may not always converge, so we
     // set to numGlobalElements+1 for good measure.
     if (maxiters == -1)
-      maxiters = NumGlobalElements + 1;
+      maxiters = numGlobalElements + 1;
 
     // In a nonverbose test, the frequency should be set to -1, which
     // Belos interprets as "no intermediate status output."  Override
@@ -234,7 +234,7 @@ int run(int argc, char *argv[])
     //
     if (proc_verbose) {
       std::cout << std::endl << std::endl;
-      std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
+      std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numrhs << std::endl;
       std::cout << "Relative residual tolerance: " << tol << std::endl;
       std::cout << std::endl;
