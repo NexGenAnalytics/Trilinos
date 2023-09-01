@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
   using Teuchos::RCP;
   using Teuchos::rcp;
   using Teuchos::rcp_implicit_cast;
+  using Teuchos::tuple;
 
   typedef Tpetra::MultiVector<>::scalar_type ST;
   typedef Teuchos::ScalarTraits<ST>         SCT;
@@ -114,8 +115,7 @@ int main(int argc, char *argv[])
     {
       int GIDk = tpetraMap->getGlobalElement(k);
       ST val = 2*(GIDk-m) + 1;
-
-      A->insertGlobalValues( GIDk, 1, &val, &GIDk );
+      A->insertGlobalValues(GIDk, tuple(1), tuple(val));
     }
 
     A->fillComplete();
