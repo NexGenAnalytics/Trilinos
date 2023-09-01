@@ -73,6 +73,7 @@
 #include "Tpetra_Map.hpp"
 #include "Tpetra_Vector.hpp"
 #include "Tpetra_CrsMatrix.hpp"
+#include "TpetraExt_MatrixMatrix.hpp"
 // #include "MueLu_CreateTpetraPreconditioner.hpp"
 //#include "ml_MultiLevelPreconditioner.h" // ML
 
@@ -242,7 +243,9 @@ int main(int argc, char *argv[]) {
     double one = 1.0, hdt = .00005; // half time step
 
     RCP<MAT> A = rcp(new MAT(stiff) );// A = Mass+Stiff*dt/2
-    int err = mass->add(one, A, hdt);// mass->add(false, one, A, hdt);
+    // int err = EpetraExt::MatrixMatrix::Add(*Mass, false, one,*A,hdt);
+    int err = Tpetra::MatrixMatrix::add<double,LO,GO,Node>(one,false,*Mass,hdt,false,*A);
+    
 
     if (err != 0) {
       std::cout << "err "<<err<<" from MatrixMatrix::Add "<<std::endl;
