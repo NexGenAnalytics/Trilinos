@@ -72,7 +72,6 @@ int main(int argc, char *argv[])
   typedef Belos::OperatorTraits<ST,MV,OP>   OPT;
   typedef Tpetra::Map<>                     MAP;
 
-
   GlobalMPISession mpisess(&argc,&argv,&std::cout);
 
   bool success = false;
@@ -105,26 +104,25 @@ int main(int argc, char *argv[])
     // **********************************************************************
     // ******************Set up the problem to be solved*********************
     // construct diagonal matrix
-    const int numGlobalElements = 100;
+    const GO numGlobalElements = 100;
     const int m = 4; // number of negative eigenvalues
     // Create diagonal matrix with n-m positive and m negative eigenvalues.
-    RCP<const MAP > tpetraMap = rcp(new MAP(numGlobalElements, 0, comm));
+    RCP<const MAP > map = rcp(new MAP(numGlobalElements, 0, comm));
 
-    RCP<MAT> A = rcp( new MAT(tpetraMap, 1) ); // DATA_Access::copy, , 1
-    for ( size_t k=0; k<tpetraMap->getLocalNumElements(); k++ )
+    RCP<MAT> A = rcp( new MAT(map, 1) ); // DATA_Access::copy, , 1
+    for ( size_t k=0; k < map->getLocalNumElements(); k++ )
     {
-      int GIDk = tpetraMap->getGlobalElement(k);
       ST val = 2*(GIDk-m) + 1;
-      A->insertGlobalValues(GIDk, tuple(1), tuple(val));
+      A->insertGlobalValues(map->getGlobalElement(k), tuple(1), tuple<ST>(val));
     }
 
     A->fillComplete();
     TEUCHOS_ASSERT(A->isStorageOptimized());
 
     // create initial guess and right-hand side
-    RCP<MV> vecX = rcp( new MV( tpetraMap, numrhs ) );
+    RCP<MV> vecX = rcp( new MV( map, numrhs ) );
 
-    RCP<MV> vecB = rcp( new MV( tpetraMap, numrhs ) );
+    RCP<MV> vecB = rcp( new MV( map, numrhs ) );
     // **********************************************************************
     
     proc_verbose = ( verbose && (comm->getRank()==0) );  /* Only print on the zero processor */
@@ -133,8 +131,8 @@ int main(int argc, char *argv[])
     RCP<MV> B;
     // Check to see if the number of right-hand sides is the same as requested.
     if (numrhs>1) {
-      X = rcp( new MV( tpetraMap, numrhs ) );
-      B = rcp( new MV( tpetraMap, numrhs ) );
+      X = rcp( new MV( map, numrhs ) );
+      B = rcp( new MV( map, numrhs ) );
       X->randomize();
       OPT::Apply( *A, *X, *B );
       X->putScalar( 0.0 );
@@ -213,7 +211,7 @@ int main(int argc, char *argv[])
 
     std::vector<ST> actual_resids( numrhs );
     std::vector<ST> rhs_norm( numrhs );
-    MV resid(tpetraMap, numrhs);
+    MV resid(map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
     MVT::MvNorm( resid, actual_resids );
