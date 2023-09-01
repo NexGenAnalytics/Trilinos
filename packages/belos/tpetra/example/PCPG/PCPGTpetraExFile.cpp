@@ -288,7 +288,6 @@ int main(int argc, char *argv[]) {
 //     MLList.set("coarse: type","Jacobi");     // not recommended
 //     puts("Warning: Iterative coarse grid solve");
 // #endif
-    MLList.set("coarse: type","Jacobi");
 
     //
     //ML_Epetra::MultiLevelPreconditioner* Prec = new ML_Epetra::MultiLevelPreconditioner(*A, MLList);
