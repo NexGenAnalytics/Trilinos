@@ -27,7 +27,7 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils)
   )
 
   ASSERT_DEFINED(Anasazi_SOURCE_DIR)
-  TRIBITS_COPY_FILES_TO_BINARY_DIR(CopyTestMinresFiles
+  TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyTestMinresFiles
     SOURCE_DIR ${Anasazi_SOURCE_DIR}/testmatrices
     SOURCE_FILES bcsstk14.hb
     EXEDEPS Tpetra_minres_hb
