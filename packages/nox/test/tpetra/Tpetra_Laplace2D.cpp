@@ -289,6 +289,15 @@ TEUCHOS_UNIT_TEST(Tpetra_Laplace2D, Laplace2D) {
   FD->computeJacobian(initialGuess, *FD);
   FD->apply(directionVec, FD_resultVec);
 
+  Teuchos::ParameterList printParams;
+  Teuchos::RCP<Teuchos::ParameterList> jfnkParams = Teuchos::parameterList();
+  jfnkParams->set("Difference Type","Forward");
+  jfnkParams->set("Perturbation Algorithm","KSP NOX 2001");
+  jfnkParams->set("lambda",1.0e-4);
+    auto jfnkOp = Teuchos::rcp(new NOX::Thyra::MatrixFreeJacobianOperator<Scalar>(printParams));
+
+    auto nox_group =
+    Teuchos::rcp(new NOX::Thyra::Group(*initial_guess, thyraModel, jfnkOp, lowsFactory, Teuchos::null, Teuchos::null, Teuchos::null));
   // // Matrix-Free operator
   // auto MF = Teuchos::rcp( new NOX::Epetra::MatrixFree(printParams, iReq,
   // noxInitGuess));
