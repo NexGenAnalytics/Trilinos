@@ -14,7 +14,7 @@ export MPICXX="${MPI_BIN}/mpicxx"
 export MPIF90="${MPI_BIN}/mpif90"
 export MPIRUN="${MPI_BIN}/mpirun"
 
-export BLAS_ROOT="$(spack location -i openblas)/lib/libopenblas.so"
+export BLAS_ROOT="$(spack location -i openblas)"
 export LAPACK_ROOT="${BLAS_ROOT}"
 
 export CUDA_ROOT=/usr/local/cuda
