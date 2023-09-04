@@ -43,4 +43,4 @@ jobs:
       - name: Upload Test Log
         uses: actions/upload-artifact@v3
         with:
-          path: /opt/build/Trilinos/Testing/LastTest.Log
+          path: /opt/build/Trilinos/Testing/LastTest.log
