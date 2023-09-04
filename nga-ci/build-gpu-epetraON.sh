@@ -14,9 +14,6 @@ export MPICXX="${MPI_BIN}/mpicxx"
 export MPIF90="${MPI_BIN}/mpif90"
 export MPIRUN="${MPI_BIN}/mpirun"
 
-export BLAS_ROOT="${spack find -p openblas}"
-export LAPACK_ROOT="${BLAS_ROOT}"
-
 export CUDA_ROOT=/usr/local/cuda
 export PATH=${CUDA_ROOT}/bin:$PATH
 export OMPI_CXX=/opt/src/Trilinos/packages/kokkos/bin/nvcc_wrapper
@@ -57,9 +54,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_CUSPARSE=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
-    -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
     -D TPL_ENABLE_LAPACK=ON \
-    -D TPL_LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.so" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
