@@ -8,11 +8,14 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-export MPI_BIN="$(dirname $(which mpicc))"
+export MPI_BIN="$(spack location -i openmpi)"
 export MPICC="${MPI_BIN}/mpicc"
 export MPICXX="${MPI_BIN}/mpicxx"
 export MPIF90="${MPI_BIN}/mpif90"
 export MPIRUN="${MPI_BIN}/mpirun"
+
+export BLAS_ROOT="$(spack location -i openblas)/lib/libopenblas.so"
+export LAPACK_ROOT="${BLAS_ROOT}"
 
 export CUDA_ROOT=/usr/local/cuda
 export PATH=${CUDA_ROOT}/bin:$PATH
@@ -54,7 +57,9 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_ENABLE_CUSPARSE=ON \
     \
     -D TPL_ENABLE_BLAS=ON \
+    -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
     -D TPL_ENABLE_LAPACK=ON \
+    -D TPL_LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.so" \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
