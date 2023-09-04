@@ -43,3 +43,7 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           context: .
           file: ./nga-ci/mpi-epetraOFF.dockerfile
+      - name: Upload Test Log
+        uses: actions/upload-artifact@v3
+        with:
+          path: /opt/build/Trilinos/Testing/LastTest.Log

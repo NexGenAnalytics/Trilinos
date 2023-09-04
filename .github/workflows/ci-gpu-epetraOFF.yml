@@ -40,3 +40,7 @@ jobs:
         run: |
           docker build -t ${{ env.DOCKER_TAG }} -f ./nga-ci/gpu-epetraOFF.dockerfile .
           docker run --gpus all ${{ env.DOCKER_TAG }} /opt/src/Trilinos/nga-ci/test-gpu.sh
+      - name: Upload Test Log
+        uses: actions/upload-artifact@v3
+        with:
+          path: /opt/build/Trilinos/Testing/LastTest.Log
