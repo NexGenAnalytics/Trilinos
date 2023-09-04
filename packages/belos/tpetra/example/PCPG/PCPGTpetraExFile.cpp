@@ -92,13 +92,6 @@ int main(int argc, char *argv[]) {
   // Laplace's equation, homogeneous Dirichlet boundary conditions, [0,1]^2
   // regular mesh, Q1 finite elements
   //
-  // typedef double                            ST;
-  // typedef Teuchos::ScalarTraits<ST>        SCT;
-  // typedef SCT::magnitudeType                MT;
-  // typedef Epetra_MultiVector                MV;
-  // typedef Epetra_Operator                   OP;
-  // typedef Belos::MultiVecTraits<ST,MV>     MVT;
-  // typedef Belos::OperatorTraits<ST,MV,OP>  OPT;
 
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -106,19 +99,19 @@ int main(int argc, char *argv[]) {
   using std::cout;
   using std::endl;
 
-  typedef Tpetra::MultiVector<>::scalar_type Scalar;
-  typedef Teuchos::ScalarTraits<Scalar>       SCT;
-  typedef SCT::magnitudeType               MT;
-  typedef Tpetra::Map<>::local_ordinal_type LO;
-  typedef Tpetra::Map<>::global_ordinal_type GO;
-  typedef Tpetra::Map<>::node_type Node;
-  typedef Tpetra::CrsMatrix<Scalar,LO,GO> MAT;
-  typedef Tpetra::Vector<Scalar, LO, GO, Node> V;
-  typedef Tpetra::MultiVector<Scalar,LO,GO> MV;
+  typedef Tpetra::MultiVector<>::scalar_type     Scalar;
+  typedef Teuchos::ScalarTraits<Scalar>          SCT;
+  typedef SCT::magnitudeType                     MT;
+  typedef Tpetra::Map<>::local_ordinal_type      LO;
+  typedef Tpetra::Map<>::global_ordinal_type     GO;
+  typedef Tpetra::Map<>::node_type               Node;
+  typedef Tpetra::CrsMatrix<Scalar,LO,GO>        MAT;
+  typedef Tpetra::Vector<Scalar, LO, GO, Node>   V;
+  typedef Tpetra::MultiVector<Scalar,LO,GO>      MV;
   typedef Tpetra::Operator<Scalar, LO, GO, Node> OP;
-  typedef Tpetra::Map<LO,GO,Node> MAP;
-  typedef Belos::OperatorTraits<Scalar,MV,OP> OPT;
-  typedef Belos::MultiVecTraits<Scalar,MV>    MVT;
+  typedef Tpetra::Map<LO,GO,Node>                MAP;
+  typedef Belos::OperatorTraits<Scalar,MV,OP>    OPT;
+  typedef Belos::MultiVecTraits<Scalar,MV>       MVT;
 
   Tpetra::initialize (&argc, &argv);
   auto comm = Tpetra::getDefaultComm ();
@@ -179,63 +172,63 @@ int main(int argc, char *argv[]) {
     RCP<V> vecRHS = rcp( new V(map) );
 
     RCP<MV> LHS, RHS;
-    Scalar ko = static_cast<Scalar>(8.0/3.0);
-    Scalar k1 = static_cast<Scalar>(-1.0/3.0);
-    Scalar h =  static_cast<Scalar>(1.0/(double) numElePerDirection);  // x=(iX,iY)h
-    Scalar mo = static_cast<Scalar>(h*h*4.0/9.0);
-    Scalar m1 = static_cast<Scalar>(h*h/9.0);
-    Scalar m2 = static_cast<Scalar>(h*h/36.0);
+    Scalar ko = 8.0/3.0;
+    Scalar k1 = -1.0/3.0;
+    Scalar h =  1.0/(double) numElePerDirection;  // x=(iX,iY)h
+    Scalar mo = h*h*4.0/9.0;
+    Scalar m1 = h*h/9.0;
+    Scalar m2 = h*h/36.0;
     double pi = 4.0 * atan(1.0), valueLHS;
     int iX, iY;
     for(LO lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex(); lid++){
       GO node = map->getGlobalElement(lid);
       iX  = node  % (numElePerDirection-1);
       iY  = ( node - iX )/(numElePerDirection-1);
-      // pos = node;
-      stiff->insertGlobalValues(node, tuple(node), tuple(ko));
-      mass->insertGlobalValues(node, tuple(node), tuple(mo)); // init guess violates hom Dir bc
+      GO pos = node;
+      stiff->insertGlobalValues(node, tuple(pos), tuple(ko));
+      mass->insertGlobalValues(node, tuple(pos), tuple(mo)); // init guess violates hom Dir bc
       valueLHS = sin( pi*h*((double) iX+1) )*cos( 2.0 * pi*h*((double) iY+1) );
       vecLHS->replaceGlobalValue( 1, valueLHS);
       if (iY > 0) {
-        // pos = iX + (iY-1)*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); //North
-        mass->insertGlobalValues(node, tuple(node), tuple(m1));
+        pos = iX + (iY-1)*(numElePerDirection-1);
+        stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); //North
+        mass->insertGlobalValues(node, tuple(pos), tuple(m1));
       }
       if (iY < numElePerDirection-2) {
-        // pos = iX + (iY+1)*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); //South
-        mass->insertGlobalValues(node, tuple(node), tuple(m1));
+        pos = iX + (iY+1)*(numElePerDirection-1);
+        stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); //South
+        mass->insertGlobalValues(node, tuple(pos), tuple(m1));
       }
 
       if (iX > 0) {
-        // pos = iX-1 + iY*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // West
-        mass->insertGlobalValues(node, tuple(node), tuple(m1));
+        pos = iX-1 + iY*(numElePerDirection-1);
+        stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); // West
+        mass->insertGlobalValues(node, tuple(pos), tuple(m1));
         if (iY > 0) {
-          // pos = iX-1 + (iY-1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // North West
-          mass->insertGlobalValues(node, tuple(node), tuple(m2));
+          pos = iX-1 + (iY-1)*(numElePerDirection-1);
+          stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); // North West
+          mass->insertGlobalValues(node, tuple(pos), tuple(m2));
         }
         if (iY < numElePerDirection-2) {
-          // pos = iX-1 + (iY+1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // South West
-          mass->insertGlobalValues(node, tuple(node), tuple(m2));
+          pos = iX-1 + (iY+1)*(numElePerDirection-1);
+          stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); // South West
+          mass->insertGlobalValues(node, tuple(pos), tuple(m2));
         }
       }
 
       if (iX < numElePerDirection - 2) {
-        // pos = iX+1 + iY*(numElePerDirection-1);
-        stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // East
-        mass->insertGlobalValues(node, tuple(node), tuple(m1));
+        pos = iX+1 + iY*(numElePerDirection-1);
+        stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); // East
+        mass->insertGlobalValues(node, tuple(pos), tuple(m1));
         if (iY > 0) {
-          // pos = iX+1 + (iY-1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // North East
-          mass->insertGlobalValues(node, tuple(node), tuple(m2));
+          pos = iX+1 + (iY-1)*(numElePerDirection-1);
+          stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); // North East
+          mass->insertGlobalValues(node, tuple(pos), tuple(m2));
         }
         if (iY < numElePerDirection-2) {
-          // pos = iX+1 + (iY+1)*(numElePerDirection-1);
-          stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // South East
-          mass->insertGlobalValues(node, tuple(node), tuple(m2));
+          pos = iX+1 + (iY+1)*(numElePerDirection-1);
+          stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); // South East
+          mass->insertGlobalValues(node, tuple(pos), tuple(m2));
         }
       }
     }
