@@ -8,7 +8,7 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-export MPI_BIN="$(spack location -i openmpi)"
+export MPI_BIN="$(dirname $(which mpicc))"
 export MPICC="${MPI_BIN}/mpicc"
 export MPICXX="${MPI_BIN}/mpicxx"
 export MPIF90="${MPI_BIN}/mpif90"
