@@ -8,11 +8,11 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-export MPI_ROOT="${spack find -p openmpi}"
-export MPICC="${MPI_ROOT}/bin/mpicc"
-export MPICXX="${MPI_ROOT}/bin/mpicxx"
-export MPIF90="${MPI_ROOT}/bin/mpif90"
-export MPIRUN="${MPI_ROOT}/bin/mpirun"
+export MPI_BIN="$(dirname $(which mpicc))"
+export MPICC="${MPI_BIN}/mpicc"
+export MPICXX="${MPI_BIN}/mpicxx"
+export MPIF90="${MPI_BIN}/mpif90"
+export MPIRUN="${MPI_BIN}/mpirun"
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D CMAKE_BUILD_TYPE=DEBUG \

@@ -8,28 +8,23 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
+export MPI_BIN="$(dirname $(which mpicc))"
+export MPICC="${MPI_BIN}/mpicc"
+export MPICXX="${MPI_BIN}/mpicxx"
+export MPIF90="${MPI_BIN}/mpif90"
+export MPIRUN="${MPI_BIN}/mpirun"
 
-export MPI_ROOT="${CMAKE_PREFIX_PATH}/openmpi-4.1.5-qjkxgt6ffv6shm6rgttbnwuerhchufq7"
-export MPICC="${MPI_ROOT}/bin/mpicc"
-export MPICXX="${MPI_ROOT}/bin/mpicxx"
-export MPIF90="${MPI_ROOT}/bin/mpif90"
-export MPIRUN="${MPI_ROOT}/bin/mpirun"
+export BLAS_ROOT="${spack find -p openblas}"
+export LAPACK_ROOT="${BLAS_ROOT}"
 
-export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
-export LAPACK_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
-
-export PATH=/usr/local/cuda-12.2/bin:$PATH
-# export NVCC_WRAPPER_DEFAULT_COMPILER=${MPICXX}
-# export CXX=${MPICXX}
+export CUDA_ROOT=/usr/local/cuda
+export PATH=${CUDA_ROOT}/bin:$PATH
 export OMPI_CXX=/opt/src/Trilinos/packages/kokkos/bin/nvcc_wrapper
-export CUDA_ROOT=/usr/local/cuda-12.2
 export LD_LIBRARY_PATH=${CUDA_ROOT}/lib64:$LD_LIBRARY_PATH
 export CUDA_LAUNCH_BLOCKING=1
 ENABLE_CUDA=ON
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
-    -D CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} \
     -D CMAKE_BUILD_TYPE=DEBUG \
     -D Trilinos_ENABLE_DEBUG=ON \
     -D Trilinos_PARALLEL_LINK_JOBS_LIMIT=2 \
