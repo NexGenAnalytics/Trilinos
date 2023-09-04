@@ -67,7 +67,7 @@
 //
 // \data Last modified 2007 December 11
 
-#include "ml_include.h" //--enable-epetra --enable-teuchos.
+// #include "ml_include.h" //--enable-epetra --enable-teuchos.
 
 #include "Tpetra_Core.hpp"
 #include "Tpetra_Map.hpp"
@@ -79,7 +79,9 @@
 
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
+#include "BelosTpetraAdapter.hpp"
 #include "BelosPCPGSolMgr.hpp"
+#include "BelosTpetraTestFramework.hpp"
 
 #include "Teuchos_CommandLineProcessor.hpp"
 #include "Teuchos_ParameterList.hpp"
@@ -104,7 +106,9 @@ int main(int argc, char *argv[]) {
   using std::cout;
   using std::endl;
 
-  typedef Tpetra::CrsMatrix<>::scalar_type Scalar;
+  typedef Tpetra::MultiVector<>::scalar_type Scalar;
+  typedef Teuchos::ScalarTraits<Scalar>       SCT;
+  typedef SCT::magnitudeType               MT;
   typedef Tpetra::Map<>::local_ordinal_type LO;
   typedef Tpetra::Map<>::global_ordinal_type GO;
   typedef Tpetra::Map<>::node_type Node;
@@ -112,14 +116,12 @@ int main(int argc, char *argv[]) {
   typedef Tpetra::Vector<Scalar, LO, GO, Node> V;
   typedef Tpetra::MultiVector<Scalar,LO,GO> MV;
   typedef Tpetra::Operator<Scalar, LO, GO, Node> OP;
-  typedef Tpetra::Map<LO,GO,Node> MT;
-  typedef MV::mag_type mag_type; 
-  typedef Teuchos::ScalarTraits<Scalar> SCT;
+  typedef Tpetra::Map<LO,GO,Node> MAP;
+  typedef Belos::OperatorTraits<Scalar,MV,OP> OPT;
+  typedef Belos::MultiVecTraits<Scalar,MV>    MVT;
 
   Tpetra::initialize (&argc, &argv);
   auto comm = Tpetra::getDefaultComm ();
-
-  const int myRank = comm->getRank ();
 
   bool verbose = false;
   bool success = true;
@@ -145,7 +147,7 @@ int main(int argc, char *argv[]) {
     // DKGS is another Iterated Classical Gram Schmidt.
     // Mathematical issues, such as the difference between ICGS and DKGS, are not documented at all.
     // UH tells me that Anasazi::SVQBOrthoManager is available;  I need it for Belos
-    mag_type tol = 1.0e-8;           // relative residual tolerance
+    MT tol = 1.0e-8;           // relative residual tolerance
 
     // How do command line parsers work?
     Teuchos::CommandLineProcessor cmdp(false,true);
@@ -170,7 +172,7 @@ int main(int argc, char *argv[]) {
     int num_time_step = 4;
     int numNodes = (numElePerDirection - 1)*(numElePerDirection - 1);
     //By the way, either matrix has (3*numElePerDirection - 2)^2 nonzeros.
-    RCP<MT> map = rcp(new MT(numNodes, 0, comm) );
+    RCP<MAP> map = rcp(new MAP(numNodes, 0, comm) );
     RCP<MAT> stiff = rcp(new MAT(map, 0));
     RCP<MAT> mass = rcp(new MAT(map, 0) );
     RCP<V> vecLHS = rcp( new V(map) );
@@ -184,54 +186,54 @@ int main(int argc, char *argv[]) {
     Scalar m1 = static_cast<Scalar>(h*h/9.0);
     Scalar m2 = static_cast<Scalar>(h*h/36.0);
     double pi = 4.0 * atan(1.0), valueLHS;
-    int lid, node, pos, iX, iY;
-    for(lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex(); lid++){
+    int iX, iY;
+    for(LO lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex(); lid++){
       GO node = map->getGlobalElement(lid);
       iX  = node  % (numElePerDirection-1);
       iY  = ( node - iX )/(numElePerDirection-1);
-      pos = node;
+      // pos = node;
       stiff->insertGlobalValues(node, tuple(node), tuple(ko));
       mass->insertGlobalValues(node, tuple(node), tuple(mo)); // init guess violates hom Dir bc
       valueLHS = sin( pi*h*((double) iX+1) )*cos( 2.0 * pi*h*((double) iY+1) );
       vecLHS->replaceGlobalValue( 1, valueLHS);
       if (iY > 0) {
-        pos = iX + (iY-1)*(numElePerDirection-1);
+        // pos = iX + (iY-1)*(numElePerDirection-1);
         stiff->insertGlobalValues(node, tuple(node), tuple(k1)); //North
         mass->insertGlobalValues(node, tuple(node), tuple(m1));
       }
       if (iY < numElePerDirection-2) {
-        pos = iX + (iY+1)*(numElePerDirection-1);
+        // pos = iX + (iY+1)*(numElePerDirection-1);
         stiff->insertGlobalValues(node, tuple(node), tuple(k1)); //South
         mass->insertGlobalValues(node, tuple(node), tuple(m1));
       }
 
       if (iX > 0) {
-        pos = iX-1 + iY*(numElePerDirection-1);
+        // pos = iX-1 + iY*(numElePerDirection-1);
         stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // West
         mass->insertGlobalValues(node, tuple(node), tuple(m1));
         if (iY > 0) {
-          pos = iX-1 + (iY-1)*(numElePerDirection-1);
+          // pos = iX-1 + (iY-1)*(numElePerDirection-1);
           stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // North West
           mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
         if (iY < numElePerDirection-2) {
-          pos = iX-1 + (iY+1)*(numElePerDirection-1);
+          // pos = iX-1 + (iY+1)*(numElePerDirection-1);
           stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // South West
           mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
       }
 
       if (iX < numElePerDirection - 2) {
-        pos = iX+1 + iY*(numElePerDirection-1);
+        // pos = iX+1 + iY*(numElePerDirection-1);
         stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // East
         mass->insertGlobalValues(node, tuple(node), tuple(m1));
         if (iY > 0) {
-          pos = iX+1 + (iY-1)*(numElePerDirection-1);
+          // pos = iX+1 + (iY-1)*(numElePerDirection-1);
           stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // North East
           mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
         if (iY < numElePerDirection-2) {
-          pos = iX+1 + (iY+1)*(numElePerDirection-1);
+          // pos = iX+1 + (iY+1)*(numElePerDirection-1);
           stiff->insertGlobalValues(node, tuple(node), tuple(k1)); // South East
           mass->insertGlobalValues(node, tuple(node), tuple(m2));
         }
@@ -240,30 +242,26 @@ int main(int argc, char *argv[]) {
     stiff->fillComplete();
     mass->fillComplete();
 
-    double one = 1.0, hdt = .00005; // half time step
+    const Scalar ONE  = SCT::one();
 
-    RCP<MAT> A = rcp(new MAT(stiff) );// A = Mass+Stiff*dt/2
+    double hdt = .00005; // half time step
+    RCP<MAT> A = rcp(new MAT(*stiff, Teuchos::Copy) );// A = Mass+Stiff*dt/2
     // int err = EpetraExt::MatrixMatrix::Add(*Mass, false, one,*A,hdt);
-    int err = Tpetra::MatrixMatrix::add<double,LO,GO,Node>(one,false,*Mass,hdt,false,*A);
     
-
-    if (err != 0) {
-      std::cout << "err "<<err<<" from MatrixMatrix::Add "<<std::endl;
-      return(err);
-    }
-
+    Tpetra::MatrixMatrix::add<Scalar,LO,GO,Node>(ONE,false,*mass, Scalar(hdt), false, *A);
     A->fillComplete();
 
     hdt = -hdt;
-    RCP<MAT> B = rcp(new MAT(stiff) );// B = Mass-Stiff*dt/2
-    mass->add( false, one, *B, hdt);
-    if (err != 0) {
-      std::cout << "err "<<err<<" from MatrixMatrix::Add "<<std::endl;
-      return(err);
-    }
-
+    RCP<MAT> B = rcp(new MAT(*stiff, Teuchos::Copy) );// B = Mass-Stiff*dt/2
+    // mass->add( ONE, B, Scalar(hdt),B->getDomainMap(), B->getRangeMap()); // Mass->add( false, one, *B, hdt);
+    Tpetra::MatrixMatrix::add<Scalar,LO,GO,Node>(ONE,false,*mass, Scalar(hdt), false, *B);
+    // if (err != 0) {
+    //   std::cout << "err "<<err<<" from MatrixMatrix::Add "<<std::endl;
+    //   return(err);
+    // }
     B->fillComplete();
-    B->multiply(false, *vecLHS, *vecRHS); // rhs_new := B*lhs_old,
+    // old epetra B->multiply(false, *vecLHS, *vecRHS); // rhs_new := B*lhs_old,
+    B->apply(*vecLHS, *vecRHS);
 
     proc_verbose = verbose && (comm->getRank()==0);  /* Only print on the zero processor */
 
@@ -273,12 +271,12 @@ int main(int argc, char *argv[]) {
     //
     // ************Construct preconditioner*************
     //
-    Teuchos::ParameterList MLList; // Set MLList for Smoothed Aggregation
+    // Teuchos::ParameterList MLList; // Set MLList for Smoothed Aggregation
 
-    ML_Epetra::SetDefaults("SA",MLList); // reset parameters ML User's Guide
-    MLList.set("smoother: type","Chebyshev"); // Chebyshev smoother  ... aztec??
-    MLList.set("smoother: sweeps",3);
-    MLList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
+    // ML_Tpetra::SetDefaults("SA", MLList); // reset parameters ML User's Guide
+    // MLList.set("smoother: type","Chebyshev"); // Chebyshev smoother  ... aztec??
+    // MLList.set("smoother: sweeps",3);
+    // MLList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
 
 // TD: For Tpetra What this code is doing (Tpetra alternative to Amesos/KLU seems to be Amesos2/KLU2)
 // 
@@ -365,7 +363,8 @@ int main(int argc, char *argv[]) {
     bool badRes;
     for( int time_step = 0; time_step < num_time_step; time_step++){
       if( time_step ){
-        B->Multiply(false, *LHS, *RHS); // rhs_new := B*lhs_old,
+        // old epetra B->multiply(false, *vecLHS, *vecRHS); // rhs_new := B*lhs_old,
+        B->apply(*LHS, *RHS); // rhs_new := B*lhs_old,
         set = problem->setProblem(LHS,RHS);
         if (set == false) {
           if (proc_verbose)
@@ -386,7 +385,7 @@ int main(int argc, char *argv[]) {
       badRes = false;
       std::vector<double> actual_resids( numrhs );
       //std::vector<double> rhs_norm( numrhs );
-      Epetra_MultiVector resid(*Map, numrhs);
+      MV resid(map, numrhs); // Epetra_MultiVector resid(*Map, numrhs);
       OPT::Apply( *A, *LHS, resid );
       MVT::MvAddMv( -1.0, resid, 1.0, *RHS, resid );
       MVT::MvNorm( resid, actual_resids );
