@@ -8,7 +8,7 @@ spack env activate trilinos
 
 pushd /opt/build/Trilinos
 ret_code=0
-ctest -j 14 --output-on-failure || ret_code=$?
+ctest -j 14 --output-junit junit-tests-report.xml --output-on-failure || ret_code=$?
 # We collect the test logs for exporting
 echo "ctest returned: $ret_code"
 mkdir -p /tmp/artifacts/
