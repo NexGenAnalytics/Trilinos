@@ -93,12 +93,12 @@ class Vector_Operator
 
 //************************************************************************************************
 
-template<class MV>
+template<class ST, class MV>
 class Diagonal_Operator : public Vector_Operator<MV>
 {
   public:
 
-    Diagonal_Operator(int n_in, double v_in) : Vector_Operator<MV>(n_in, n_in), v(v_in) { };
+    Diagonal_Operator(int n_in, ST v_in) : Vector_Operator<MV>(n_in, n_in), v(v_in) { };
 
     ~Diagonal_Operator() { };
 
@@ -109,17 +109,17 @@ class Diagonal_Operator : public Vector_Operator<MV>
 
   private:
 
-    double v;
+    ST v;
 };
 
 //************************************************************************************************
 
-template<class MV>
+template<class ST, class MV>
 class Diagonal_Operator_2 : public Vector_Operator<MV>
 {
   public:
 
-    Diagonal_Operator_2<MV>(int n_in, int min_gid_in, double v_in)
+    Diagonal_Operator_2<ST,MV>(int n_in, int min_gid_in, ST v_in)
     : Vector_Operator<MV>(n_in, n_in), min_gid(min_gid_in), v(v_in) {}
 
     ~Diagonal_Operator_2() { };
@@ -127,19 +127,19 @@ class Diagonal_Operator_2 : public Vector_Operator<MV>
     void operator () (const MV &x, MV &y)
     {
       auto yLocalData = y.getLocalViewHost(Tpetra::Access::ReadWrite);
-      auto xLocalData = y.getLocalViewHost(Tpetra::Access::ReadOnly);
+      auto xLocalData = x.getLocalViewHost(Tpetra::Access::ReadOnly);
 
-      for (size_t i = 0; i < x.getLocalLength(); ++i) {
-        for (size_t j = 0; j < x.getNumVectors(); ++j) {
-          yLocalData(j, i) = (min_gid+i+1)*v*xLocalData(j,i);
+      for (size_t j = 0; j < x.getNumVectors(); ++j) {
+        for (size_t i = 0; i < x.getLocalLength(); ++i) {
+            yLocalData(i, j) = (min_gid + i + 1) * v * xLocalData(i, j); // NOTE: square operator!
         }
       }
-    };
+    }
 
   private:
 
     int min_gid;
-    double v;
+    ST v;
 };
 
 //************************************************************************************************
@@ -206,7 +206,7 @@ class Trilinos_Interface : public OP
     bool hasTransposeApply() const {return(use_transpose);};
 
     Teuchos::RCP<const MP> getDomainMap() const override {return pMap; }
-    
+
     Teuchos::RCP<const MP> getRangeMap() const override {return pMap; }
 
   private:
@@ -247,7 +247,7 @@ class Iterative_Inverse_Operator : public Vector_Operator<MV>
   const bool print;
 
   Teuchos::Time timer;
-  Teuchos::RCP<Teuchos::Comm<int>> pComm;
+  Teuchos::RCP<const Teuchos::Comm<int>> pComm;
   Teuchos::RCP<MP> pMap;
 
   Teuchos::RCP<OP> pPE;
@@ -265,21 +265,15 @@ Iterative_Inverse_Operator<OP, ST, MP, MV>::Iterative_Inverse_Operator(int n_in,
   print(print_in),
   timer(opString)
 {
-  int n_global = n_in;
-  
-  // AM: Could be replaced by: pComm = Tpetra::getDefaultComm();
-#ifdef HAVE_TPETRA_MPI
+  int n_global;
+
   MPI_Allreduce(&n_in, &n_global, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
-  pComm = Teuchos::rcp (new Teuchos::MpiComm<int> (MPI_COMM_WORLD));
-#else
-  pComm = Teuchos::rcp (new Teuchos::SerialComm<int> ());
-  n_global = n_in;
-#endif
-  
+  pComm = Tpetra::getDefaultComm();
+
   pMap = Teuchos::rcp( new MP(n_global, n_in, 0, pComm) );
   pPE = Teuchos::rcp( new Trilinos_Interface<OP, ST, MP, MV>(pA, pComm, pMap ) );
 
-  pProb = Teuchos::rcp( new LinearProblem<double,MV,OP>() );
+  pProb = Teuchos::rcp( new LinearProblem<ST,MV,OP>() );
   pProb->setOperator( pPE );
 
   int max_iter = 100;
@@ -351,23 +345,22 @@ int run(int argc, char *argv[])
   bool success = true;
 
   ST tol = sqrt(std::numeric_limits<ST>::epsilon());
-  
+
   try {
     int n(10);
     int numRHS=1;
 
     RCP<MP> map = RCP(new MP(n, 0, Comm));
     MV X(map, numRHS), Y(map, numRHS);
-    
+
     X.putScalar(1.0);
-    
+
     // Inner computes inv(D2)*y
-    RCP<Diagonal_Operator_2<MV>> D2 = rcp(new Diagonal_Operator_2<MV>(n, map->getMinGlobalIndex(), 1.0));
+    RCP<Diagonal_Operator_2<ST,MV>> D2 = rcp(new Diagonal_Operator_2<ST,MV>(n, map->getMinGlobalIndex(), 1.0));
     Iterative_Inverse_Operator<OP, ST, MP, MV> A2(n, 1, D2, "Belos (inv(D2))", true);
 
     // should return x=(1, 1/2, 1/3, ..., 1/10)
-    // AM: If you uncomment this line, test failed, I don't know why
-    // A2(X,Y);
+    A2(X,Y);
 
     if (pid==0) {
       std::cout << "Vector Y should have all entries [1, 1/2, 1/3, ..., 1/10]" << std::endl;
@@ -375,12 +368,12 @@ int run(int argc, char *argv[])
     Y.print(std::cout);
 
     // Inner computes inv(D)*x
-    RCP<Diagonal_Operator<MV>> D = Teuchos::rcp(new Diagonal_Operator<MV>(n, 4.0));
+    RCP<Diagonal_Operator<ST,MV>> D = Teuchos::rcp(new Diagonal_Operator<ST,MV>(n, 4.0));
     RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Inner =
       rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, D, "Belos (inv(D))", false));
 
     // Composed_Operator computed inv(D)*B*x
-    RCP<Diagonal_Operator<MV>> B = rcp(new Diagonal_Operator<MV>(n, 4.0));
+    RCP<Diagonal_Operator<ST,MV>> B = rcp(new Diagonal_Operator<ST,MV>(n, 4.0));
     RCP<Composed_Operator<MV>> C = rcp(new Composed_Operator<MV>(n, Inner, B));
 
     // Outer computes inv(C) = inv(inv(D)*B)*x = inv(B)*D*x = x
@@ -412,7 +405,7 @@ int run(int argc, char *argv[])
       std::cout << "Two-norm of std::vector (Y-1.0) : "<< norm_Y[0] << std::endl;
 
     success = (norm_Y[0] < tol && !Teuchos::ScalarTraits<ST>::isnaninf( norm_Y[0] ) );
-    
+
     if (success) {
       if (pid==0)
         std::cout << "End Result: TEST PASSED" << std::endl;
@@ -420,10 +413,10 @@ int run(int argc, char *argv[])
       if (pid==0)
         std::cout << "End Result: TEST FAILED" << std::endl;
     }
-  
+
   }
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
-  
+
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
