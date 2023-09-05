@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
-          name: TestLog
+          name: Artifacts
           path: /opt/build/Trilinos/artifacts/*
           if-no-files-found: ignore
       - name: Report Test results
@@ -52,7 +52,7 @@ jobs:
         if: success() || failure()
         with:
           name: Tests report (GPU-EpetraOFF)
-          path: /opt/build/Trilinos/junit-tests-report.xml
+          path: /tmp/artifacts/junit-tests-report.xml
           reporter: java-junit
           output-to: step-summary
           fail-on-error: 'true'
