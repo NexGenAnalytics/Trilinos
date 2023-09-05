@@ -45,7 +45,7 @@ jobs:
         if: success() || failure()
         with:
           name: Artifacts
-          path: /opt/build/Trilinos/artifacts/*
+          path: /tmp/artifacts/*
           if-no-files-found: ignore
       - name: Report Test results
         uses: phoenix-actions/test-reporting@v12
