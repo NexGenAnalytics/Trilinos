@@ -132,14 +132,14 @@ class Diagonal_Operator_2 : public Vector_Operator<MV>
     void operator () (const MV &x, MV &y)
     {
       auto yLocalData = y.getLocalViewHost(Tpetra::Access::ReadWrite);
-      auto xLocalData = y.getLocalViewHost(Tpetra::Access::ReadOnly);
+      auto xLocalData = x.getLocalViewHost(Tpetra::Access::ReadOnly);
 
-      for (size_t i = 0; i < x.getLocalLength(); ++i) {
-        for (size_t j = 0; j < x.getNumVectors(); ++j) {
-            yLocalData(j, i) = (min_gid+i+1)*v*xLocalData(j,i);
-        }
+      for (size_t j = 0; j < x.getNumVectors(); ++j) {
+          for (size_t i = 0; i < x.getLocalLength(); ++i) {
+              yLocalData(i, j) = (min_gid + i + 1) * v * xLocalData(i, j); // NOTE: square operator!
+          }
       }
-    };
+    }
 
   private:
 
@@ -271,8 +271,10 @@ Iterative_Inverse_Operator<OP,ST,MP,MV>::Iterative_Inverse_Operator(int n_in, in
   print(print_in),
   timer(opString)
 {
+  int n_global;
+
+  MPI_Allreduce(&n_in, &n_global, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
   pComm = Tpetra::getDefaultComm();
-  int n_global = pComm->getSize();
 
   pMap =  rcp( new MP(n_global, n_in, 0, pComm) );
 
@@ -315,7 +317,6 @@ void Iterative_Inverse_Operator<OP,ST,MP,MV>::operator () (const MV &b, MV &x)
     {
       std::cout << std::endl << "pid[" << pid << "] BiCGStab converged" << std::endl;
       std::cout << "Solution time: " << timer.totalElapsedTime() << std::endl;
-
     }
     else
       std::cout << std::endl << "pid[" << pid << "] BiCGStab did not converge" << std::endl;
@@ -343,7 +344,7 @@ int run(int argc, char *argv[])
 
   const auto comm = Tpetra::getDefaultComm();
 
-  bool verbose = true;
+  bool verbose = false;
   bool success = true;
 
   try {
