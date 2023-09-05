@@ -13,7 +13,7 @@ export OMPI_ALLOW_RUN_AS_ROOT=1
 export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
 # path to the artifacts
-artifacts_dir=/opt/build/Trilinos/artifacts/
+artifacts_dir=/opt/build/Trilinos/artifacts
 
 ctest -j 5 --output-junit junit-tests-report.xml --output-on-failure || ret_code=$?
 # We collect the test logs for exporting
