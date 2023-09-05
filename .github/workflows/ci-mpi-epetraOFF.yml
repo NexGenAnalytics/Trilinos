@@ -43,6 +43,7 @@ jobs:
           tags: ${{ env.DOCKER_TAG }}
           context: .
           file: ./nga-ci/mpi-epetraOFF.dockerfile
+          build-args: -v /tmp/artifacts:/tmp/artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         if: success() || failure()

@@ -39,7 +39,7 @@ jobs:
       - name: Build and Run Docker Image
         run: |
           docker build -t ${{ env.DOCKER_TAG }} -f ./nga-ci/gpu-epetraOFF.dockerfile .
-          docker run --gpus all ${{ env.DOCKER_TAG }} /opt/src/Trilinos/nga-ci/test-gpu.sh
+          docker run -v /tmp/artifacts:/tmp/artifacts --gpus all ${{ env.DOCKER_TAG }} /opt/src/Trilinos/nga-ci/test-gpu.sh
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         if: success() || failure()
