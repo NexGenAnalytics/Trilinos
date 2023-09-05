@@ -132,14 +132,14 @@ class Diagonal_Operator_2 : public Vector_Operator<MV>
     void operator () (const MV &x, MV &y)
     {
       auto yLocalData = y.getLocalViewHost(Tpetra::Access::ReadWrite);
-      auto xLocalData = y.getLocalViewHost(Tpetra::Access::ReadOnly);
+      auto xLocalData = x.getLocalViewHost(Tpetra::Access::ReadOnly);
 
-      for (size_t i = 0; i < x.getLocalLength(); ++i) {
-        for (size_t j = 0; j < x.getNumVectors(); ++j) {
-            yLocalData(j, i) = (i+1)*v*xLocalData(j,i);
+      for (size_t j = 0; j < x.getNumVectors(); ++j) {
+        for (size_t i = 0; i < x.getLocalLength(); ++i) {
+            yLocalData(i, j) = (i + 1) * v * xLocalData(i, j);
         }
       }
-    };
+    }
 
   private:
 

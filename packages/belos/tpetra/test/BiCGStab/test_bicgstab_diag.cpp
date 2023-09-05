@@ -135,9 +135,9 @@ class Diagonal_Operator_2 : public Vector_Operator<MV>
       auto xLocalData = x.getLocalViewHost(Tpetra::Access::ReadOnly);
 
       for (size_t j = 0; j < x.getNumVectors(); ++j) {
-          for (size_t i = 0; i < x.getLocalLength(); ++i) {
-              yLocalData(i, j) = (min_gid + i + 1) * v * xLocalData(i, j); // NOTE: square operator!
-          }
+        for (size_t i = 0; i < x.getLocalLength(); ++i) {
+            yLocalData(i, j) = (min_gid + i + 1) * v * xLocalData(i, j); // NOTE: square operator!
+        }
       }
     }
 
