@@ -34,16 +34,10 @@ jobs:
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
           echo "DOCKER_TAG: ${{ env.DOCKER_TAG }}"
           echo "SCOPE_NAME  ${{ env.SCOPE_NAME }}"
-      - name: Build and test the Docker Image
-        id: docker_build
-        continue-on-error: false
-        uses: docker/build-push-action@v3
-        with:
-          push: false
-          tags: ${{ env.DOCKER_TAG }}
-          context: .
-          file: ./nga-ci/mpi-epetraOFF.dockerfile
-          build-args: -v /tmp/artifacts:/tmp/artifacts
+      - name: Build and Run Docker Image
+        run: |
+          docker build -t ${{ env.DOCKER_TAG }} -f ./nga-ci/mpi-epetraOFF.dockerfile .
+          docker run -v /tmp/artifacts:/tmp/artifacts ${{ env.DOCKER_TAG }} /opt/src/Trilinos/nga-ci/test-mpi.sh
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         if: success() || failure()

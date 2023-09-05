@@ -9,6 +9,9 @@ spack env activate trilinos
 cd /opt/build/Trilinos
 ret_code=0
 
+export OMPI_ALLOW_RUN_AS_ROOT=1
+export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
 # path to the artifacts
 artifacts_dir=/tmp/artifacts
 
