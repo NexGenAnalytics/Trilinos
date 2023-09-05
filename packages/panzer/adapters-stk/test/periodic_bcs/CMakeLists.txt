@@ -12,6 +12,15 @@ IF(PANZER_HAVE_EPETRA_STACK)
     NUM_MPI_PROCS 4
     )
 
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    periodic_mesh
+    SOURCES periodic_mesh.cpp ${UNIT_TEST_DRIVER}
+    COMM serial mpi
+    NUM_MPI_PROCS 2
+    )
+
+ENDIF(PANZER_HAVE_EPETRA_STACK)
+
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   periodic_bcs_tpetra
   SOURCES periodic_bcs_tpetra.cpp ${UNIT_TEST_DRIVER}
@@ -35,25 +44,6 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   )
 
 
-IF (PANZER_HAVE_EPETRA)
-
-    TRIBITS_ADD_EXECUTABLE_AND_TEST(
-      periodic_bcs
-      SOURCES periodic_bcs.cpp ${UNIT_TEST_DRIVER}
-      COMM serial mpi
-      NUM_MPI_PROCS 4
-      )
-
-    TRIBITS_ADD_EXECUTABLE_AND_TEST(
-      periodic_mesh
-      SOURCES periodic_mesh.cpp ${UNIT_TEST_DRIVER}
-      COMM serial mpi
-      NUM_MPI_PROCS 2
-      )
-
-ENDIF(PANZER_HAVE_EPETRA)
-
-
 # TRIBITS_ADD_EXECUTABLE_AND_TEST(
 #   periodic_mesh_nosubcells
 #   SOURCES periodic_mesh_nosubcells.cpp ${UNIT_TEST_DRIVER}
@@ -68,5 +58,3 @@ ENDIF(PANZER_HAVE_EPETRA)
     DEST_DIR "${CMAKE_CURRENT_BINARY_DIR}/"
     EXEDEPS periodic_32bit_int_limit
     )
-
-ENDIF(PANZER_HAVE_EPETRA_STACK)
