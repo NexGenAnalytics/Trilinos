@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
     A->fillComplete();
 
     hdt = -hdt;
-    RCP<MAT> B = Tpetra::MatrixMatrix::add(one, false, *mass, hdt, false, *stiff); // B = Mass-Stiff*dt/2
+    RCP<MAT> B = Tpetra::MatrixMatrix::add(ONE, false, *mass, hdt, false, *stiff); // B = Mass-Stiff*dt/2
     B->fillComplete();
 
     B->apply(*vecLHS, *vecRHS);
