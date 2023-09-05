@@ -99,19 +99,19 @@ int main(int argc, char *argv[]) {
   using std::cout;
   using std::endl;
 
-  typedef Tpetra::MultiVector<>::scalar_type     Scalar;
-  typedef Teuchos::ScalarTraits<Scalar>          SCT;
-  typedef SCT::magnitudeType                     MT;
-  typedef Tpetra::Map<>::local_ordinal_type      LO;
-  typedef Tpetra::Map<>::global_ordinal_type     GO;
-  typedef Tpetra::Map<>::node_type               Node;
-  typedef Tpetra::CrsMatrix<Scalar,LO,GO>        MAT;
-  typedef Tpetra::Vector<Scalar, LO, GO, Node>   V;
-  typedef Tpetra::MultiVector<Scalar,LO,GO>      MV;
-  typedef Tpetra::Operator<Scalar, LO, GO, Node> OP;
-  typedef Tpetra::Map<LO,GO,Node>                MAP;
-  typedef Belos::OperatorTraits<Scalar,MV,OP>    OPT;
-  typedef Belos::MultiVecTraits<Scalar,MV>       MVT;
+  typedef Tpetra::MultiVector<>::scalar_type   ST;
+  typedef Teuchos::ScalarTraits<ST>            SCT;
+  typedef SCT::magnitudeType                   MT;
+  typedef Tpetra::Map<>::local_ordinal_type    LO;
+  typedef Tpetra::Map<>::global_ordinal_type   GO;
+  typedef Tpetra::Map<>::node_type             Node;
+  typedef Tpetra::CrsMatrix<ST,LO,GO>          MAT;
+  typedef Tpetra::Vector<ST, LO, GO, Node>     V;
+  typedef Tpetra::MultiVector<ST,LO,GO>        MV;
+  typedef Tpetra::Operator<ST, LO, GO, Node>   OP;
+  typedef Tpetra::Map<LO,GO,Node>              MAP;
+  typedef Belos::OperatorTraits<ST,MV,OP>      OPT;
+  typedef Belos::MultiVecTraits<ST,MV>         MVT;
 
   Tpetra::initialize (&argc, &argv);
   auto comm = Tpetra::getDefaultComm ();
@@ -161,34 +161,33 @@ int main(int argc, char *argv[]) {
     //
     // *************Form the problem*********************
     //
-    int numElePerDirection = 14*comm->getSize(); // 5 -> 20
     int num_time_step = 4;
-    int numNodes = (numElePerDirection - 1)*(numElePerDirection - 1);
+    GO numElePerDirection = 14 * comm->getSize(); // 5 -> 20
+    size_t numNodes = (numElePerDirection - 1) * (numElePerDirection - 1);
     //By the way, either matrix has (3*numElePerDirection - 2)^2 nonzeros.
     RCP<MAP> map = rcp(new MAP(numNodes, 0, comm) );
-    RCP<MAT> stiff = rcp(new MAT(map, 0));
-    RCP<MAT> mass = rcp(new MAT(map, 0) );
+    RCP<MAT> stiff = rcp(new MAT(map, numNodes));
+    RCP<MAT> mass = rcp(new MAT(map, numNodes) );
     RCP<V> vecLHS = rcp( new V(map) );
     RCP<V> vecRHS = rcp( new V(map) );
-
     RCP<MV> LHS, RHS;
-    Scalar ko = 8.0/3.0;
-    Scalar k1 = -1.0/3.0;
-    Scalar h =  1.0/(double) numElePerDirection;  // x=(iX,iY)h
-    Scalar mo = h*h*4.0/9.0;
-    Scalar m1 = h*h/9.0;
-    Scalar m2 = h*h/36.0;
-    double pi = 4.0 * atan(1.0), valueLHS;
-    int iX, iY;
-    for(LO lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex(); lid++){
-      GO node = map->getGlobalElement(lid);
+
+    ST ko = 8.0/3.0, k1 = -1.0/3.0;
+    ST h =  1.0 / static_cast<ST>(numElePerDirection);  // x=(iX,iY)h
+    ST mo = h*h*4.0/9.0, m1 = h*h/9.0, m2 = h*h/36.0;
+    ST pi = 4.0 * atan(1.0), valueLHS;
+    
+    GO node, iX, iY;
+    for(LO lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex(); lid++) {
+      node = map->getGlobalElement(lid);
       iX  = node  % (numElePerDirection-1);
       iY  = ( node - iX )/(numElePerDirection-1);
       GO pos = node;
       stiff->insertGlobalValues(node, tuple(pos), tuple(ko));
       mass->insertGlobalValues(node, tuple(pos), tuple(mo)); // init guess violates hom Dir bc
-      valueLHS = sin( pi*h*((double) iX+1) )*cos( 2.0 * pi*h*((double) iY+1) );
+      valueLHS = sin( pi*h*((ST) iX+1) )*cos( 2.0 * pi*h*((ST) iY+1) );
       vecLHS->replaceGlobalValue( 1, valueLHS);
+
       if (iY > 0) {
         pos = iX + (iY-1)*(numElePerDirection-1);
         stiff->insertGlobalValues(node, tuple(pos), tuple(k1)); //North
@@ -235,25 +234,16 @@ int main(int argc, char *argv[]) {
     stiff->fillComplete();
     mass->fillComplete();
 
-    const Scalar ONE  = SCT::one();
+    const ST ONE  = SCT::one();
 
-    double hdt = .00005; // half time step
-    RCP<MAT> A = rcp(new MAT(*stiff, Teuchos::Copy) );// A = Mass+Stiff*dt/2
-    // int err = EpetraExt::MatrixMatrix::Add(*Mass, false, one,*A,hdt);
-    
-    Tpetra::MatrixMatrix::add<Scalar,LO,GO,Node>(ONE,false,*mass, Scalar(hdt), false, *A);
+    ST hdt = .00005; // half time step
+    RCP<MAT> A = Tpetra::MatrixMatrix::add(ONE, false, *mass, hdt, false, *stiff); // A = Mass+Stiff*dt/2
     A->fillComplete();
 
     hdt = -hdt;
-    RCP<MAT> B = rcp(new MAT(*stiff, Teuchos::Copy) );// B = Mass-Stiff*dt/2
-    // mass->add( ONE, B, Scalar(hdt),B->getDomainMap(), B->getRangeMap()); // Mass->add( false, one, *B, hdt);
-    Tpetra::MatrixMatrix::add<Scalar,LO,GO,Node>(ONE,false,*mass, Scalar(hdt), false, *B);
-    // if (err != 0) {
-    //   std::cout << "err "<<err<<" from MatrixMatrix::Add "<<std::endl;
-    //   return(err);
-    // }
+    RCP<MAT> B = Tpetra::MatrixMatrix::add(one, false, *mass, hdt, false, *stiff); // B = Mass-Stiff*dt/2
     B->fillComplete();
-    // old epetra B->multiply(false, *vecLHS, *vecRHS); // rhs_new := B*lhs_old,
+
     B->apply(*vecLHS, *vecRHS);
 
     proc_verbose = verbose && (comm->getRank()==0);  /* Only print on the zero processor */
@@ -271,7 +261,6 @@ int main(int argc, char *argv[]) {
     // MLList.set("smoother: sweeps",3);
     // MLList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
 
-// TD: For Tpetra What this code is doing (Tpetra alternative to Amesos/KLU seems to be Amesos2/KLU2)
 // 
 // #ifdef HAVE_ML_AMESOS
 //     MLList.set("coarse: type","Amesos-KLU"); // solve with serial direct solver KLU
@@ -281,16 +270,13 @@ int main(int argc, char *argv[]) {
 // #endif
 
     //
-    //ML_Epetra::MultiLevelPreconditioner* Prec = new ML_Epetra::MultiLevelPreconditioner(*A, MLList);
     // RCP<OP> prec = MueLu::CreateTpetraPreconditioner(A, MLList );
     // assert(prec != Teuchos::null);
 
     // Create the Belos preconditioned operator from the preconditioner.
     // NOTE:  This is necessary because Belos expects an operator to apply the
     //        preconditioner with Apply() NOT ApplyInverse().
-    
     // RCP<Belos::EpetraPrecOp> belosPrec = rcp( new Belos::EpetraPrecOp( Prec ) );
-    // RCP<Belos::TpetraOperator> belosPrec = rcp( new Belos::TpetraOperator( prec ) );
 
     //
     // *****Create parameter list for the PCPG solver manager*****
@@ -321,10 +307,10 @@ int main(int argc, char *argv[]) {
     //
     // *******Construct a preconditioned linear problem********
     //
-    RCP<Belos::LinearProblem<double,MV,OP> > problem
-      = rcp( new Belos::LinearProblem<double,MV,OP>( A, LHS, RHS ) );
+    RCP<Belos::LinearProblem<ST,MV,OP> > problem
+      = rcp( new Belos::LinearProblem<ST,MV,OP>( A, LHS, RHS ) );
     
-    //problem->setLeftPrec( belosPrec );
+    //problem->setLeftPrec( prec );
 
     bool set = problem->setProblem();
     if (set == false) {
@@ -334,8 +320,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Create an iterative solver manager.
-    RCP< Belos::SolverManager<double,MV,OP> > solver
-      = rcp( new Belos::PCPGSolMgr<double,MV,OP>(problem, rcp(&belosList,false)) );
+    RCP< Belos::SolverManager<ST,MV,OP> > solver
+      = rcp( new Belos::PCPGSolMgr<ST,MV,OP>(problem, rcp(&belosList,false)) );
 
     // std::cout <<  LHS.Values() << std::endl
 
@@ -365,7 +351,7 @@ int main(int argc, char *argv[]) {
           return -1;
         }
       } // if time_step
-      std::vector<double> rhs_norm( numrhs );
+      std::vector<ST> rhs_norm( numrhs );
       MVT::MvNorm( *RHS, rhs_norm );
       std::cout << "                  RHS norm is ... " << rhs_norm[0] << std::endl;
       //
@@ -376,8 +362,7 @@ int main(int argc, char *argv[]) {
       // Compute actual residuals.
       //
       badRes = false;
-      std::vector<double> actual_resids( numrhs );
-      //std::vector<double> rhs_norm( numrhs );
+      std::vector<ST> actual_resids( numrhs );
       MV resid(map, numrhs); // Epetra_MultiVector resid(*Map, numrhs);
       OPT::Apply( *A, *LHS, resid );
       MVT::MvAddMv( -1.0, resid, 1.0, *RHS, resid );
