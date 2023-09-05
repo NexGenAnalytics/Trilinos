@@ -46,4 +46,6 @@ jobs:
       - name: Upload Test Log
         uses: actions/upload-artifact@v3
         with:
-          path: /opt/build/Trilinos/Testing/LastTest.log
+          name: TestLog
+          path: /opt/build/Trilinos/Testing/Temporary/*.log
+          if-no-files-found: ignore
