@@ -1,0 +1,30 @@
+
+
+ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Triutils)
+ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_TpetraExt)
+IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_TpetraExt)
+
+  TRIBITS_ADD_EXECUTABLE(
+    GCRODR_Tpetra_File_Ex
+    SOURCES GCRODRTpetraExFile.cpp
+    COMM serial mpi
+    )
+
+  TRIBITS_COPY_FILES_TO_BINARY_DIR(CopyExampleGCRODRFiles
+    SOURCE_DIR ${Belos_SOURCE_DIR}/tpetra/example/GCRODR
+    SOURCE_FILES sherman5.hb
+    EXEDEPS GCRODR_Tpetra_File_Ex
+    )
+
+  ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack)
+  IF(${PACKAGE_NAME}_ENABLE_Ifpack)
+
+    TRIBITS_ADD_EXECUTABLE(
+      PrecGCRODR_Tpetra_File_Ex
+      SOURCES PrecGCRODRTpetraExFile.cpp
+      COMM serial mpi
+      )
+
+  ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack)
+
+ENDIF(${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_TpetraExt)
