@@ -8,19 +8,16 @@ spack env activate trilinos
 
 cd /opt/build/Trilinos
 
-export CMAKE_PREFIX_PATH="/opt/spack/opt/spack/linux-ubuntu22.04-x86_64_v3/gcc-11.4.0"
+export MPI_ROOT="$(dirname $(which mpicc))"
+export MPICC="${MPI_ROOT}/mpicc"
+export MPICXX="${MPI_ROOT}/mpicxx"
+export MPIF90="${MPI_ROOT}/mpif90"
+export MPIRUN="${MPI_ROOT}/mpirun"
 
-export MPI_ROOT="${CMAKE_PREFIX_PATH}/openmpi-4.1.5-qjkxgt6ffv6shm6rgttbnwuerhchufq7"
-export MPICC="${MPI_ROOT}/bin/mpicc"
-export MPICXX="${MPI_ROOT}/bin/mpicxx"
-export MPIF90="${MPI_ROOT}/bin/mpif90"
-export MPIRUN="${MPI_ROOT}/bin/mpirun"
-
-export BLAS_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
-export LAPACK_ROOT="${CMAKE_PREFIX_PATH}/openblas-0.3.23-bwv7xuj5t72zlgxhiq4wz3nyb35b2two"
+export BLAS_ROOT="$(spack location -i openblas)"
+export LAPACK_ROOT="${BLAS_ROOT}"
 
 cmake -G "${CMAKE_GENERATOR:-Ninja}" \
-    -D CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
     -D CMAKE_BUILD_TYPE=DEBUG \
     -D Trilinos_ENABLE_DEBUG=ON \
     -D Trilinos_PARALLEL_LINK_JOBS_LIMIT=3 \
@@ -43,6 +40,8 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D TPL_BLAS_LIBRARIES="${BLAS_ROOT}/lib/libopenblas.so" \
     -D TPL_ENABLE_LAPACK=ON \
     -D TPL_LAPACK_LIBRARIES="${LAPACK_ROOT}/lib/libopenblas.so" \
+    \
+    -D TPL_ENABLE_CUDA=OFF \
     \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \

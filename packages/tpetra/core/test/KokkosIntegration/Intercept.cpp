@@ -60,7 +60,7 @@ void initialize(int& narg, char* arg[]) {
 
   fprintf(stderr, "Kokkos::initialize()\n");
   o_init(narg, arg);
-} 
+}
 
 void finalize() {
   void (*o_finalize)(void);
@@ -82,15 +82,15 @@ __host__ __device__ cudaError_t cudaDeviceSynchronize() {
   return o_cudaDeviceSynchronize();
 }
 
+#ifndef __CUDA_ARCH__
 //Copies data between host and device.  Don't care about __device__ calls, so count only if from host.
 __host__ __device__ cudaError_t cudaMemcpy2DAsync ( void* dst, size_t dpitch, const void* src, size_t spitch, size_t width, size_t height, cudaMemcpyKind kind, cudaStream_t stream) {
   cudaError_t (*o_cudaMemcpy2DAsync) (void*, size_t, const void*, size_t, size_t, size_t, cudaMemcpyKind, cudaStream_t);
   o_cudaMemcpy2DAsync = (cudaError_t (*)(void*, size_t, const void*, size_t, size_t, size_t, cudaMemcpyKind, cudaStream_t))dlsym(RTLD_NEXT, "cudaMemcpy2DAsync");
-#ifndef __CUDA_ARCH__
-  ApiTest *ctr = ApiTest::getInstance();
 
+  ApiTest *ctr = ApiTest::getInstance();
   ctr->incr("cudaMemcpy2DAsync");
-#endif
+
   return o_cudaMemcpy2DAsync(dst, dpitch, src, spitch, width, height, kind, stream);
 }
 
@@ -98,11 +98,10 @@ __host__ __device__ cudaError_t cudaMemcpy2DAsync ( void* dst, size_t dpitch, co
 __host__ __device__ cudaError_t cudaMemcpy3DAsync ( const cudaMemcpy3DParms* p, cudaStream_t stream ) {
   cudaError_t (*o_cudaMemcpy3DAsync) ( const cudaMemcpy3DParms* , cudaStream_t );
   o_cudaMemcpy3DAsync = (cudaError_t (*)(const cudaMemcpy3DParms* , cudaStream_t))dlsym(RTLD_NEXT, "cudaMemcpy3DAsync");
-#ifndef __CUDA_ARCH__
-  ApiTest *ctr = ApiTest::getInstance();
 
+  ApiTest *ctr = ApiTest::getInstance();
   ctr->incr("cudaMemcpy3DAsync");
-#endif
+
   return o_cudaMemcpy3DAsync(p, stream);
 }
 
@@ -110,17 +109,18 @@ __host__ __device__ cudaError_t cudaMemcpy3DAsync ( const cudaMemcpy3DParms* p, 
 __host__ __device__ cudaError_t cudaMemcpyAsync ( void* dst, const void* src, size_t count, cudaMemcpyKind kind, cudaStream_t stream) {
   cudaError_t (*o_cudaMemcpyAsync) ( void*, const void*, size_t, cudaMemcpyKind, cudaStream_t );
   o_cudaMemcpyAsync = (cudaError_t (*)(void*, const void*, size_t, cudaMemcpyKind, cudaStream_t))dlsym(RTLD_NEXT, "cudaMemcpyAsync");
-#ifndef __CUDA_ARCH__
-  ApiTest *ctr = ApiTest::getInstance();
 
+  ApiTest *ctr = ApiTest::getInstance();
   ctr->incr("cudaMemcpyAsync");
-#endif
+
   return o_cudaMemcpyAsync(dst, src, count, kind, stream);
 }
 
+#endif // __CUDA_ARCH__
+
 //Copies data to the given symbol on the device.
 __host__ cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind) {
-  cudaError_t (*o_cudaMemcpy)(void*, const void*, size_t, cudaMemcpyKind);  
+  cudaError_t (*o_cudaMemcpy)(void*, const void*, size_t, cudaMemcpyKind);
   o_cudaMemcpy = (cudaError_t (*)(void*, const void*, size_t, cudaMemcpyKind))dlsym(RTLD_NEXT, "cudaMemcpy");
   ApiTest *ctr = ApiTest::getInstance();
 

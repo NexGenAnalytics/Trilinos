@@ -5,7 +5,7 @@ COPY . /opt/src/Trilinos
 RUN mkdir -p /opt/build/Trilinos
 
 # Build using the spack environment we created
-RUN bash /opt/src/Trilinos/nga-ci/build-mpi-epetraOFF.sh
+RUN bash /opt/src/Trilinos/nga-ci/build-gpu-epetraON.sh
 
 # For running later
-RUN chmod +x /opt/src/Trilinos/nga-ci/test-mpi.sh
+RUN chmod +x /opt/src/Trilinos/nga-ci/test-gpu.sh
