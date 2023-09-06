@@ -102,6 +102,8 @@ int run(int argc, char *argv[]) {
     using GO = typename Tpetra::Vector<>::global_ordinal_type;
     using NT = typename Tpetra::Vector<>::node_type;
 
+    using SCT = typename Teuchos::ScalarTraits<ST>;
+    using MT  = typename SCT::magnitudeType;
     using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
     using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
     using MVT = typename Belos::MultiVecTraits<ST,MV>;
@@ -156,8 +158,7 @@ int run(int argc, char *argv[]) {
         // DKGS is another Iterated Classical Gram Schmidt.
         // Mathematical issues, such as the difference between ICGS and DKGS, are not documented at all.
         // UH tells me that Anasazi::SVQBOrthoManager is available;  I need it for Belos
-        ST tol = sqrt(std::numeric_limits<ST>::epsilon()); // relative residual tolerance
-
+        MT tol = 1.0e-8;           // relative residual tolerance
         // How do command line parsers work?
         Teuchos::CommandLineProcessor cmdp(false,true);
 
@@ -423,5 +424,5 @@ int run(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
     // run with different ST
     run<double>(argc, argv);
-    // run<float>(argc, argv); // FAILS
+    // run<float>(argc, argv); // FAILS -- will need to change tolerance
 }
