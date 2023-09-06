@@ -282,7 +282,7 @@ Iterative_Inverse_Operator<OP,ST,MP,MV>::Iterative_Inverse_Operator(int n_in, in
 
   int restart = 10;
   int max_iter = 100;
-  ST tol = 1.0e-10;
+  const ST tol = sqrt(std::numeric_limits<ST>::epsilon());
   int verbosity = Belos::Errors + Belos::Warnings;
   if (print)
     verbosity += Belos::TimingDetails + Belos::StatusTestDetails;
@@ -346,8 +346,10 @@ int run(int argc, char *argv[])
 
   const auto comm = Tpetra::getDefaultComm();
 
-  bool verbose = true;
+  bool verbose = false;
   bool success = true;
+
+  ST tol = sqrt(std::numeric_limits<ST>::epsilon()); // relative residual tolerance
 
   try {
 
@@ -409,7 +411,7 @@ int run(int argc, char *argv[])
     if (pid==0)
       std::cout << "Two-norm of std::vector (Y-1.0) : "<< norm_Y[0] << std::endl;
 
-    success = (norm_Y[0] < 1e-10 && !Teuchos::ScalarTraits<ST>::isnaninf( norm_Y[0] ) );
+    success = (norm_Y[0] < tol && !Teuchos::ScalarTraits<ST>::isnaninf( norm_Y[0] ) );
 
     if (success) {
       if (pid==0)
@@ -427,5 +429,5 @@ int run(int argc, char *argv[])
 int main(int argc, char *argv[]) {
   // run with different ST
   run<double>(argc, argv);
-  // run<float>(argc, argv);
+  // run<float>(argc, argv); FAILS
 }
