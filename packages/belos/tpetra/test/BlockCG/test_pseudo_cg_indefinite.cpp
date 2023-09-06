@@ -51,8 +51,8 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
-//
-int main(int argc, char *argv[])
+template<typename ScalarType>
+int run(int argc, char *argv[]) {
 {
   using Teuchos::CommandLineProcessor;
   using Teuchos::GlobalMPISession;
@@ -62,26 +62,25 @@ int main(int argc, char *argv[])
   using Teuchos::rcp_implicit_cast;
   using Teuchos::tuple;
 
-  typedef Tpetra::MultiVector<>::scalar_type ST;
-  typedef Teuchos::ScalarTraits<ST>         SCT;
-  typedef SCT::magnitudeType                 MT;
-  typedef Tpetra::MultiVector<ST>            MV;
-  typedef Tpetra::Operator<ST>               OP;
-  typedef Tpetra::CrsMatrix<ST>             MAT;
-  typedef Belos::MultiVecTraits<ST,MV>      MVT;
-  typedef Belos::OperatorTraits<ST,MV,OP>   OPT;
-  typedef Tpetra::Map<>                     MAP;
-  typedef Tpetra::Map<>::global_ordinal_type GO;
+  using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NT = typename Tpetra::Vector<>::node_type;
 
-  GlobalMPISession mpisess(&argc,&argv,&std::cout);
+  using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using MVT = typename Belos::MultiVecTraits<ST,MV>;
+  using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
+  using MAT = Tpetra::CrsMatrix<ST,LO,GO,NT>;
+
+  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
+  RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
 
   bool success = false;
   bool verbose = false;
 
   try
   {
-    Teuchos::RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
-
     // Get test parameters from command-line processor
     //
     bool debug = false, proc_verbose = false;
@@ -108,11 +107,9 @@ int main(int argc, char *argv[])
     const GO numGlobalElements = 100;
     const int m = 4; // number of negative eigenvalues
     // Create diagonal matrix with n-m positive and m negative eigenvalues.
-    RCP<const MAP > map = rcp(new MAP(numGlobalElements, 0, comm));
+    RCP<const MAP> map = rcp(new MAP(numGlobalElements, 0, comm));
 
     RCP<MAT> A = rcp( new MAT(map, 1) ); // DATA_Access::copy, , 1
-
-    
 
     if (proc_verbose)
         std::cout << "TD: Start Loop" << std::endl;
@@ -252,4 +249,8 @@ int main(int argc, char *argv[])
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
+}
+
+int main(int argc, char *argv[]) {
+  run<double>(argc,argv);
 } // end test_pseudo_cg_indefinite.cpp
