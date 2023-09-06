@@ -158,7 +158,7 @@ int run(int argc, char *argv[]) {
         // DKGS is another Iterated Classical Gram Schmidt.
         // Mathematical issues, such as the difference between ICGS and DKGS, are not documented at all.
         // UH tells me that Anasazi::SVQBOrthoManager is available;  I need it for Belos
-        MT tol = 1.0e-8;           // relative residual tolerance
+        ST tol = sqrt(std::numeric_limits<ST>::epsilon()); // relative residual tolerance
 
         // How do command line parsers work?
         Teuchos::CommandLineProcessor cmdp(false,true);
@@ -423,7 +423,7 @@ int run(int argc, char *argv[]) {
 } // run
 
 int main(int argc, char *argv[]) {
-    // run with different scalar types
+    // run with different ST
     run<double>(argc, argv);
     // run<float>(argc, argv); // FAILS
 }
