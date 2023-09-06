@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 
     // form random eigenvalues
     std::vector<double> lambda1(nev);
-    SerialDenseMatrix<int,double> Lambda(nev,1);
+    SerialDenseMatrix<int,double> Lambda(nev,1)
     Anasazi::randomSDM(Lambda);
     for (int i=0; i<nev; ++i) {
       lambda1[i] = Lambda(i,0);
