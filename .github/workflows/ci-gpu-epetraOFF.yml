@@ -10,7 +10,7 @@ on:
 # Cancel any existing jobs
 concurrency:
   group: ${{ github.event.repository.name }}-${{ github.ref }}-${{ github.workflow }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   build:
