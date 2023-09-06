@@ -171,8 +171,8 @@ int run(int argc, char *argv[]) {
     RCP<MAP> map = rcp(new MAP(numNodes, 0, comm) );
     RCP<MAT> stiff = rcp(new MAT(map, numNodes));
     RCP<MAT> mass = rcp(new MAT(map, numNodes) );
-    RCP<V> vecLHS = rcp( new V(map) );
-    RCP<V> vecRHS = rcp( new V(map) );
+    RCP<V> vecLHS = rcp(new V(map));
+    RCP<V> vecRHS = rcp(new V(map));
     RCP<MV> LHS, RHS;
 
     ST ko = 8.0/3.0, k1 = -1.0/3.0;
