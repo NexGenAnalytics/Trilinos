@@ -87,7 +87,8 @@
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 
-int main(int argc, char *argv[]) {
+template<typename ScalarType>
+int run(int argc, char *argv[]) {
   //
   // Laplace's equation, homogeneous Dirichlet boundary conditions, [0,1]^2
   // regular mesh, Q1 finite elements
@@ -99,25 +100,27 @@ int main(int argc, char *argv[]) {
   using std::cout;
   using std::endl;
 
-  typedef Tpetra::MultiVector<>::scalar_type   ST;
-  typedef Teuchos::ScalarTraits<ST>            SCT;
-  typedef SCT::magnitudeType                   MT;
-  typedef Tpetra::Map<>::local_ordinal_type    LO;
-  typedef Tpetra::Map<>::global_ordinal_type   GO;
-  typedef Tpetra::Map<>::node_type             Node;
-  typedef Tpetra::CrsMatrix<ST,LO,GO>          MAT;
-  typedef Tpetra::Vector<ST, LO, GO, Node>     V;
-  typedef Tpetra::MultiVector<ST,LO,GO>        MV;
-  typedef Tpetra::Operator<ST, LO, GO, Node>   OP;
-  typedef Tpetra::Map<LO,GO,Node>              MAP;
-  typedef Belos::OperatorTraits<ST,MV,OP>      OPT;
-  typedef Belos::MultiVecTraits<ST,MV>         MVT;
+  using ST  = typename Tpetra::MultiVector<ScalarType>::scalar_type;
+  using LO  = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO  = typename Tpetra::Vector<>::global_ordinal_type;
+  using NT  = typename Tpetra::Vector<>::node_type;
 
-  Tpetra::initialize (&argc, &argv);
-  auto comm = Tpetra::getDefaultComm ();
+  using V   = typename Tpetra::Vector<ST,LO,GO,NT>;
+  using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MVT = typename Belos::MultiVecTraits<ST,MV>;
+  using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
+  using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  using MAP = typename Tpetra::Map<LO,GO,NT>;
+  using SCT = typename Teuchos::ScalarTraits<ST>;
+  using MT  = typename SCT::magnitudeType;
+
+  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
+  RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
 
   bool verbose = false;
   bool success = true;
+
   try {
     bool proc_verbose = false;
     int frequency = -1;        // frequency of status test output.
@@ -398,3 +401,7 @@ int main(int argc, char *argv[]) {
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+int main(int argc, char *argv[]) {
+  run<double>(argc,argv);
+} // end PCPGTpetraExFile.cpp
