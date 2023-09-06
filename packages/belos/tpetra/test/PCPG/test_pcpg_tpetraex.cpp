@@ -102,8 +102,6 @@ int run(int argc, char *argv[]) {
     using GO = typename Tpetra::Vector<>::global_ordinal_type;
     using NT = typename Tpetra::Vector<>::node_type;
 
-    using SCT = typename Teuchos::ScalarTraits<ST>;
-    using MT  = typename SCT::magnitudeType;
     using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
     using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
     using MVT = typename Belos::MultiVecTraits<ST,MV>;
