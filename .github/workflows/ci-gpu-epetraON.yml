@@ -2,7 +2,7 @@ name: GPU-EpetraON
 
 # Trigger the workflow on merge to NGA-FY23-develop
 on:
-  pull request:
+  pull_request:
     branches:
       - NGA-FY23-develop
   workflow_dispatch:
