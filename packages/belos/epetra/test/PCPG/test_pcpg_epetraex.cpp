@@ -259,7 +259,6 @@ int main(int argc, char *argv[]) {
 
     B->FillComplete();
     B->OptimizeStorage();
-
     B->Multiply(false, *vecLHS, *vecRHS); // rhs_new := B*lhs_old,
 
     proc_verbose = verbose && (MyPID==0);  /* Only print on the zero processor */
