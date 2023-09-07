@@ -9,6 +9,7 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_ML)
     PCPG_Tpetra_File_Ex
     SOURCES PCPGTpetraExFile.cpp
     COMM serial mpi
+    ARGS --verbose
     )
 
 ENDIF()
