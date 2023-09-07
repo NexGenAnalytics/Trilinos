@@ -1,9 +1,9 @@
 IF (PANZER_HAVE_EPETRA_STACK)
-    ADD_SUBDIRECTORY(assembly_engine)
     ADD_SUBDIRECTORY(model_evaluator)
     ADD_SUBDIRECTORY(solver)
 ENDIF (PANZER_HAVE_EPETRA_STACK)
 
+ADD_SUBDIRECTORY(assembly_engine)
 ADD_SUBDIRECTORY(bcstrategy)
 ADD_SUBDIRECTORY(periodic_bcs)
 ADD_SUBDIRECTORY(initial_condition_builder)
