@@ -61,7 +61,8 @@
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 
-int main(int argc, char *argv[]) {
+template<typename ScalarType>
+int run(int argc, char *argv[]) {
 
   using Teuchos::CommandLineProcessor;
   using Teuchos::GlobalMPISession;
@@ -69,18 +70,19 @@ int main(int argc, char *argv[]) {
   using Teuchos::RCP;
   using Teuchos::rcp;
   using Teuchos::rcp_implicit_cast;
-  using Teuchos::tuple;
 
-  using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
-  using LO = typename Tpetra::Vector<>::local_ordinal_type;
-  using GO = typename Tpetra::Vector<>::global_ordinal_type;
-  using NT = typename Tpetra::Vector<>::node_type;
+  using ST  = typename Tpetra::MultiVector<ScalarType>::scalar_type;
+  using LO  = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO  = typename Tpetra::Vector<>::global_ordinal_type;
+  using NT  = typename Tpetra::Vector<>::node_type;
 
-  using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
-  using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
-  using MAT = Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  using SCT = typename ScalarTraits<ST>;
+  using MT  = typename SCT::magnitudeType;
 
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
   RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
@@ -136,7 +138,7 @@ int main(int argc, char *argv[]) {
     RCP<MV> B, X;
     RCP<V> vecB, vecX;
     
-    // TODO: find Tpetra equivalent
+    // TODO: find Tpetra equivalent for:
     // EpetraExt::readEpetraLinearSystem(filenameMatrix, Comm, &A, &map, &vecX, &vecB);
 
     // Stratimikos::DefaultLinearSolverBuilder
@@ -165,7 +167,8 @@ int main(int argc, char *argv[]) {
           MV * BmustDelete;
           int mmRHSioflag = 0;
           const char * charPtrRHSfn = filenameRHS.c_str();
-          mmRHSioflag = EpetraExt::MatrixMarketFileToMultiVector(charPtrRHSfn, *map, BmustDelete);
+          // TODO: find Tpetra equivalent for:
+          // mmRHSioflag = EpetraExt::MatrixMarketFileToMultiVector(charPtrRHSfn, *map, BmustDelete);
           //std::cout << "rhs from input file " << std::endl;
           //BmustDelete->Print(std::cout);
 
@@ -266,7 +269,7 @@ int main(int argc, char *argv[]) {
     }
     Belos::ReturnType ret = newSolver->solve(); // Perform solve
     std::vector<double> solNorm( numrhs );      // get solution norm
-    MVT::MvNorm( *X, solNorm );
+    MVT::MvNorm( X, solNorm );
     int numIters = newSolver->getNumIters();    // get number of solver iterations
     MT condNum = newSolver->getMatCondNum();
     MT matrixNorm= newSolver->getMatNorm();
@@ -281,13 +284,13 @@ int main(int argc, char *argv[]) {
       << "solution norm: " << solNorm[0] << std::endl
       << "least squares residual Norm: " << lsResNorm << std::endl;
     bool badRes = false;                     // Compute the actual residuals.
-    std::vector<double> actual_resids( numrhs );
-    std::vector<double> rhs_norm( numrhs );
-    MV resid(*map, numrhs);
+    std::vector<ST> actual_resids( numrhs );
+    std::vector<ST> rhs_norm( numrhs );
+    MV resid(map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
     MVT::MvNorm( resid, actual_resids );
-    MVT::MvNorm( *B, rhs_norm );
+    MVT::MvNorm( B, rhs_norm );
     if (proc_verbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
@@ -301,18 +304,22 @@ int main(int argc, char *argv[]) {
       }
     }
 
-  if (ret!=Belos::Converged || badRes) {
-    success = false;
-    if (proc_verbose)
-      std::cout << std::endl << "ERROR:  Belos did not converge!" << std::endl;
-  } else {
-    success = true;
-    if (proc_verbose)
-      std::cout << std::endl << "SUCCESS:  Belos converged!" << std::endl;
+    if (ret!=Belos::Converged || badRes) {
+      success = false;
+      if (proc_verbose)
+        std::cout << std::endl << "ERROR:  Belos did not converge!" << std::endl;
+    } else {
+      success = true;
+      if (proc_verbose)
+        std::cout << std::endl << "SUCCESS:  Belos converged!" << std::endl;
+    }
   }
-}
-TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
+  TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
 
-return success ? EXIT_SUCCESS : EXIT_FAILURE;
+  return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+int main(int argc, char *argv[]) {
+  run<double>(argc,argv);
+} // end LSQRTpetraExFile.cpp
