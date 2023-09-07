@@ -282,7 +282,7 @@ Iterative_Inverse_Operator<OP,ST,MP,MV>::Iterative_Inverse_Operator(int n_in, in
 
   int restart = 10;
   int max_iter = 100;
-  const ST tol = sqrt(std::numeric_limits<ST>::epsilon());
+  const ST tol = 1.0e-10;
   int verbosity = Belos::Errors + Belos::Warnings;
   if (print)
     verbosity += Belos::TimingDetails + Belos::StatusTestDetails;
@@ -349,7 +349,7 @@ int run(int argc, char *argv[])
   bool verbose = false;
   bool success = true;
 
-  ST tol = sqrt(std::numeric_limits<ST>::epsilon()); // relative residual tolerance
+  ST tol = 1.0e-10; // relative residual tolerance
 
   try {
 
@@ -429,5 +429,5 @@ int run(int argc, char *argv[])
 int main(int argc, char *argv[]) {
   // run with different ST
   run<double>(argc, argv);
-  // run<float>(argc, argv); FAILS
+  // run<float>(argc, argv); FAILS (will need different tolerance)
 }
