@@ -425,8 +425,8 @@ int run(int argc, char *argv[])
 }
 
 int main(int argc, char *argv[]) {
-  // run with different ST
+  // run with different ST (which may require different tolerances)
   run<double>(argc, argv);
-  // run<float>(argc, argv); // FAILS (will need different tolerance)
+  // run<float>(argc, argv); // FAILS
 }
 
