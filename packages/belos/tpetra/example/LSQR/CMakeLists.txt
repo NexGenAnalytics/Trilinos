@@ -9,6 +9,7 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_Tpetra)
     LSQR_Tpetra_File_Ex
     SOURCES LSQRTpetraExFile.cpp
     COMM serial mpi
+    ARGS "--verbose"
     )
 
   TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyExampleLSQRFiles

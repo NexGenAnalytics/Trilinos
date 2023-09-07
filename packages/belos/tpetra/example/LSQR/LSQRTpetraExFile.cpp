@@ -50,11 +50,13 @@
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
 #include "BelosLSQRSolMgr.hpp"
+#include "BelosTpetraTestFramework.hpp"
 
 // #include "EpetraExt_readEpetraLinearSystem.h"
 // #include "EpetraExt_MultiVectorIn.h"
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+#include <MatrixMarket_Tpetra.hpp>
 
 #include "Teuchos_GlobalMPISession.hpp"
 #include "Teuchos_CommandLineProcessor.hpp"
@@ -81,7 +83,7 @@ int run(int argc, char *argv[]) {
   using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MAP = typename Tpetra::Map<LO,GO,NT>;
-  using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  // using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
@@ -99,9 +101,9 @@ int run(int argc, char *argv[]) {
     bool debug = false;
     int frequency = -1;        // frequency of status test output.
     int blockSize = 1;         // blockSize
-    int numrhs = 1;            // number of right-hand sides to solve for
+    int numRHS = 1;            // number of right-hand sides to solve for
     int maxiters = -1;         // maximum number of iterations allowed per linear system
-    std::string filenameMatrix("orsirr1_scaled.hb");
+    std::string filename("orsirr1_scaled.hb");
     std::string filenameRHS;   // blank mean unset
     MT relResTol = 3.0e-4;     // relative residual tolerance
     // Like CG, LSQR is a short recurrence method that
@@ -119,13 +121,13 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
     cmdp.setOption("debug","nondebug",&debug,"Print debugging information from solver.");
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
-    cmdp.setOption("filename",&filenameMatrix,"Filename for test matrix.  Acceptable file extensions: *.hb,*.mtx,*.triU,*.triS");
+    cmdp.setOption("filename",&filename,"Filename for test matrix.  Acceptable file extensions: *.hb,*.mtx,*.triU,*.triS");
     cmdp.setOption("rhsFilename",&filenameRHS,"Filename for right-hand side.  Acceptable file extension: *.mtx");
     cmdp.setOption("lambda",&damp,"Regularization parameter");
     cmdp.setOption("tol",&relResTol,"Relative residual tolerance");
     cmdp.setOption("matrixTol",&relMatTol,"Relative error in Matrix");
     cmdp.setOption("max-cond",&maxCond,"Maximum condition number");
-    cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
+    cmdp.setOption("num-rhs",&numRHS,"Number of right-hand sides to be solved for.");
     cmdp.setOption("block-size",&blockSize,"Block size used by LSQR."); // must be one at this point
     cmdp.setOption("max-iters",&maxiters,"Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
 
@@ -134,19 +136,36 @@ int run(int argc, char *argv[]) {
     }
     if (!verbose)
       frequency = -1;  // reset frequency if test is not verbose
-    //
-    // Get the problem
-    //
-    RCP<MAP> map;
-    RCP<MAT> A;
-    RCP<MV> B, X;
-    RCP<V> vecB, vecX;
-    std::cout << filenameMatrix;
-    std::cout << filenameRHS;
-    // TODO: find Tpetra equivalent for:
-    // EpetraExt::readEpetraLinearSystem(filenameMatrix, Comm, &A, &map, &vecX, &vecB);
 
-    // Stratimikos::DefaultLinearSolverBuilder
+    //
+    // *************Get the problem*********************
+    //
+    Belos::Tpetra::HarwellBoeingReader<Tpetra::CrsMatrix<ST> > reader( comm );
+    RCP<Tpetra::CrsMatrix<ST> > A = reader.readFromFile( filename );
+    // RCP<const Tpetra::Map<> > map = A->getRowMap();
+    // RCP<const MAP> dmnmap = A->getDomainMap();
+    // RCP<const MAP> rngmap = A->getRangeMap();
+    RCP<const MAP> map = A->getDomainMap();
+
+    // RCP<MV> X (map, 1);
+    // MV B (map, 1);
+    // B.randomize ();
+
+    // RCP<MV> vecX, vecB;
+    // RCP<MV> vecX = rcp( new MV( map, numRHS ) );
+    // RCP<MV> vecB = rcp( new MV( map, numRHS ) );
+
+    // RCP<MV> B, X;
+    // Create initial vectors
+    RCP<MV> B, X;
+    X = rcp( new MV(map,numRHS) );
+    MVT::MvRandom( *X );
+    B = rcp( new MV(map,numRHS) );
+    OPT::Apply( *A, *X, *B );
+    MVT::MvInit( *X, 0.0 );
+
+    RCP<MV> vecB = rcp(new MV(map, numRHS));
+    RCP<MV> vecX = rcp(new MV(map, numRHS));
 
     // Rectangular matrices are embedded in square matrices.  vecX := 0,  vecB = A*randVec
     proc_verbose = verbose && (comm->getRank()==0);  /* Only print on the zero processor */
@@ -157,66 +176,79 @@ int run(int argc, char *argv[]) {
     }
 
     // Check to see if the number of right-hand sides is the same as requested.
-    if (numrhs>1) {
-      isRHS = false; // numrhs > 1 not yet supported
-      X = rcp( new MV( map, numrhs ) );
-      B = rcp( new MV( map, numrhs ) );
+    if (numRHS>1) {
+      if (proc_verbose)
+          std::cout << "Aa" << std::endl;
+      isRHS = false; // numRHS > 1 not yet supported
+      X = rcp( new MV(map, numRHS) );
+      B = rcp( new MV(map, numRHS) );
+      if (proc_verbose)
+        std::cout << "a" << std::endl;
       X->randomize();
+      if (proc_verbose)
+        std::cout << "b" << std::endl;
       OPT::Apply( *A, *X, *B ); // B := AX
       X->putScalar( 0.0 );   // annihilate X
-    }
-    else {
-      if ( isRHS )
-        {
-          MV * BmustDelete;
-          int mmRHSioflag = 0;
-          const char * charPtrRHSfn = filenameRHS.c_str();
-          // TODO: find Tpetra equivalent for:
-          // mmRHSioflag = EpetraExt::MatrixMarketFileToMultiVector(charPtrRHSfn, *map, BmustDelete);
-          //std::cout << "rhs from input file " << std::endl;
-          //BmustDelete->Print(std::cout);
+      if (proc_verbose)
+        std::cout << "c" << std::endl;
+    } else {
+      if (proc_verbose)
+          std::cout << "Bb" << std::endl;
+      if (isRHS) {
+        B->print(std::cout);
+        std::cout << ">>>>>>>>>>>>>>>>>>";
+        B = Tpetra::MatrixMarket::Reader<MV>::readVectorFile(filenameRHS, comm, map);
+        std::cout << "rhs from input file " << std::endl;
+        std::cout << ">>>>>>>>>>>>>>>>>>";
+        B->print(std::cout);
+        std::cout << ">>>>>>>>>>>>>>>>>>";
 
-          if( mmRHSioflag )
-            {
-              if (proc_verbose)
-                std::cout << "Error " <<  mmRHSioflag << " occured while attempting to read file " << filenameRHS << std::endl;
-              return -1;
-            }
-          X = rcp( new MV( map, numrhs ) );
-          X->scale( 0.0 );
-          B = rcp( new MV(BmustDelete));
-          delete BmustDelete;
+        X = rcp( new MV(map, numRHS) );
+        X->scale( 0.0 );
+      } else {
+        LO locNumCol = map->getMaxLocalIndex() + 1; // Create a known solution
+        GO globNumCol = map->getMaxGlobalIndex() + 1;
+        if (proc_verbose)
+            std::cout << "2a" << std::endl;
+        for(LO li = 0; li <= locNumCol; li++) {
+          const auto gid = map->getGlobalElement(li);
+          if (proc_verbose)
+            std::cout << "2b" << std::endl;
+          ST value = (ST) ( globNumCol -1 - gid );
+          int numEntries = 1;
+          // vecX->ReplaceGlobalValues( numEntries, &value, &gid );
+          if (proc_verbose)
+            std::cout << "2d" << std::endl;
+          // vecX->replaceGlobalValue(gid, value); // not sure
+          vecX->replaceGlobalValue(numEntries,0,value);
+          if (proc_verbose)
+            std::cout << "2e" << std::endl;
         }
-      else
-        {
-          int locNumCol = map->getMaxLocalIndex() + 1; // Create a known solution
-          int globNumCol = map->getMaxGlobalIndex() + 1;
-          for(LO li = 0; li <= locNumCol; li++) {
-            const auto gid = map->getGlobalElement(li);
-            ST value = (ST) ( globNumCol -1 - gid );
-            int numEntries = 1;
-            // vecX->ReplaceGlobalValues( numEntries, &value, &gid );
-            vecX->replaceGlobalValues( gid, tuple<GO>(gid), tuple<ST>(value) ); // not sure
-          }
-          bool Trans = false;
-          A->apply(*vecX, *vecB ); // Create a consistent linear system
-          // At this point, the initial guess is exact.
-          bool goodInitGuess = true; // perturb initial guess
-          bool zeroInitGuess = false; // annihilate initial guess
-          if( goodInitGuess )
-            {
-              ST value = 1.e-2; // "Rel RHS Err" and "Rel Mat Err" apply to the residual equation,
-              int numEntries = 1;   // norm( b - A x_k ) ?<? relResTol norm( b- Axo).
-              int index = 0;        // norm(b) is inaccessible to LSQR.
-              vecX->sumIntoMyValues(  numEntries, &value, &index);
-            }
-          if( zeroInitGuess )
-            {
-              vecX->putScalar( 0.0 ); //
-            }
-          X = Teuchos::rcp_implicit_cast<MV>(vecX);
-          B = Teuchos::rcp_implicit_cast<MV>(vecB);
+
+        A->apply(*vecX, *vecB ); // Create a consistent linear system
+
+        // At this point, the initial guess is exact.
+        bool goodInitGuess = true; // perturb initial guess
+        bool zeroInitGuess = false; // annihilate initial guess
+        std::cout << "3" << std::endl;
+        if( goodInitGuess ) {
+          ST value = 1.e-2; // "Rel RHS Err" and "Rel Mat Err" apply to the residual equation,
+          // LO numEntries = 1;   // norm( b - A x_k ) ?<? relResTol norm( b- Axo).
+          LO index = 0;        // norm(b) is inaccessible to LSQR.
+          // vecX->SumIntoMyValues(  numEntries, &value, &index);
+          std::cout << "4" << std::endl;
+          vecX->sumIntoLocalValue(index, 0, value);
+          // vecX->sumIntoLocalValue(index, value);
         }
+
+        if( zeroInitGuess ) {
+          std::cout << "5" << std::endl;
+          vecX->putScalar( 0.0 ); //
+        }
+
+        X = Teuchos::rcp_implicit_cast<MV>(vecX);
+        B = Teuchos::rcp_implicit_cast<MV>(vecB);
+      }
     }
     //
     // ********Other information used by block solver***********
@@ -245,7 +277,7 @@ int run(int argc, char *argv[]) {
     //
     // Construct an unpreconditioned linear problem instance.
     //
-    Belos::LinearProblem<double,MV,OP> problem( A, X, B );
+    Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     bool set = problem.setProblem();
     if (set == false) {
       if (proc_verbose)
@@ -264,7 +296,7 @@ int run(int argc, char *argv[]) {
     if (proc_verbose) { // ******** Print a problem description *********
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
-      std::cout << "Number of right-hand sides: " << numrhs << std::endl;
+      std::cout << "Number of right-hand sides: " << numRHS << std::endl;
       std::cout << "Block size used by solver: " << blockSize << std::endl;
       std::cout << "Max number of iterations for a linear system: " << maxiters << std::endl;
       std::cout << "Relative residual tolerance: " << relResTol << std::endl;
@@ -273,8 +305,8 @@ int run(int argc, char *argv[]) {
       std::cout << newSolver->description() << std::endl; // visually verify the parameter list
     }
     Belos::ReturnType ret = newSolver->solve(); // Perform solve
-    std::vector<double> solNorm( numrhs );      // get solution norm
-    MVT::MvNorm( X, solNorm );
+    std::vector<ST> solNorm( numRHS );      // get solution norm
+    MVT::MvNorm( *X, solNorm );
     int numIters = newSolver->getNumIters();    // get number of solver iterations
     MT condNum = newSolver->getMatCondNum();
     MT matrixNorm= newSolver->getMatNorm();
@@ -289,17 +321,17 @@ int run(int argc, char *argv[]) {
       << "solution norm: " << solNorm[0] << std::endl
       << "least squares residual Norm: " << lsResNorm << std::endl;
     bool badRes = false;                     // Compute the actual residuals.
-    std::vector<ST> actual_resids( numrhs );
-    std::vector<ST> rhs_norm( numrhs );
-    MV resid(map, numrhs);
+    std::vector<ST> actual_resids( numRHS );
+    std::vector<ST> rhs_norm( numRHS );
+    MV resid(map, numRHS);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
     MVT::MvNorm( resid, actual_resids );
-    MVT::MvNorm( B, rhs_norm );
+    MVT::MvNorm( *B, rhs_norm );
     if (proc_verbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
-      for ( int i=0; i<numrhs; i++) {
-        double actRes = actual_resids[i]/rhs_norm[i];
+      for ( int i=0; i<numRHS; i++) {
+        ST actRes = actual_resids[i]/rhs_norm[i];
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > relResTol * resGrowthFactor)
           {
