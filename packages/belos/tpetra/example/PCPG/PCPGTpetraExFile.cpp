@@ -395,10 +395,6 @@ int run(int argc, char *argv[]) {
   }
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
-#ifdef EPETRA_MPI
-  MPI_Finalize();
-#endif
-
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
