@@ -1,10 +1,10 @@
 
 
-ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Triutils)
 ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Tpetra)
 IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_Tpetra)
 
-  TRIBITS_ADD_EXECUTABLE(
+  # WORKS.
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
     LSQR_Tpetra_File_Ex
     SOURCES LSQRTpetraExFile.cpp
     COMM serial mpi
@@ -16,18 +16,18 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_Tpetra)
     EXEDEPS LSQR_Tpetra_File_Ex
     )
 
-  # WIP (incoming):
-  # ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack)
-  # IF(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  # WIP (in progress):
+  ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  IF(${PACKAGE_NAME}_ENABLE_Ifpack2)
 
-  #   TRIBITS_ADD_EXECUTABLE(
-  #     PrecLSQR_Tpetra_File_Ex
-  #     SOURCES PrecLSQRTpetraExFile.cpp
-  #     COMM serial mpi
-  #     )
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+      PrecLSQR_Tpetra_File_Ex
+      SOURCES PrecLSQRTpetraExFile.cpp
+      COMM serial mpi
+      )
 
 
 
-  # ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack2)
 
-ENDIF(${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_Tpetra)
+ENDIF(${PACKAGE_NAME}_ENABLE_Tpetra)

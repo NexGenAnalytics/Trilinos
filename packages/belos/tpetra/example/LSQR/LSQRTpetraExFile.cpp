@@ -52,8 +52,6 @@
 #include "BelosLSQRSolMgr.hpp"
 #include "BelosTpetraTestFramework.hpp"
 
-// #include "EpetraExt_readEpetraLinearSystem.h"
-// #include "EpetraExt_MultiVectorIn.h"
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 #include <MatrixMarket_Tpetra.hpp>
@@ -83,7 +81,7 @@ int run(int argc, char *argv[]) {
   using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MAP = typename Tpetra::Map<LO,GO,NT>;
-  // using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
@@ -140,8 +138,8 @@ int run(int argc, char *argv[]) {
     //
     // *************Get the problem*********************
     //
-    Belos::Tpetra::HarwellBoeingReader<Tpetra::CrsMatrix<ST> > reader( comm );
-    RCP<Tpetra::CrsMatrix<ST> > A = reader.readFromFile( filename );
+    Belos::Tpetra::HarwellBoeingReader<MAT> reader( comm );
+    RCP<MAT> A = reader.readFromFile( filename );
     RCP<const MAP> map = A->getDomainMap();
 
     // Initialize vectors
@@ -184,7 +182,6 @@ int run(int argc, char *argv[]) {
           int numEntries = 1;
           vecX->replaceGlobalValue(numEntries,0,value);
         }
-
         A->apply(*vecX, *vecB ); // Create a consistent linear system
 
         // At this point, the initial guess is exact.
