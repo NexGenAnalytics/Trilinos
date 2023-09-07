@@ -53,7 +53,6 @@
 
 template<typename ScalarType>
 int run(int argc, char *argv[]) {
-{
   using Teuchos::CommandLineProcessor;
   using Teuchos::GlobalMPISession;
   using Teuchos::ParameterList;
@@ -62,16 +61,20 @@ int run(int argc, char *argv[]) {
   using Teuchos::rcp_implicit_cast;
   using Teuchos::tuple;
 
-  using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
-  using LO = typename Tpetra::Vector<>::local_ordinal_type;
-  using GO = typename Tpetra::Vector<>::global_ordinal_type;
-  using NT = typename Tpetra::Vector<>::node_type;
+  using ST  = typename Tpetra::MultiVector<ScalarType>::scalar_type;
+  using LO  = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO  = typename Tpetra::Vector<>::global_ordinal_type;
+  using NT  = typename Tpetra::Vector<>::node_type;
+  
+  using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using MAP = typename Tpetra::Map<LO,GO,NT>;
 
-  using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
-  using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
   using MAT = Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  using SCT = typename Teuchos::ScalarTraits<ST>;
+  using MT  = typename SCT::magnitudeType;
 
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
   RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
