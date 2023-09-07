@@ -41,11 +41,9 @@
 //
 // Update of belos/epetra/example/GCRODR/GCRODREpetraExFile.cpp
 //
-// While the Epetra version read a problem from a file which could be in
-// Harwell-Boeing (*.hb), Matrix Market (*.mtx), or triplet format (*.triU, *.triS),
-// this driver only handles Harwell-Boeing (for now).
-// The right-hand side from the problem, if it exists, will be used instead of
-// multiple random right-hand-sides.  The initial guesses are all set to zero.
+// This driver reads a problem from a Harwell-Boeing (HB) file.
+// The right-hand-side corresponds to a randomly generated solution.
+// The initial guesses are all set to zero.
 //
 // NOTE: No preconditioner is used in this example.
 //
