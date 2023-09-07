@@ -70,19 +70,23 @@ int run(int argc, char *argv[]) {
   using Teuchos::RCP;
   using Teuchos::rcp;
   using Teuchos::rcp_implicit_cast;
+  using Teuchos::tuple;
 
   using ST  = typename Tpetra::MultiVector<ScalarType>::scalar_type;
   using LO  = typename Tpetra::Vector<>::local_ordinal_type;
   using GO  = typename Tpetra::Vector<>::global_ordinal_type;
   using NT  = typename Tpetra::Vector<>::node_type;
 
-  using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using V   = typename Tpetra::Vector<ST,LO,GO,NT>;
   using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MAP = typename Tpetra::Map<LO,GO,NT>;
+  using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
+
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
-  using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
-  using SCT = typename ScalarTraits<ST>;
-  using MT  = typename SCT::magnitudeType;
+
+  using MT  = typename Teuchos::ScalarTraits<ST>::magnitudeType;
 
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
   RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
@@ -137,7 +141,8 @@ int run(int argc, char *argv[]) {
     RCP<MAT> A;
     RCP<MV> B, X;
     RCP<V> vecB, vecX;
-    
+    std::cout << filenameMatrix;
+    std::cout << filenameRHS;
     // TODO: find Tpetra equivalent for:
     // EpetraExt::readEpetraLinearSystem(filenameMatrix, Comm, &A, &map, &vecX, &vecB);
 
@@ -147,19 +152,18 @@ int run(int argc, char *argv[]) {
     proc_verbose = verbose && (comm->getRank()==0);  /* Only print on the zero processor */
 
     bool isRHS = false;
-    if ( filenameRHS != "" )
-      {
-        isRHS = true;
-      }
+    if (filenameRHS != "") {
+      isRHS = true;
+    }
 
     // Check to see if the number of right-hand sides is the same as requested.
     if (numrhs>1) {
       isRHS = false; // numrhs > 1 not yet supported
-      X = rcp( new MV( *map, numrhs ) );
-      B = rcp( new MV( *map, numrhs ) );
-      X->Random();
+      X = rcp( new MV( map, numrhs ) );
+      B = rcp( new MV( map, numrhs ) );
+      X->randomize();
       OPT::Apply( *A, *X, *B ); // B := AX
-      X->PutScalar( 0.0 );   // annihilate X
+      X->putScalar( 0.0 );   // annihilate X
     }
     else {
       if ( isRHS )
@@ -178,20 +182,21 @@ int run(int argc, char *argv[]) {
                 std::cout << "Error " <<  mmRHSioflag << " occured while attempting to read file " << filenameRHS << std::endl;
               return -1;
             }
-          X = rcp( new MV( *map, numrhs ) );
+          X = rcp( new MV( map, numrhs ) );
           X->scale( 0.0 );
-          B = rcp( new MV(*BmustDelete));
+          B = rcp( new MV(BmustDelete));
           delete BmustDelete;
         }
       else
         {
-          int locNumCol = map->maxLID() + 1; // Create a known solution
-          int globNumCol = map->maxAllGID() + 1;
-          for( int li = 0; li < locNumCol; li++){   // assume consecutive lid
-            int gid = map->GID(li);
+          int locNumCol = map->getMaxLocalIndex() + 1; // Create a known solution
+          int globNumCol = map->getMaxGlobalIndex() + 1;
+          for(LO li = 0; li <= locNumCol; li++) {
+            const auto gid = map->getGlobalElement(li);
             ST value = (ST) ( globNumCol -1 - gid );
             int numEntries = 1;
-            vecX->replaceGlobalValues( numEntries, &value, &gid );
+            // vecX->ReplaceGlobalValues( numEntries, &value, &gid );
+            vecX->replaceGlobalValues( gid, tuple<GO>(gid), tuple<ST>(value) ); // not sure
           }
           bool Trans = false;
           A->apply(*vecX, *vecB ); // Create a consistent linear system
@@ -207,7 +212,7 @@ int run(int argc, char *argv[]) {
             }
           if( zeroInitGuess )
             {
-              vecX->PutScalar( 0.0 ); //
+              vecX->putScalar( 0.0 ); //
             }
           X = Teuchos::rcp_implicit_cast<MV>(vecX);
           B = Teuchos::rcp_implicit_cast<MV>(vecB);
@@ -217,7 +222,7 @@ int run(int argc, char *argv[]) {
     // ********Other information used by block solver***********
     // *****************(can be user specified)******************
     //
-    const int numGlobalElements = B->GlobalLength();
+    const int numGlobalElements = B->getGlobalLength();
     if (maxiters == -1)
       maxiters = numGlobalElements/blockSize - 1; // maximum number of iterations to run
     ParameterList belosList; // mechanism for configuring specific linear solver
