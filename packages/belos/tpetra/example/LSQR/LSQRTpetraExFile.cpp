@@ -142,30 +142,12 @@ int run(int argc, char *argv[]) {
     //
     Belos::Tpetra::HarwellBoeingReader<Tpetra::CrsMatrix<ST> > reader( comm );
     RCP<Tpetra::CrsMatrix<ST> > A = reader.readFromFile( filename );
-    // RCP<const Tpetra::Map<> > map = A->getRowMap();
-    // RCP<const MAP> dmnmap = A->getDomainMap();
-    // RCP<const MAP> rngmap = A->getRangeMap();
     RCP<const MAP> map = A->getDomainMap();
 
-    // RCP<MV> X (map, 1);
-    // MV B (map, 1);
-    // B.randomize ();
-
-    // RCP<MV> vecX, vecB;
-    // RCP<MV> vecX = rcp( new MV( map, numRHS ) );
-    // RCP<MV> vecB = rcp( new MV( map, numRHS ) );
-
-    // RCP<MV> B, X;
-    // Create initial vectors
-    RCP<MV> B, X;
-    X = rcp( new MV(map,numRHS) );
-    MVT::MvRandom( *X );
-    B = rcp( new MV(map,numRHS) );
-    OPT::Apply( *A, *X, *B );
-    MVT::MvInit( *X, 0.0 );
-
+    // Initialize vectors
     RCP<MV> vecB = rcp(new MV(map, numRHS));
     RCP<MV> vecX = rcp(new MV(map, numRHS));
+    RCP<MV> B, X;
 
     // Rectangular matrices are embedded in square matrices.  vecX := 0,  vecB = A*randVec
     proc_verbose = verbose && (comm->getRank()==0);  /* Only print on the zero processor */
@@ -182,47 +164,25 @@ int run(int argc, char *argv[]) {
       isRHS = false; // numRHS > 1 not yet supported
       X = rcp( new MV(map, numRHS) );
       B = rcp( new MV(map, numRHS) );
-      if (proc_verbose)
-        std::cout << "a" << std::endl;
       X->randomize();
-      if (proc_verbose)
-        std::cout << "b" << std::endl;
       OPT::Apply( *A, *X, *B ); // B := AX
       X->putScalar( 0.0 );   // annihilate X
-      if (proc_verbose)
-        std::cout << "c" << std::endl;
     } else {
-      if (proc_verbose)
-          std::cout << "Bb" << std::endl;
       if (isRHS) {
         B->print(std::cout);
-        std::cout << ">>>>>>>>>>>>>>>>>>";
         B = Tpetra::MatrixMarket::Reader<MV>::readVectorFile(filenameRHS, comm, map);
-        std::cout << "rhs from input file " << std::endl;
-        std::cout << ">>>>>>>>>>>>>>>>>>";
-        B->print(std::cout);
-        std::cout << ">>>>>>>>>>>>>>>>>>";
-
+        // std::cout << "rhs from input file " << std::endl;
+        // B->print(std::cout);
         X = rcp( new MV(map, numRHS) );
         X->scale( 0.0 );
       } else {
         LO locNumCol = map->getMaxLocalIndex() + 1; // Create a known solution
         GO globNumCol = map->getMaxGlobalIndex() + 1;
-        if (proc_verbose)
-            std::cout << "2a" << std::endl;
         for(LO li = 0; li <= locNumCol; li++) {
           const auto gid = map->getGlobalElement(li);
-          if (proc_verbose)
-            std::cout << "2b" << std::endl;
           ST value = (ST) ( globNumCol -1 - gid );
           int numEntries = 1;
-          // vecX->ReplaceGlobalValues( numEntries, &value, &gid );
-          if (proc_verbose)
-            std::cout << "2d" << std::endl;
-          // vecX->replaceGlobalValue(gid, value); // not sure
           vecX->replaceGlobalValue(numEntries,0,value);
-          if (proc_verbose)
-            std::cout << "2e" << std::endl;
         }
 
         A->apply(*vecX, *vecB ); // Create a consistent linear system
@@ -230,24 +190,19 @@ int run(int argc, char *argv[]) {
         // At this point, the initial guess is exact.
         bool goodInitGuess = true; // perturb initial guess
         bool zeroInitGuess = false; // annihilate initial guess
-        std::cout << "3" << std::endl;
         if( goodInitGuess ) {
           ST value = 1.e-2; // "Rel RHS Err" and "Rel Mat Err" apply to the residual equation,
           // LO numEntries = 1;   // norm( b - A x_k ) ?<? relResTol norm( b- Axo).
           LO index = 0;        // norm(b) is inaccessible to LSQR.
-          // vecX->SumIntoMyValues(  numEntries, &value, &index);
-          std::cout << "4" << std::endl;
           vecX->sumIntoLocalValue(index, 0, value);
-          // vecX->sumIntoLocalValue(index, value);
         }
 
         if( zeroInitGuess ) {
-          std::cout << "5" << std::endl;
           vecX->putScalar( 0.0 ); //
         }
 
-        X = Teuchos::rcp_implicit_cast<MV>(vecX);
-        B = Teuchos::rcp_implicit_cast<MV>(vecB);
+        X = vecX;
+        B = vecB;
       }
     }
     //
