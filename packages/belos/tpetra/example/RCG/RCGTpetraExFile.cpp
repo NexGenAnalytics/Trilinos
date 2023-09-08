@@ -50,14 +50,13 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_Map.hpp>
-#include <Tpetra_MatrixIO.hpp> // I/O for Harwell-Boeing files
+#include <Tpetra_MatrixIO.hpp>
 
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
 #include "BelosRCGSolMgr.hpp"
-// #include "BelosTpetraUtils.h"
 
 // Trilinos
 #include <Trilinos_Util.h>
@@ -128,7 +127,7 @@ int run(int argc, char *argv[])
     Tpetra::Utils::readHBMatrix(filename, comm, A);
     RCP<const tmap_t> rowMap = A->getDomainMap();
 
-    // *****Construct initial guess and right-hand sides *****
+    // Construct initial guess and right-hand sides
     RCP<tmultivector_t> B, X;
     X = rcp(new MV(rowMap, numrhs));
     MVT::MvRandom(*X);
@@ -136,8 +135,7 @@ int run(int argc, char *argv[])
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
     
-    // ********Other information used by block solver***********
-    // *****************(can be user specified)******************
+    // Other information used by block solver (can be user specified)
     const int NumGlobalElements = B->getGlobalLength();
     if (maxiters == -1)
       maxiters = NumGlobalElements - 1; // maximum number of iterations to run
@@ -170,7 +168,7 @@ int run(int argc, char *argv[])
     RCP< Belos::SolverManager<ST,MV,OP> > newSolver
       = rcp( new Belos::RCGSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)) );
     
-    // **********Print out information about problem*******************
+    // Print out information about problem
     if (proc_verbose) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
@@ -185,7 +183,7 @@ int run(int argc, char *argv[])
     // Perform solve
     Belos::ReturnType ret = newSolver->solve();
     
-    // Compute actual residuals.
+    // Compute actual residuals
     bool badRes = false;
     std::vector<ST> actual_resids( numrhs );
     std::vector<ST> rhs_norm( numrhs );
