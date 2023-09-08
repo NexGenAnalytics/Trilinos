@@ -47,13 +47,11 @@
 //
 // NOTE: No preconditioner is used in this example.
 //
+// Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosBlockCGSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraTestFramework.hpp"
-
-// I/O for Harwell-Boeing files
-// #include <Trilinos_Util_iohb.h>
 
 // Tpetra
 #include <Tpetra_Map.hpp>
