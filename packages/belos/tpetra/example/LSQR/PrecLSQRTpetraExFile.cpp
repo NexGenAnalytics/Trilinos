@@ -64,13 +64,6 @@
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 
-void IFPACK2_CHK_ERR(int code) {
-  if (code < 0) { \
-  std::cerr << "IFPACK2 ERROR " << code << ", " \
-    << __FILE__ << ", line " << __LINE__ << std::endl; \
-    return(code);  }
-}
-
 template<typename ScalarType>
 int run(int argc, char *argv[]) {
   using Teuchos::CommandLineProcessor;
@@ -201,10 +194,10 @@ int run(int argc, char *argv[]) {
     // create the preconditioner. For valid PrecType values,
     // please check the documentation
     std::string PrecType = "ILU"; // incomplete LU
-    int OverlapLevel = 1; // nonnegative
+    int overlapLevel = 1; // nonnegative
 
-    RCP<Ifpack2Prec> Prec = Ifpack2::Factory::create<MAT>("ILUT", Teuchos::rcpFromRef(A), OverlapLevel);
-    assert(Prec != Teuchos::null);
+    RCP<Ifpack2Prec> prec = Ifpack2::Factory::create<MAT>("ILUT", Teuchos::rcpFromRef(A), overlapLevel);
+    assert(prec != Teuchos::null);
 
     // specify parameters for ILU
     ifpack2List.set("fact: level-of-fill", 1);
@@ -213,31 +206,22 @@ int run(int argc, char *argv[]) {
     // Their meaning is as defined in file Epetra_CombineMode.h
     ifpack2List.set("schwarz: combine mode", "Add");
     // sets the parameters
-    IFPACK2_CHK_ERR(Prec->setParameters(ifpack2List));
+    prec->setParameters(ifpack2List);
 
     // initialize the preconditioner. At this point the matrix must
     // have been FillComplete()'d, but actual values are ignored.
-    IFPACK2_CHK_ERR(Prec->initialize());
+    prec->initialize();
 
     // Builds the preconditioners, by looking for the values of
     // the matrix.
-    IFPACK2_CHK_ERR(Prec->compute());
+    prec->compute();
 
-    {
-      const int errcode = Prec->SetUseTranspose (true);
-      if (errcode != 0) {
-        throw std::logic_error ("Oh hai! Ifpack_Preconditioner doesn't know how to apply its transpose.");
-      } else {
-        (void) Prec->SetUseTranspose (false);
-      }
+    const int errcode = prec->SetUseTranspose (true);
+    if (errcode != 0) {
+      throw std::logic_error ("Oh hai! Ifpack2_Preconditioner doesn't know how to apply its transpose.");
+    } else {
+      (void) prec->SetUseTranspose (false);
     }
-
-    // Create the Belos preconditioned operator from the Ifpack preconditioner.
-    // NOTE:  This is necessary because Belos expects an operator to apply the
-    //        preconditioner with Apply() NOT ApplyInverse().
-    // TODO: Find alternative of EpetraPrecOp for Tpetra ?
-    // RCP<Belos::EpetraPrecOp> belosPrec = rcp( new Belos::EpetraPrecOp( Prec ) );
-    RCP<Ifpack2Prec> belosPrec = Prec;
 
     //
     // *****Create parameter list for the LSQR solver manager*****
@@ -270,10 +254,10 @@ int run(int argc, char *argv[]) {
     RCP<Belos::LinearProblem<double,MV,OP> > problem
       = rcp( new Belos::LinearProblem<double,MV,OP>( A, X, B ) );
     if (leftprec) {
-      problem->setLeftPrec( belosPrec );
+      problem->setLeftPrec( prec );
     }
     else {
-      problem->setRightPrec( belosPrec );
+      problem->setRightPrec( prec );
     }
     bool set = problem->setProblem();
     if (set == false) {
