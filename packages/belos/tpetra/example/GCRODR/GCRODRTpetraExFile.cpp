@@ -58,7 +58,6 @@
 #include "BelosConfigDefs.hpp"
 #include "BelosGCRODRSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
-#include "BelosTpetraAdapter.hpp"
 #include "BelosTpetraTestFramework.hpp"
 
 // Teuchos
