@@ -97,6 +97,8 @@ int run(int argc, char *argv[])
 
   try
   {
+    int MyPID = rank(*comm);
+
     // Get test parameters from command-line processor
     bool proc_verbose = false;
     int frequency = -1;                  // frequency of status test output.
@@ -126,6 +128,8 @@ int run(int argc, char *argv[])
     RCP<tcrsmatrix_t> A;
     Tpetra::Utils::readHBMatrix(filename, comm, A);
     RCP<const tmap_t> rowMap = A->getDomainMap();
+
+    proc_verbose = ( verbose && (MyPID==0) );
 
     // Construct initial guess and right-hand sides
     RCP<tmultivector_t> B, X;
