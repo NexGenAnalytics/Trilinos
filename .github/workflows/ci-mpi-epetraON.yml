@@ -54,6 +54,7 @@ jobs:
           reporter: java-junit
           output-to: step-summary
           fail-on-error: 'true'
+          list-tests: 'failed'
       - name: Clear Docker cache
         run: |
           docker system prune -af
