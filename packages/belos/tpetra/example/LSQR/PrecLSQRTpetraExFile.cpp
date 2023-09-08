@@ -55,7 +55,9 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include <MatrixMarket_Tpetra.hpp>
 
-#include "Ifpack2.h"
+#include "Ifpack2_Factory.hpp"
+#include "Ifpack2_Preconditioner.hpp"
+#include "Ifpack2_Parameters.hpp"
 
 #include "Teuchos_GlobalMPISession.hpp"
 #include "Teuchos_CommandLineProcessor.hpp"
@@ -81,12 +83,14 @@ int run(int argc, char *argv[]) {
   using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MAP = typename Tpetra::Map<LO,GO,NT>;
-  // using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  using MAT = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
 
   using MT  = typename Teuchos::ScalarTraits<ST>::magnitudeType;
+
+  using Ifpack2Prec = typename Ifpack2::Preconditioner<ST,LO,GO,NT>;
 
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
   RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
@@ -150,9 +154,9 @@ int run(int argc, char *argv[]) {
     if (numRHS>1) {
       X = rcp( new MV( *map, numRHS ) );
       B = rcp( new MV( *map, numRHS ) );
-      X->Random();
+      X->randomize();
       OPT::Apply( *A, *X, *B );
-      X->PutScalar( 0.0 );
+      X->putScalar( 0.0 );
     }
     else {
       int locNumCol = map->getMaxLocalIndex() + 1; // Create a known solution
@@ -185,36 +189,32 @@ int run(int argc, char *argv[]) {
     //
     // ************Construct preconditioner*************
     //
-    ParameterList ifpackList;
-
-    // allocates an IFPACK factory. No data is associated
-    // to this object (only method Create()).
-    Ifpack Factory;  // do support transpose multiply
+    ParameterList ifpack2List;
 
     // create the preconditioner. For valid PrecType values,
     // please check the documentation
     std::string PrecType = "ILU"; // incomplete LU
     int OverlapLevel = 1; // nonnegative
 
-    RCP<Ifpack_Preconditioner> Prec = Teuchos::rcp( Factory.Create(PrecType, &*A, OverlapLevel) );
+    RCP<Ifpack2Prec> Prec = Ifpack2::Factory::create<MAT>("ILUT", Teuchos::rcpFromRef(A), OverlapLevel);
     assert(Prec != Teuchos::null);
 
     // specify parameters for ILU
-    ifpackList.set("fact: level-of-fill", 1);
+    ifpack2List.set("fact: level-of-fill", 1);
     // the combine mode is on the following:
     // "Add", "Zero", "Insert", "InsertAdd", "Average", "AbsMax"
     // Their meaning is as defined in file Epetra_CombineMode.h
-    ifpackList.set("schwarz: combine mode", "Add");
+    ifpack2List.set("schwarz: combine mode", "Add");
     // sets the parameters
-    IFPACK_CHK_ERR(Prec->SetParameters(ifpackList));
+    IFPACK2_CHK_ERR(Prec->setParameters(ifpack2List));
 
     // initialize the preconditioner. At this point the matrix must
     // have been FillComplete()'d, but actual values are ignored.
-    IFPACK_CHK_ERR(Prec->Initialize());
+    IFPACK2_CHK_ERR(Prec->initialize());
 
     // Builds the preconditioners, by looking for the values of
     // the matrix.
-    IFPACK_CHK_ERR(Prec->Compute());
+    IFPACK2_CHK_ERR(Prec->compute());
 
     {
       const int errcode = Prec->SetUseTranspose (true);
@@ -228,14 +228,16 @@ int run(int argc, char *argv[]) {
     // Create the Belos preconditioned operator from the Ifpack preconditioner.
     // NOTE:  This is necessary because Belos expects an operator to apply the
     //        preconditioner with Apply() NOT ApplyInverse().
-    RCP<Belos::EpetraPrecOp> belosPrec = rcp( new Belos::EpetraPrecOp( Prec ) );
+    // TODO: Find alternative of EpetraPrecOp for Tpetra ?
+    // RCP<Belos::EpetraPrecOp> belosPrec = rcp( new Belos::EpetraPrecOp( Prec ) );
+    RCP<Ifpack2Prec> belosPrec = Prec;
 
     //
     // *****Create parameter list for the LSQR solver manager*****
     //
-    const int NumGlobalElements = B->GlobalLength();
+    const int numGlobalElements = B->getGlobalNumElements();
     if (maxiters == -1)
-      maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
+      maxiters = numGlobalElements/blocksize - 1; // maximum number of iterations to run
     //
     ParameterList belosList;
     belosList.set( "Block Size", blocksize );       // Blocksize to be used by iterative solver
@@ -284,7 +286,7 @@ int run(int argc, char *argv[]) {
     //
     if (proc_verbose) {
       std::cout << std::endl << std::endl;
-      std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
+      std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numRHS << std::endl;
       std::cout << "Block size used by solver: " << blocksize << std::endl;
       std::cout << "Max number of Gmres iterations per restart cycle: " << maxiters << std::endl;
@@ -320,7 +322,7 @@ int run(int argc, char *argv[]) {
     bool badRes = false;
     std::vector<double> actual_resids( numRHS );
     std::vector<double> rhs_norm( numRHS );
-    Epetra_MultiVector resid(*Map, numRHS);
+    MV resid(map, numRHS);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
     MVT::MvNorm( resid, actual_resids );

@@ -1,7 +1,7 @@
 
 
 ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Tpetra)
-IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_Tpetra)
+IF (${PACKAGE_NAME}_ENABLE_Tpetra)
 
   # WORKS.
   TRIBITS_ADD_EXECUTABLE_AND_TEST(
@@ -17,17 +17,16 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_Tpetra)
     )
 
   # WIP (in progress):
-  ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack2)
-  IF(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  # CIRCULAR DEPNDENCY between Belos and Ifpack2
+  # ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  # IF(${PACKAGE_NAME}_ENABLE_Ifpack2)
 
-  TRIBITS_ADD_EXECUTABLE_AND_TEST(
-      PrecLSQR_Tpetra_File_Ex
-      SOURCES PrecLSQRTpetraExFile.cpp
-      COMM serial mpi
-      )
+  # TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  #     PrecLSQR_Tpetra_File_Ex
+  #     SOURCES PrecLSQRTpetraExFile.cpp
+  #     COMM serial mpi
+  #     )
 
-
-
-  ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack2)
+  # ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack2)
 
 ENDIF(${PACKAGE_NAME}_ENABLE_Tpetra)
