@@ -17,15 +17,4 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_TpetraExt)
     EXEDEPS GCRODR_Tpetra_File_Ex
     )
 
-  ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack)
-  IF(${PACKAGE_NAME}_ENABLE_Ifpack)
-
-    TRIBITS_ADD_EXECUTABLE(
-      PrecGCRODR_Tpetra_File_Ex
-      SOURCES PrecGCRODRTpetraExFile.cpp
-      COMM serial mpi
-      )
-
-  ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack)
-
 ENDIF(${PACKAGE_NAME}_ENABLE_Triutils AND ${PACKAGE_NAME}_ENABLE_TpetraExt)

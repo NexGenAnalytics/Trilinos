@@ -113,7 +113,7 @@ int run(int argc, char *argv[]) {
     int maxrestarts = 15;      // number of restarts allowed
     std::string filename("sherman5.hb");
     std::string ortho("IMGS");
-    MT tol = 1.0e-10;          // relative residual tolerance
+    MT tol = 1.0e-8;          // relative residual tolerance
 
     Teuchos::CommandLineProcessor cmdp(false,true);
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
