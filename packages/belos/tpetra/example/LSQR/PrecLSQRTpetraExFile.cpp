@@ -64,6 +64,13 @@
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 
+void IFPACK2_CHK_ERR(int code) {
+  if (code < 0) { \
+  std::cerr << "IFPACK2 ERROR " << code << ", " \
+    << __FILE__ << ", line " << __LINE__ << std::endl; \
+    return(code);  }
+}
+
 template<typename ScalarType>
 int run(int argc, char *argv[]) {
   using Teuchos::CommandLineProcessor;
@@ -152,8 +159,8 @@ int run(int argc, char *argv[]) {
 
     // Check to see if the number of right-hand sides is the same as requested.
     if (numRHS>1) {
-      X = rcp( new MV( *map, numRHS ) );
-      B = rcp( new MV( *map, numRHS ) );
+      X = rcp( new MV( map, numRHS ) );
+      B = rcp( new MV( map, numRHS ) );
       X->randomize();
       OPT::Apply( *A, *X, *B );
       X->putScalar( 0.0 );
