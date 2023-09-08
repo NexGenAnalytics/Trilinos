@@ -216,17 +216,19 @@ int run(int argc, char *argv[]) {
     // the matrix.
     prec->compute();
 
-    const int errcode = prec->SetUseTranspose (true);
-    if (errcode != 0) {
-      throw std::logic_error ("Oh hai! Ifpack2_Preconditioner doesn't know how to apply its transpose.");
-    } else {
-      (void) prec->SetUseTranspose (false);
-    }
+    // const int errcode = prec->SetUseTranspose (true);
+    // if (errcode != 0) {
+    //   throw std::logic_error ("Oh hai! Ifpack2_Preconditioner doesn't know how to apply its transpose.");
+    // } else {
+    //   (void) prec->SetUseTranspose (false);
+    // }
+    // Note: hasTransposeApply from ILUT def return Tpetra CrsMatrix hasTransposeApply which is true
+    // So Tpetra did probably use transpose automatically in that case
 
     //
     // *****Create parameter list for the LSQR solver manager*****
     //
-    const int numGlobalElements = B->getGlobalNumElements();
+    const int numGlobalElements = B->getGlobalLength();
     if (maxiters == -1)
       maxiters = numGlobalElements/blocksize - 1; // maximum number of iterations to run
     //
