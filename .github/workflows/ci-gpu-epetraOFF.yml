@@ -2,7 +2,7 @@ name: GPU-EpetraOFF
 
 # Trigger the workflow on merge to NGA-FY23-develop
 on:
-  pull_request:
+  push:
     branches:
       - NGA-FY23-develop
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
 # Cancel any existing jobs
 concurrency:
   group: ${{ github.event.repository.name }}-${{ github.ref }}-${{ github.workflow }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   build:
