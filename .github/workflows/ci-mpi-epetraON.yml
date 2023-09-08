@@ -49,8 +49,11 @@ jobs:
         uses: phoenix-actions/test-reporting@v12
         if: success() || failure()
         with:
-          name: Tests report (GPU-EpetraOFF)
+          name: Tests report (MPI-EpetraON)
           path: /tmp/artifacts/junit-tests-report.xml
           reporter: java-junit
           output-to: step-summary
           fail-on-error: 'true'
+      - name: Clear Docker cache
+        run: |
+          docker system prune -af
