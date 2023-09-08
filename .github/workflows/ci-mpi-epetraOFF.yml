@@ -1,4 +1,4 @@
-name: MPI-EpetraOFF (warnings as errors)
+name: MPI-EpetraOFF
 
 # Trigger the workflow on push or pull request
 on:

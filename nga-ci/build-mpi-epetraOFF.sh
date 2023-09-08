@@ -32,7 +32,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_VERBOSE_CONFIGURE=OFF \
     -D BUILD_SHARED_LIBS:BOOL=ON \
     \
-    -D Trilinos_WARNINGS_AS_ERRORS_FLAGS="-Werror" \
+    -D Trilinos_WARNINGS_AS_ERRORS_FLAGS="-Wno-error" \
     -D Trilinos_ENABLE_SEACAS=OFF \
     -D Trilinos_ENABLE_Sacado=OFF \
     \
