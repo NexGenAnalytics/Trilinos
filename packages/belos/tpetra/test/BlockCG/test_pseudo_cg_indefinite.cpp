@@ -255,5 +255,5 @@ int run(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-  run<double>(argc,argv);
+  return run<double>(argc,argv);
 } // end test_pseudo_cg_indefinite.cpp
