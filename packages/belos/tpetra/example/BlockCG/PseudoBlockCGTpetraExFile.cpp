@@ -169,7 +169,7 @@ int run(int argc, char *argv[]) {
     // *******************************************************************
     //
     // Create an iterative solver manager.
-    RCP< Belos::SolverManager<ST,MV,OP> > newSolver
+    RCP< Belos::PseudoBlockCGSolMgr<ST,MV,OP> > newSolver
       = rcp( new Belos::PseudoBlockCGSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)) );
 
     //

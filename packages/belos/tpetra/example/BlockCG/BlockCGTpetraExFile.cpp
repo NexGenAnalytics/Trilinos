@@ -47,6 +47,7 @@
 //
 // NOTE: No preconditioner is used in this example.
 //
+
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosBlockCGSolMgr.hpp"
@@ -119,7 +120,7 @@ int run(int argc, char *argv[]) {
       return -1;
     }
     if (!verbose)
-      frequency = -1;  // reset frequency if test is not verbose
+      frequency = -1; // reset frequency if test is not verbose
 
     proc_verbose = verbose && (MyPID==0);  /* Only print on the zero processor */
     //
@@ -137,7 +138,7 @@ int run(int argc, char *argv[]) {
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
     //
-    // ********Other information used by block solver***********
+    // ********Other information used by block solver************
     // *****************(can be user specified)******************
     //
     const int NumGlobalElements = B->getGlobalLength();
@@ -169,7 +170,7 @@ int run(int argc, char *argv[]) {
     //
     // Create an iterative solver manager.
     //
-    RCP< Belos::SolverManager<ST,MV,OP> > newSolver
+    RCP< Belos::BlockCGSolMgr<ST,MV,OP> > newSolver
       = rcp( new Belos::BlockCGSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)) );
     //
     // **********Print out information about problem*******************
@@ -230,6 +231,6 @@ int run(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   // run with different ST
-  run<double>(argc,argv);
+  return run<double>(argc,argv);
   // run<float>(argc,argv); // FAILS
 }
