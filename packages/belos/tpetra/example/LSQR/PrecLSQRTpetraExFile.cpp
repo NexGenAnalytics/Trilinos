@@ -115,11 +115,11 @@ int run(int argc, char *argv[])
     int numRHS = 1;    // number of right-hand sides to solve for
     int maxiters = -1; // maximum number of iterations allowed per linear system
     std::string filename("orsirr1_scaled.hb");
-    MT relResTol = 1.0e-5;    // relative residual tolerance for the preconditioned linear system
-    MT resGrowthFactor = 1.0; // In this example, warn if |resid| > resGrowthFactor * relResTol
+    MT relResTol = 3.0e-4;    // relative residual tolerance for the preconditioned linear system
+    MT resGrowthFactor = 4.;  // In this example, warn if |resid| > resGrowthFactor * relResTol
 
-    MT relMatTol = 1.e-10; // relative Matrix error, default value sqrt(eps)
-    MT maxCond = 1.e+5;    // maximum condition number default value 1/eps
+    MT relMatTol = 1.e-4;  // relative Matrix error, default value sqrt(eps)
+    MT maxCond = 1.e+8;    // maximum condition number default value 1/eps
     MT damp = 0.;          // regularization (or damping) parameter
 
     Teuchos::CommandLineProcessor cmdp(false, true);
