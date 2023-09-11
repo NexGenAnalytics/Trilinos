@@ -2,7 +2,7 @@ name: MPI-EpetraOFF
 
 # Trigger the workflow on push or pull request
 on:
-  push:
+  pull_request:
     branches:
       - NGA-FY23-develop
   workflow_dispatch:
@@ -19,6 +19,9 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v3
+      - name: Clear Docker cache
+        run: |
+          docker system prune -af
       - name: CI Variables
         id: vars
         run: echo "DOCKER_TAG=$(echo ${{ github.ref }} | cut -d'/' -f3- | sed 's/[^a-z0-9_-]/__/gi')" >> $GITHUB_ENV
@@ -47,7 +50,7 @@ jobs:
           if-no-files-found: ignore
       - name: Report Test results
         uses: phoenix-actions/test-reporting@v12
-        if: success() || failure()
+        if: failure()
         with:
           name: Tests report (MPI-EpetraOFF)
           path: /tmp/artifacts/junit-tests-report.xml

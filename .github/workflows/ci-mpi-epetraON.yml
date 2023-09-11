@@ -2,7 +2,7 @@ name: MPI-EpetraON
 
 # Trigger the workflow on push or pull request
 on:
-  pull_request:
+  push:
     branches:
       - NGA-FY23-develop
   workflow_dispatch:
@@ -19,9 +19,6 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v3
-      - name: Clear Docker cache
-        run: |
-          docker system prune -fa
       - name: CI Variables
         id: vars
         run: echo "DOCKER_TAG=$(echo ${{ github.ref }} | cut -d'/' -f3- | sed 's/[^a-z0-9_-]/__/gi')" >> $GITHUB_ENV
@@ -58,3 +55,6 @@ jobs:
           output-to: step-summary
           fail-on-error: 'true'
           list-tests: 'failed'
+      - name: Clear Docker cache
+        run: |
+          docker system prune -af
