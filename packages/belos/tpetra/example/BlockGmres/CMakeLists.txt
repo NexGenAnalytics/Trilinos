@@ -9,6 +9,12 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils)
     COMM serial mpi
     )
 
+  TRIBITS_ADD_EXECUTABLE(
+    PseudoBlockGmres_Tpetra_File_Ex
+    SOURCES PseudoBlockGmresTpetraExFile.cpp
+    COMM serial mpi
+    )
+
   TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyExampleBlockGmresFiles
     SOURCE_DIR ${Belos_SOURCE_DIR}/tpetra/example/BlockGmres
     SOURCE_FILES orsirr1.hb identity.mtx
