@@ -16,8 +16,7 @@ IF (${PACKAGE_NAME}_ENABLE_Tpetra)
     EXEDEPS LSQR_Tpetra_File_Ex
     )
 
-  # WIP (in progress):
-  # CIRCULAR DEPNDENCY between Belos and Ifpack2
+  # TODO: SOLVE CIRCULAR DEPENDENCY between Belos and Ifpack2
   # ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Ifpack2)
   # IF(${PACKAGE_NAME}_ENABLE_Ifpack2)
 
