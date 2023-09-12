@@ -3,7 +3,9 @@ ASSERT_DEFINED(Anasazi_SOURCE_DIR)
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   Tpetra_BlockCG_hb_test
   SOURCES test_bl_cg_hb.cpp
-  ARGS "--verbose"
+  ARGS
+    "--verbose"
+    "--verbose --filename=bcsstk14.hb --use-single-red"
   COMM serial mpi
   )
 
