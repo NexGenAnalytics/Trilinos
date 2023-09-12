@@ -52,6 +52,7 @@
 // Galeri
 #include <Galeri_XpetraMaps.hpp>
 #include <Galeri_XpetraMatrixTypes.hpp>
+#include <Galeri_XpetraProblemFactory.hpp>
 
 // Teuchos
 #include <Teuchos_RCP.hpp>
@@ -157,14 +158,18 @@ int run(int argc, char *argv[]) {
     // Here, we use a discretization of the 2-D Laplacian operator.
     // The global mesh size is nx * nx.
     //
+
     Teuchos::ParameterList GaleriList;
     GaleriList.set ("n", nx * nx * nx);
     GaleriList.set ("nx", nx);
     GaleriList.set ("ny", nx);
     GaleriList.set ("nz", nx);
-    RCP<tmap_t> Map = rcp (Galeri::Xpetra::CreateMap (::Xpetra::UseTpetra, "Linear", Comm, GaleriList));
-    RCP<trowmatrix_t> A = // CWS: check trowmatrix_t here (instead of tcrsmatrix_t)
-      rcp (Galeri::CreateCrsMatrix ("Laplace3D", &*Map, GaleriList));
+
+    auto Map = RCP{Galeri::Xpetra::CreateMap<ST,GO,tmap_t>("Cartesian3D", Comm, GaleriList)};
+    auto GaleriProblem = Galeri::Xpetra::BuildProblem<ST,LO,GO,tmap_t,tcrsmatrix_t,MV>("Laplace3D", Map, GaleriList);
+
+    // Create matrix from problem
+    auto A = GaleriProblem->BuildMatrix();
 
     // Create RHS using random solution vector
     RCP<MV> B = rcp (new MV (Map, numrhs));
@@ -280,7 +285,6 @@ int run(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   // run with different ST
-  run<double>(argc,argv);
+  return run<double>(argc,argv);
   // run<float>(argc,argv); // FAILS
-  return 0;
 }
