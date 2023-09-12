@@ -120,7 +120,6 @@ int run(int argc, char *argv[])
     }
 
     proc_verbose = ( verbose && (MyPID==0) );
-
     if (proc_verbose) {
       std::cout << Belos::Belos_Version() << std::endl << std::endl;
     }
