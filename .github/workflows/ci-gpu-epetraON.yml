@@ -19,6 +19,9 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v3
+      - name: Clear Docker cache
+        run: |
+          docker system prune -af
       - name: CI Variables
         run: echo "DOCKER_TAG=nga-fy23-develop" >> $GITHUB_ENV
       - name: Set up Docker Buildx
@@ -54,6 +57,3 @@ jobs:
           output-to: step-summary
           fail-on-error: 'true'
           list-tests: 'failed'
-      - name: Clear Docker cache
-        run: |
-          docker system prune -af

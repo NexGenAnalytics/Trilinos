@@ -19,6 +19,9 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v3
+      - name: Clear Docker cache
+        run: |
+          docker system prune -af
       - name: CI Variables
         id: vars
         run: echo "DOCKER_TAG=$(echo ${{ github.ref }} | cut -d'/' -f3- | sed 's/[^a-z0-9_-]/__/gi')" >> $GITHUB_ENV
@@ -55,6 +58,3 @@ jobs:
           output-to: step-summary
           fail-on-error: 'true'
           list-tests: 'failed'
-      - name: Clear Docker cache
-        run: |
-          docker system prune -af

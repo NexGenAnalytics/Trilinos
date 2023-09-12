@@ -50,7 +50,7 @@ jobs:
           if-no-files-found: ignore
       - name: Report Test results
         uses: phoenix-actions/test-reporting@v12
-        if: failure()
+        if: success() || failure()
         with:
           name: Tests report (MPI-EpetraOFF)
           path: /tmp/artifacts/junit-tests-report.xml
@@ -58,6 +58,3 @@ jobs:
           output-to: step-summary
           fail-on-error: 'true'
           list-tests: 'failed'
-      - name: Clear Docker cache
-        run: |
-          docker system prune -af
