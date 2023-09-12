@@ -246,7 +246,6 @@ int run(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   // run with different ST
-  run<double>(argc,argv);
+  return run<double>(argc,argv);
   // run<float>(argc,argv); // FAILS
-  return 0;
 }
