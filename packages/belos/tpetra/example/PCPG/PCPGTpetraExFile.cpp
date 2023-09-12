@@ -107,6 +107,7 @@ int run(int argc, char *argv[]) {
   using Teuchos::RCP;
   using Teuchos::rcp;
   using Teuchos::tuple;
+  using Teuchos::ParameterList;
 
   using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
@@ -123,6 +124,9 @@ int run(int argc, char *argv[]) {
   using SCT = typename Teuchos::ScalarTraits<ST>;
   using MT = typename SCT::magnitudeType;
 
+  using LinearProblem = typename Belos::LinearProblem<ST, MV, OP>;
+  using Solver = ::Belos::PCPGSolMgr<ST, MV, OP>;
+
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
   RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
 
@@ -133,15 +137,12 @@ int run(int argc, char *argv[]) {
     bool proc_verbose = false;
     int frequency = -1;  // frequency of status test output.
     int blocksize = 1;   // blocksize, PCPGIter
-    int numrhs = 1;      // number of right-hand sides to solve for
-    int maxiters =
-        30;  // maximum number of iterations allowed per linear system
+    int numRhs = 1;      // number of right-hand sides to solve for
+    int maxIters = 30;   // maximum number of iterations allowed per linear system
 
-    int maxDeflate =
-        4;  // maximum number of vectors deflated from the linear system;
+    int maxDeflate = 4;  // maximum number of vectors deflated from the linear system;
     // There is no overhead cost assoc with changing maxDeflate between solves
-    int maxSave =
-        8;  // maximum number of vectors saved from current and previous .");
+    int maxSave = 8;  // maximum number of vectors saved from current and previous .");
     // If maxSave changes between solves, then re-initialize (setSize).
 
     // Hypothesis: seed vectors are conjugate.
@@ -150,40 +151,32 @@ int run(int argc, char *argv[]) {
 
     // The documentation it suitable for certain tasks, like defining a modules
     // grammar,
-    std::string ortho(
-        "ICGS");  // The Belos documentation obscures the fact that
+    std::string ortho("ICGS");  // The Belos documentation obscures the fact that
     // IMGS is Iterated Modified Gram Schmidt,
     // ICGS is Iterated Classical Gram Schmidt, and
     // DKGS is another Iterated Classical Gram Schmidt.
     // Mathematical issues, such as the difference between ICGS and DKGS, are
     // not documented at all. UH tells me that Anasazi::SVQBOrthoManager is
     // available;  I need it for Belos
-    MT tol = sqrt(
-        std::numeric_limits<ST>::epsilon());  // relative residual tolerance
+    MT tol = sqrt(std::numeric_limits<ST>::epsilon());  // relative residual tolerance
 
     // How do command line parsers work?
     Teuchos::CommandLineProcessor cmdp(false, true);
     cmdp.setOption("verbose", "quiet", &verbose, "Print messages and results");
-    cmdp.setOption("frequency", &frequency,
-                   "Solvers frequency for printing residuals (#iters)");
-    cmdp.setOption("tol", &tol,
-                   "Relative residual tolerance used by PCPG solver");
-    cmdp.setOption("num-rhs", &numrhs,
-                   "Number of right-hand sides to be solved for");
-    cmdp.setOption("max-iters", &maxiters,
+    cmdp.setOption("frequency", &frequency, "Solvers frequency for printing residuals (#iters)");
+    cmdp.setOption("tol", &tol, "Relative residual tolerance used by PCPG solver");
+    cmdp.setOption("num-rhs", &numRhs, "Number of right-hand sides to be solved for");
+    cmdp.setOption("max-iters", &maxIters,
                    "Maximum number of iterations per linear system (-1 = "
                    "adapted to problem/block size)");
-    cmdp.setOption("num-deflate", &maxDeflate,
-                   "Number of vectors deflated from the linear system");
-    cmdp.setOption("num-save", &maxSave,
-                   "Number of vectors saved from old Krylov subspaces");
-    cmdp.setOption("ortho-type", &ortho,
-                   "Orthogonalization type, either DGKS, ICGS or IMGS");
-    if (cmdp.parse(argc, argv) !=
-        Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
+    cmdp.setOption("num-deflate", &maxDeflate, "Number of vectors deflated from the linear system");
+    cmdp.setOption("num-save", &maxSave, "Number of vectors saved from old Krylov subspaces");
+    cmdp.setOption("ortho-type", &ortho, "Orthogonalization type, either DGKS, ICGS or IMGS");
+    if (cmdp.parse(argc, argv) != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
       return -1;
     }
-    if (!verbose) frequency = -1;  // reset frequency if test is not verbose
+    if (!verbose)
+      frequency = -1;  // reset frequency if test is not verbose
 
     //
     // *************Form the problem*********************
@@ -208,8 +201,7 @@ int run(int argc, char *argv[]) {
     ST pi = 4.0 * atan(1.0), valueLHS;
     GO node, iX, iY;
 
-    for (LO lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex();
-         lid++) {
+    for (LO lid = map->getMinLocalIndex(); lid <= map->getMaxLocalIndex(); lid++) {
       node = map->getGlobalElement(lid);
       iX = node % (numElePerDirection - 1);
       iY = (node - iX) / (numElePerDirection - 1);
@@ -281,8 +273,7 @@ int run(int argc, char *argv[]) {
 
     B->apply(*vecLHS, *vecRHS);
 
-    proc_verbose =
-        verbose && (comm->getRank() == 0);  // Only print on the zero processor
+    proc_verbose = verbose && (comm->getRank() == 0);  // Only print on the zero processor
 
     LHS = Teuchos::rcp_implicit_cast<MV>(vecLHS);
     RHS = Teuchos::rcp_implicit_cast<MV>(vecRHS);
@@ -320,55 +311,49 @@ int run(int argc, char *argv[]) {
     // *****Create parameter list for the PCPG solver manager*****
     //
     const int numGlobalElements = RHS->getGlobalLength();
-    if (maxiters == -1)
-      maxiters = numGlobalElements / blocksize -
-                 1;  // maximum number of iterations to run
+    if (maxIters == -1)
+      maxIters = numGlobalElements / blocksize - 1;  // maximum number of iterations to run
     //
-    Teuchos::ParameterList belosList;
-    belosList.set("Block Size",
-                  blocksize);  // Blocksize to be used by iterative solver
-    belosList.set("Maximum Iterations",
-                  maxiters);  // Maximum number of iterations allowed
-    belosList.set("Convergence Tolerance",
-                  tol);  // Relative convergence tolerance requested
-    belosList.set("Num Deflated Blocks",
-                  maxDeflate);  // Number of vectors in seed space
-    belosList.set("Num Saved Blocks",
-                  maxSave);  // Number of vectors saved from old spaces
-    belosList.set("Orthogonalization", ortho);  // Orthogonalization type
+    RCP<ParameterList> belosList = rcp(new ParameterList());
+    belosList->set("Block Size",
+                   blocksize);  // Blocksize to be used by iterative solver
+    belosList->set("Maximum Iterations",
+                   maxIters);  // Maximum number of iterations allowed
+    belosList->set("Convergence Tolerance",
+                   tol);  // Relative convergence tolerance requested
+    belosList->set("Num Deflated Blocks",
+                   maxDeflate);  // Number of vectors in seed space
+    belosList->set("Num Saved Blocks",
+                   maxSave);                     // Number of vectors saved from old spaces
+    belosList->set("Orthogonalization", ortho);  // Orthogonalization type
 
-    if (numrhs > 1) {
-      belosList.set("Show Maximum Residual Norm Only",
-                    true);  // although numrhs = 1.
+    if (numRhs > 1) {
+      belosList->set("Show Maximum Residual Norm Only",
+                     true);  // although numRhs = 1.
     }
     if (verbose) {
-      belosList.set("Verbosity",
-                    Belos::Errors + Belos::Warnings + Belos::TimingDetails +
-                        Belos::FinalSummary + Belos::StatusTestDetails);
-      if (frequency > 0) belosList.set("Output Frequency", frequency);
+      belosList->set("Verbosity", Belos::Errors + Belos::Warnings + Belos::TimingDetails + Belos::FinalSummary +
+                                      Belos::StatusTestDetails);
+      if (frequency > 0)
+        belosList->set("Output Frequency", frequency);
     } else
-      belosList.set("Verbosity",
-                    Belos::Errors + Belos::Warnings + Belos::FinalSummary);
+      belosList->set("Verbosity", Belos::Errors + Belos::Warnings + Belos::FinalSummary);
     //
     // *******Construct a preconditioned linear problem********
     //
-    RCP<Belos::LinearProblem<ST, MV, OP>> problem =
-        rcp(new Belos::LinearProblem<ST, MV, OP>(A, LHS, RHS));
+    RCP<LinearProblem> problem = rcp(new LinearProblem(A, LHS, RHS));
 
     // problem->setLeftPrec( prec );
 
     bool set = problem->setProblem();
     if (set == false) {
       if (proc_verbose)
-        std::cout << std::endl
-                  << "ERROR:  Belos::LinearProblem failed to set up correctly!"
-                  << std::endl;
+        std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
 
     // Create an iterative solver manager.
-    RCP<Belos::SolverManager<ST, MV, OP>> solver =
-        rcp(new Belos::PCPGSolMgr<ST, MV, OP>(problem, rcp(&belosList, false)));
+    RCP<Solver> solver = rcp(new Solver(problem, belosList));
 
     //
     // *******************************************************************
@@ -378,10 +363,9 @@ int run(int argc, char *argv[]) {
     if (proc_verbose) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
-      std::cout << "Number of right-hand sides: " << numrhs << std::endl;
+      std::cout << "Number of right-hand sides: " << numRhs << std::endl;
       std::cout << "Block size used by solver: " << blocksize << std::endl;
-      std::cout << "Maximum number of iterations allowed: " << maxiters
-                << std::endl;
+      std::cout << "Maximum number of iterations allowed: " << maxIters << std::endl;
       std::cout << "Relative residual tolerance: " << tol << std::endl;
       std::cout << std::endl;
     }
@@ -394,17 +378,13 @@ int run(int argc, char *argv[]) {
         set = problem->setProblem(LHS, RHS);
         if (set == false) {
           if (proc_verbose)
-            std::cout
-                << std::endl
-                << "ERROR:  Belos::LinearProblem failed to set up correctly!"
-                << std::endl;
+            std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
           return -1;
         }
       }  // if time_step
-      std::vector<ST> rhs_norm(numrhs);
+      std::vector<ST> rhs_norm(numRhs);
       MVT::MvNorm(*RHS, rhs_norm);
-      std::cout << "                  RHS norm is ... " << rhs_norm[0]
-                << std::endl;
+      std::cout << "                  RHS norm is ... " << rhs_norm[0] << std::endl;
       //
       // Perform solve
       //
@@ -413,23 +393,21 @@ int run(int argc, char *argv[]) {
       // Compute actual residuals.
       //
       badRes = false;
-      std::vector<ST> actual_resids(numrhs);
-      MV resid(map, numrhs);  // Epetra_MultiVector resid(*Map, numrhs);
+      std::vector<ST> actual_resids(numRhs);
+      MV resid(map, numRhs);  // Epetra_MultiVector resid(*Map, numRhs);
       OPT::Apply(*A, *LHS, resid);
       MVT::MvAddMv(-1.0, resid, 1.0, *RHS, resid);
       MVT::MvNorm(resid, actual_resids);
       MVT::MvNorm(*RHS, rhs_norm);
-      std::cout << "                    RHS norm is ... " << rhs_norm[0]
-                << std::endl;
+      std::cout << "                    RHS norm is ... " << rhs_norm[0] << std::endl;
 
       if (proc_verbose) {
-        std::cout << "---------- Actual Residuals (normalized) ----------"
-                  << std::endl
-                  << std::endl;
-        for (int i = 0; i < numrhs; i++) {
+        std::cout << "---------- Actual Residuals (normalized) ----------" << std::endl << std::endl;
+        for (int i = 0; i < numRhs; i++) {
           double actRes = actual_resids[i] / rhs_norm[i];
           std::cout << "Problem " << i << " : \t" << actRes << std::endl;
-          if (actRes > tol) badRes = true;
+          if (actRes > tol)
+            badRes = true;
         }
       }
       if (ret != Belos::Converged || badRes) {
@@ -442,8 +420,7 @@ int run(int argc, char *argv[]) {
       if (success)
         std::cout << std::endl << "SUCCESS:  Belos converged!" << std::endl;
       else
-        std::cout << std::endl
-                  << "ERROR:  Belos did not converge!" << std::endl;
+        std::cout << std::endl << "ERROR:  Belos did not converge!" << std::endl;
     }
   }  // end try
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
@@ -451,6 +428,6 @@ int run(int argc, char *argv[]) {
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-int main(int argc, char *argv[]) {
-  return run<double>(argc, argv);
-}  // end PCPGTpetraExFile.cpp
+int main(int argc, char *argv[]) { return run<double>(argc, argv); }
+// return run<float>(argc, argv); }
+// end PCPGTpetraExFile.cpp
