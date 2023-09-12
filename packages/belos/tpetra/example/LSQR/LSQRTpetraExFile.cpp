@@ -106,14 +106,14 @@ int run(int argc, char *argv[])
     int maxiters = -1;  // maximum number of iterations allowed per linear system
     std::string filename("orsirr1_scaled.hb");
     std::string filenameRHS; // blank mean unset
-    MT relResTol = 3.0e-4;   // relative residual tolerance
+    MT relResTol = 3.0 * sqrt(std::numeric_limits<ST>::epsilon());   // relative residual tolerance
     // Like CG, LSQR is a short recurrence method that
     // does not have the "n" step convergence property in finite precision arithmetic.
     MT resGrowthFactor = 4.0; // In this example, warn if |resid| > resGrowthFactor * relResTol
     // With no preconditioner, this is only the difference between the "implicit" and the "explict
     // residual.
 
-    MT relMatTol = 1.e-4; // relative Matrix error, default value sqrt(eps)
+    MT relMatTol = 1. * sqrt(std::numeric_limits<ST>::epsilon()); // relative Matrix error, default value sqrt(eps)
     MT maxCond = 1.e+8;   // maximum condition number default value 1/eps
     MT damp = 0.;         // regularization (or damping) parameter
 
