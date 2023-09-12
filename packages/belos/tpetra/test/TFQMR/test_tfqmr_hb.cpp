@@ -56,13 +56,9 @@
 #include <Teuchos_ParameterList.hpp>
 #include <Teuchos_StandardCatchMacros.hpp>
 
-// Trilinos
-#include <Trilinos_Util.h>
-
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
-#include "BelosTpetraAdapter.hpp"
 #include "BelosTFQMRSolMgr.hpp"
 #include "BelosPseudoBlockTFQMRSolMgr.hpp"
 #include "BelosTpetraTestFramework.hpp"
@@ -85,6 +81,8 @@ int run(int argc, char *argv[]) {
 
   using OP = Tpetra::Operator<ST,LO,GO,NT>;
   using MV = Tpetra::MultiVector<ST,LO,GO,NT>;
+
+  using tcrsmatrix_t = Tpetra::CrsMatrix<ST>;
 
   // Belos
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
@@ -129,8 +127,8 @@ int run(int argc, char *argv[]) {
       frequency = -1;  // reset frequency if test is not verbose
 
     // Get the problem
-    Belos::Tpetra::HarwellBoeingReader<Tpetra::CrsMatrix<ST> > reader( comm );
-    RCP<Tpetra::CrsMatrix<ST> > A = reader.readFromFile( filename );
+    Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
+    RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
     RCP<const Tpetra::Map<> > map = A->getDomainMap();
     
     // Create initial vectors
