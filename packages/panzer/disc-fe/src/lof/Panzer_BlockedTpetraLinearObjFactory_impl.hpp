@@ -53,7 +53,6 @@
 
 // Thyra
 #include "Thyra_DefaultBlockedLinearOp.hpp"
-#include "Thyra_TpetraLinearOp.hpp"
 #include "Thyra_DefaultProductVectorSpace.hpp"
 #include "Thyra_SpmdVectorBase.hpp"
 #include "Thyra_TpetraLinearOp.hpp"
@@ -110,12 +109,6 @@ Teuchos::RCP<LinearObjContainer>
 BlockedTpetraLinearObjFactory<Traits,ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>::
 buildLinearObjContainer() const
 {
-   // if a "single field" DOFManager is used
-   if(!containsBlockedDOFManager()) {
-      Teuchos::RCP<TLOC> container = Teuchos::rcp(new TLOC(getColMap(0), getMap(0)));
-      return container;
-   }
-
    std::vector<Teuchos::RCP<const MapType> > blockMaps;
    std::size_t blockDim = gidProviders_.size();
    for(std::size_t i=0;i<blockDim;i++)
@@ -132,12 +125,6 @@ Teuchos::RCP<LinearObjContainer>
 BlockedTpetraLinearObjFactory<Traits,ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>::
 buildGhostedLinearObjContainer() const
 {
-   // if a "single field" DOFManager is used
-   if(!containsBlockedDOFManager()) {
-      Teuchos::RCP<TLOC> container = Teuchos::rcp(new TLOC(getColGhostedMap(0), getGhostedMap(0)));
-      return container;
-   }
-
    std::vector<Teuchos::RCP<const MapType> > blockMaps;
    std::size_t blockDim = gidProviders_.size();
    for(std::size_t i=0;i<blockDim;i++)
@@ -157,10 +144,8 @@ globalToGhostContainer(const LinearObjContainer & in,LinearObjContainer & out,in
 
    typedef LinearObjContainer LOC;
 
-   if (!containsBlockedDOFManager())
-   {
-      const TLOC &t_in = Teuchos::dyn_cast<const TLOC>(in);
-      TLOC &t_out = Teuchos::dyn_cast<TLOC>(out);
+   const BTLOC & b_in = Teuchos::dyn_cast<const BTLOC>(in);
+   BTLOC & b_out = Teuchos::dyn_cast<BTLOC>(out);
 
    // Operations occur if the GLOBAL container has the correct targets!
    // Users set the GLOBAL continer arguments
@@ -182,10 +167,8 @@ ghostToGlobalContainer(const LinearObjContainer & in,LinearObjContainer & out,in
 
    typedef LinearObjContainer LOC;
 
-   if (!containsBlockedDOFManager())
-   {
-      const TLOC &t_in = Teuchos::dyn_cast<const TLOC>(in);
-      TLOC &t_out = Teuchos::dyn_cast<TLOC>(out);
+   const BTLOC & b_in = Teuchos::dyn_cast<const BTLOC>(in);
+   BTLOC & b_out = Teuchos::dyn_cast<BTLOC>(out);
 
    // Operations occur if the GLOBAL container has the correct targets!
    // Users set the GLOBAL continer arguments
@@ -195,25 +178,8 @@ ghostToGlobalContainer(const LinearObjContainer & in,LinearObjContainer & out,in
    if ( !is_null(b_in.get_f()) && !is_null(b_out.get_f()) && ((mem & LOC::F)==LOC::F))
      ghostToGlobalThyraVector(b_in.get_f(),b_out.get_f());
 
-      if (!is_null(t_in.get_A()) && !is_null(t_out.get_A()) && ((mem & LOC::Mat) == LOC::Mat))
-         ghostToGlobalTpetraMatrix(0, *t_in.get_A(), *t_out.get_A());
-   }
-   else
-   {
-      const BTLOC &b_in = Teuchos::dyn_cast<const BTLOC>(in);
-      BTLOC &b_out = Teuchos::dyn_cast<BTLOC>(out);
-
-      // Operations occur if the GLOBAL container has the correct targets!
-      // Users set the GLOBAL continer arguments
-      if (!is_null(b_in.get_x()) && !is_null(b_out.get_x()) && ((mem & LOC::X) == LOC::X))
-         ghostToGlobalThyraVector(b_in.get_x(), b_out.get_x(), true);
-
-      if (!is_null(b_in.get_f()) && !is_null(b_out.get_f()) && ((mem & LOC::F) == LOC::F))
-         ghostToGlobalThyraVector(b_in.get_f(), b_out.get_f(), false);
-
-      if (!is_null(b_in.get_A()) && !is_null(b_out.get_A()) && ((mem & LOC::Mat) == LOC::Mat))
-         ghostToGlobalThyraMatrix(*b_in.get_A(), *b_out.get_A());
-   }
+   if ( !is_null(b_in.get_A()) && !is_null(b_out.get_A()) && ((mem & LOC::Mat)==LOC::Mat))
+     ghostToGlobalThyraMatrix(*b_in.get_A(),*b_out.get_A());
 }
 
 template <typename Traits,typename ScalarT,typename LocalOrdinalT,typename GlobalOrdinalT,typename NodeT>
@@ -242,12 +208,6 @@ adjustForDirichletConditions(const LinearObjContainer & localBCRows,
 
    // cast each component as needed to their product form
    RCP<PhysicallyBlockedLinearOpBase<ScalarT> > A = rcp_dynamic_cast<PhysicallyBlockedLinearOpBase<ScalarT> >(b_ghosted.get_A());
-   if (A == Teuchos::null && b_ghosted.get_A() != Teuchos::null)
-   {
-      // assume it isn't physically blocked, for convenience physically block it
-      A = rcp_dynamic_cast<PhysicallyBlockedLinearOpBase<ScalarT> >(Thyra::nonconstBlock1x1(b_ghosted.get_A()));
-   }
-
    RCP<ProductVectorBase<ScalarT> > f = rcp_dynamic_cast<ProductVectorBase<ScalarT> >(b_ghosted.get_f());
    RCP<ProductVectorBase<ScalarT> > local_bcs  = rcp_dynamic_cast<ProductVectorBase<ScalarT> >(b_localBCRows.get_f(),true);
    RCP<ProductVectorBase<ScalarT> > global_bcs = rcp_dynamic_cast<ProductVectorBase<ScalarT> >(b_globalBCRows.get_f(),true);
@@ -266,7 +226,7 @@ adjustForDirichletConditions(const LinearObjContainer & localBCRows,
       RCP<const VectorType> t_local_bcs = rcp_dynamic_cast<const ThyraVector>(local_bcs->getVectorBlock(i),true)->getConstTpetraVector();
       RCP<const VectorType> t_global_bcs = rcp_dynamic_cast<const ThyraVector>(global_bcs->getVectorBlock(i),true)->getConstTpetraVector();
 
-      // pull out tpetra values
+      // pull out epetra values
       RCP<VectorBase<ScalarT> > th_f = (f==Teuchos::null) ? Teuchos::null : f->getNonconstVectorBlock(i);
       RCP<VectorType> t_f;
       if(th_f==Teuchos::null)
@@ -298,7 +258,7 @@ adjustForDirichletConditions(const LinearObjContainer & localBCRows,
          adjustForDirichletConditions(*t_local_bcs,*t_global_bcs,t_f.ptr(),t_A.ptr(),zeroVectorRows);
 
          if(t_A!=Teuchos::null) {
-           t_A->fillComplete(map_j,map_i);
+           //t_A->fillComplete(map_j,map_i);
          }
 
          t_f = Teuchos::null; // this is so we only adjust it once on the first pass
@@ -397,7 +357,7 @@ buildReadOnlyDomainContainer() const
   using Teuchos::rcp;
   using BVROGED = panzer::BlockedVector_ReadOnly_GlobalEvaluationData;
   using TVROGED = panzer::TpetraVector_ReadOnly_GlobalEvaluationData<ScalarT,
-                                                                     LocalOrdinalT, GlobalOrdinalT, NodeT>;
+    LocalOrdinalT, GlobalOrdinalT, NodeT>;
   vector<RCP<ReadOnlyVector_GlobalEvaluationData>> gedBlocks;
   for (int i(0); i < getBlockColCount(); ++i)
   {
@@ -407,7 +367,7 @@ buildReadOnlyDomainContainer() const
   }
   auto ged = rcp(new BVROGED);
   ged->initialize(getGhostedThyraDomainSpace(), getThyraDomainSpace(),
-                  gedBlocks);
+    gedBlocks);
   return ged;
 } // end of buildReadOnlyDomainContainer()
 
@@ -634,10 +594,6 @@ Teuchos::RCP<Thyra::LinearOpBase<ScalarT> >
 BlockedTpetraLinearObjFactory<Traits,ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>::
 getThyraMatrix() const
 {
-   if(!containsBlockedDOFManager()) {
-      return Thyra::tpetraLinearOp<ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>(getThyraRangeSpace(), getThyraDomainSpace(), getTpetraMatrix(0, 0));
-   }
-
    Teuchos::RCP<Thyra::PhysicallyBlockedLinearOpBase<ScalarT> > blockedOp = Thyra::defaultBlockedLinearOp<ScalarT>();
 
    // get the block dimension
@@ -654,7 +610,7 @@ getThyraMatrix() const
             Teuchos::RCP<Thyra::LinearOpBase<ScalarT> > block = Thyra::createLinearOp<ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>(getTpetraMatrix(i,j));
             blockedOp->setNonconstBlock(i,j,block);
          }
-      }   
+      }
    }
 
    // all done
@@ -722,14 +678,10 @@ getGhostedThyraRangeVector() const
 }
 
 template <typename Traits,typename ScalarT,typename LocalOrdinalT,typename GlobalOrdinalT,typename NodeT>
-Teuchos::RCP<Thyra::LinearOpBase<ScalarT> >
+Teuchos::RCP<Thyra::BlockedLinearOpBase<ScalarT> >
 BlockedTpetraLinearObjFactory<Traits,ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>::
 getGhostedThyraMatrix() const
 {
-   if(!containsBlockedDOFManager()) {
-      return Thyra::tpetraLinearOp<ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>(getGhostedThyraRangeSpace(), getGhostedThyraDomainSpace(), getGhostedTpetraMatrix(0, 0));
-   }
-
    Teuchos::RCP<Thyra::PhysicallyBlockedLinearOpBase<ScalarT> > blockedOp = Thyra::defaultBlockedLinearOp<ScalarT>();
 
    // get the block dimension

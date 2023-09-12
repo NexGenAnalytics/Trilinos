@@ -57,6 +57,7 @@
 #include "Panzer_LinearObjFactory.hpp"
 #include "Panzer_TpetraLinearObjContainer.hpp"
 #include "Panzer_BlockedTpetraLinearObjContainer.hpp"
+#include "Panzer_TpetraLinearObjContainer.hpp"
 #include "Panzer_BlockedDOFManager.hpp"
 #include "Panzer_CloneableEvaluator.hpp"
 #include "Panzer_HashUtils.hpp" // for pair_hash
@@ -260,7 +261,7 @@ public:
    Teuchos::RCP<Thyra::VectorBase<ScalarT> > getGhostedThyraRangeVector() const;
 
    //! Get a Thyra operator
-   Teuchos::RCP<Thyra::LinearOpBase<ScalarT> > getGhostedThyraMatrix() const;
+   Teuchos::RCP<Thyra::BlockedLinearOpBase<ScalarT> > getGhostedThyraMatrix() const;
 
 /*************** Tpetra based methods *******************/
 
@@ -316,17 +317,6 @@ public:
    //! Get the range unique global indexer this factory was created with.
    Teuchos::RCP<const panzer::GlobalIndexer> getRangeGlobalIndexer() const
    { return blockProvider_; }
-
-   //! Check if contains BlockedDOFManager.
-   bool containsBlockedDOFManager() const {
-      TEUCHOS_ASSERT(!gidProviders_.empty());
-      for(auto&& provider : gidProviders_) {
-         if(!provider->containsBlockedDOFManager()) {
-            return false;
-         }
-      }
-      return true;
-   }
 
 protected:
 /*************** Generic methods/members *******************/
