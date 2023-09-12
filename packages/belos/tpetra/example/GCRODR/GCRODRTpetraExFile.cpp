@@ -46,7 +46,6 @@
 // The initial guesses are all set to zero.
 //
 // NOTE: No preconditioner is used in this example.
-//
 
 // Tpetra
 #include <Tpetra_Map.hpp>
@@ -78,10 +77,9 @@ int run(int argc, char *argv[]) {
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
   using NT = typename Tpetra::Vector<>::node_type;
 
-  using SCT = typename Teuchos::ScalarTraits<ST>;
-  using MT  = typename SCT::magnitudeType;
-  using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
-  using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using MT = typename Teuchos::ScalarTraits<ST>::magnitudeType;
 
   using tmap_t       = Tpetra::Map<LO,GO,NT>;
   using tvector_t    = Tpetra::Vector<ST,LO,GO,NT>;
@@ -112,7 +110,7 @@ int run(int argc, char *argv[]) {
     int maxrestarts = 15;      // number of restarts allowed
     std::string filename("sherman5.hb");
     std::string ortho("IMGS");
-    MT tol = 1.0e-8;          // relative residual tolerance
+    MT tol = 1.0e-8;           // relative residual tolerance
 
     Teuchos::CommandLineProcessor cmdp(false,true);
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
@@ -137,9 +135,8 @@ int run(int argc, char *argv[]) {
     if (proc_verbose) {
       std::cout << Belos::Belos_Version() << std::endl << std::endl;
     }
-    //
+
     // Get the problem
-    //
     Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( Comm );
     RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
     RCP<const tmap_t> Map = A->getDomainMap();
@@ -151,14 +148,14 @@ int run(int argc, char *argv[]) {
     B = rcp( new MV(Map,numrhs) );
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
-    //
+
     // ********Other information used by block solver***********
     // *****************(can be user specified)******************
-    //
+
     const int NumGlobalElements = B->getGlobalLength();
     if (maxiters == -1)
       maxiters = NumGlobalElements - 1; // maximum number of iterations to run
-    //
+
     ParameterList belosList;
     belosList.set( "Num Blocks", maxsubspace);        // Maximum number of blocks in Krylov factorization
     belosList.set( "Maximum Iterations", maxiters );  // Maximum number of iterations allowed
@@ -177,9 +174,8 @@ int run(int argc, char *argv[]) {
       verbosity += Belos::Debug;
     }
     belosList.set( "Verbosity", verbosity );
-    //
+
     // Construct an unpreconditioned linear problem instance.
-    //
     Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     bool set = problem.setProblem();
     if (set == false) {
@@ -187,18 +183,17 @@ int run(int argc, char *argv[]) {
         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
-    //
+
     // *******************************************************************
     // *************Start the GCRO-DR iteration*************************
     // *******************************************************************
-    //
+
     // Create an iterative solver manager.
     RCP< Belos::SolverManager<ST,MV,OP> > newSolver
       = rcp( new Belos::GCRODRSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)));
 
-    //
     // **********Print out information about problem*******************
-    //
+
     if (proc_verbose) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
@@ -208,18 +203,15 @@ int run(int argc, char *argv[]) {
       std::cout << "Relative residual tolerance: " << tol << std::endl;
       std::cout << std::endl;
     }
-    //
+
     // Perform solve
-    //
     Belos::ReturnType ret = newSolver->solve();
-    //
+
     // Get the number of iterations for this solve.
-    //
     int numIters = newSolver->getNumIters();
     std::cout << "Number of iterations performed for this solve: " << numIters << std::endl;
-    //
+
     // Compute actual residuals.
-    //
     bool badRes = false;
     std::vector<ST> actual_resids( numrhs );
     std::vector<ST> rhs_norm( numrhs );
@@ -256,4 +248,5 @@ int main(int argc, char *argv[]) {
   // run with different ST
   run<double>(argc,argv);
   // run<float>(argc,argv); // FAILS
+  return 0;
 }
