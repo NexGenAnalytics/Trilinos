@@ -7,7 +7,6 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils)
     GCRODR_Tpetra_File_Ex
     SOURCES GCRODRTpetraExFile.cpp
     COMM serial mpi
-    ARGS --verbose
     )
 
   TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyExampleGCRODRFiles
