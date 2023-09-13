@@ -21,6 +21,5 @@ echo "ctest returned: $ret_code"
 mkdir -p ${artifacts_dir}
 cp /opt/build/Trilinos/junit-tests-report.xml ${artifacts_dir}
 cp /opt/build/Trilinos/Testing/Temporary/LastTest.log ${artifacts_dir}
-echo ${ret_code} > ${artifacts_dir}/success_flag.txt
 ls ${artifacts_dir}
 exit ${ret_code}
