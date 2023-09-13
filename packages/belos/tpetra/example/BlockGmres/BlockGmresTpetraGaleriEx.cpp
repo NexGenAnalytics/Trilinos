@@ -88,10 +88,9 @@ int run(int argc, char *argv[]) {
   using GO = typename Tpetra::MultiVector<>::global_ordinal_type;
   using NT = typename Tpetra::MultiVector<>::node_type;
 
-  using SCT = typename Teuchos::ScalarTraits<ST>;
-  using MT  = typename SCT::magnitudeType;
-  using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
   using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+  using MT = typename Teuchos::ScalarTraits<ST>::magnitudeType;
 
   using tmap_t       = Tpetra::Map<LO,GO,NT>;
   using tvector_t    = Tpetra::Vector<ST,LO,GO,NT>;
@@ -151,13 +150,11 @@ int run(int argc, char *argv[]) {
       std::cout << Belos::Belos_Version() << std::endl << std::endl;
     }
 
-    //
     // Set up the test problem.
     //
     // We use Trilinos' Galeri package to construct a test problem.
     // Here, we use a discretization of the 2-D Laplacian operator.
     // The global mesh size is nx * nx.
-    //
 
     Teuchos::ParameterList GaleriList;
     GaleriList.set ("n", nx * nx * nx);
@@ -178,14 +175,14 @@ int run(int argc, char *argv[]) {
     MVT::MvRandom(*Xexact);
 
     OPT::Apply(*A, *Xexact, *B );
-    //
+
     // ********Other information used by block solver***********
     // *****************(can be user specified)******************
-    //
+
     const int NumGlobalElements = B->getGlobalLength();
     if (maxiters == -1)
       maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
-    //
+
     ParameterList belosList;
     belosList.set( "Num Blocks", maxsubspace);             // Maximum number of blocks in Krylov factorization
     belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
@@ -203,9 +200,8 @@ int run(int argc, char *argv[]) {
       verbosity += Belos::Debug;
     }
     belosList.set( "Verbosity", verbosity );
-    //
+
     // Construct an unpreconditioned linear problem instance.
-    //
     Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     bool set = problem.setProblem();
     if (set == false) {
@@ -213,12 +209,11 @@ int run(int argc, char *argv[]) {
         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
-    //
-    //
+
     // *******************************************************************
     // *************Start the block Gmres iteration*************************
     // *******************************************************************
-    //
+
     // Create an iterative solver manager.
     RCP< Belos::SolverManager<ST,MV,OP> > newSolver;
     if (pseudo && (blocksize == 1))
@@ -226,9 +221,8 @@ int run(int argc, char *argv[]) {
     else
       newSolver = rcp( new Belos::BlockGmresSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)));
 
-    //
     // **********Print out information about problem*******************
-    //
+
     if (proc_verbose) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
@@ -239,19 +233,16 @@ int run(int argc, char *argv[]) {
       std::cout << "Relative residual tolerance: " << tol << std::endl;
       std::cout << std::endl;
     }
-    //
+
     // Perform solve
-    //
     Belos::ReturnType ret = newSolver->solve();
-    //
+
     // Get the number of iterations for this solve.
-    //
     int numIters = newSolver->getNumIters();
     if (proc_verbose)
       std::cout << "Number of iterations performed for this solve: " << numIters << std::endl;
-    //
+
     // Compute actual residuals.
-    //
     bool badRes = false;
     std::vector<ST> actual_resids( numrhs );
     std::vector<ST> rhs_norm( numrhs );
