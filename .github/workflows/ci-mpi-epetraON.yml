@@ -45,8 +45,8 @@ jobs:
         uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
-          name: Artifacts
-          path: /tmp/artifacts/*
+          name: LastTestLog
+          path: /tmp/artifacts/LastTest.log
           if-no-files-found: ignore
       - name: Report Test results
         uses: phoenix-actions/test-reporting@v12
