@@ -100,9 +100,9 @@ int run(int argc, char *argv[]) {
   try
   {
     // Get test parameters from command-line processor
-    bool proc_verbose = false;
-    bool explicit_test = false;
-    bool comp_recursive = false;
+    bool procVerbose = false;
+    bool explicitTest = false;
+    bool compRecursive = false;
     bool pseudo = false;
     int frequency = -1;  // how often residuals are printed by solver
     int numrhs = 1;  // total number of right-hand sides to solve for
@@ -113,8 +113,8 @@ int run(int argc, char *argv[]) {
     Teuchos::CommandLineProcessor cmdp(false,true);
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
-    cmdp.setOption("explicit","implicit-only",&explicit_test,"Compute explicit residuals.");
-    cmdp.setOption("recursive","native",&comp_recursive,"Compute recursive residuals.");
+    cmdp.setOption("explicit","implicit-only",&explicitTest,"Compute explicit residuals.");
+    cmdp.setOption("recursive","native",&compRecursive,"Compute recursive residuals.");
     cmdp.setOption("pseudo","not-pseudo",&pseudo,"Use pseudo-block TFQMR solver.");
     cmdp.setOption("tol",&tol,"Relative residual tolerance used by TFQMD or pseudo-block TFQMR solver.");
     cmdp.setOption("filename",&filename,"Filename for Harwell-Boeing test matrix.");
@@ -138,7 +138,7 @@ int run(int argc, char *argv[]) {
     B = rcp( new MV(map,numrhs) );
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
-    proc_verbose = ( verbose && (MyPID==0) );
+    procVerbose = ( verbose && (MyPID==0) );
     
     // Solve using Belos
     const int NumGlobalElements = B->getGlobalLength();
@@ -149,12 +149,12 @@ int run(int argc, char *argv[]) {
     ParameterList belosList;
     belosList.set( "Maximum Iterations", maxiters );       // Maximum number of iterations allowed
     belosList.set( "Convergence Tolerance", tol );         // Relative convergence tolerance requested
-    if (explicit_test)
+    if (explicitTest)
     {
       belosList.set( "Explicit Residual Test", true );       // Scale by norm of right-hand side vector."
       belosList.set( "Explicit Residual Scaling", "Norm of RHS" ); // Scale by norm of right-hand side vector."
     }
-    if (comp_recursive)
+    if (compRecursive)
     {
       belosList.set( "Compute Recursive Residuals", true );
     }
@@ -171,7 +171,7 @@ int run(int argc, char *argv[]) {
     Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     bool set = problem.setProblem();
     if (set == false) {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
@@ -184,7 +184,7 @@ int run(int argc, char *argv[]) {
       solver = rcp( new Belos::TFQMRSolMgr<ST,MV,OP>(rcp(&problem, false), rcp(&belosList, false)));
     
     // **********Print out information about problem*******************
-    if (proc_verbose) {
+    if (procVerbose) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numrhs << std::endl;
@@ -206,11 +206,11 @@ int run(int argc, char *argv[]) {
     MVT::MvNorm( resid, actual_resids );
     MVT::MvNorm( *B, rhs_norm );
     
-    if (proc_verbose) {
+    if (procVerbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
         MT actRes = actual_resids[i]/rhs_norm[i];
-        if (proc_verbose) {
+        if (procVerbose) {
           std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         }
         if (actRes > tol) badRes = true;
@@ -220,10 +220,10 @@ int run(int argc, char *argv[]) {
     success = ret==Belos::Converged && !badRes;
 
     if (success) {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "End Result: TEST PASSED" << std::endl;
     } else {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "End Result: TEST FAILED" << std::endl;
     }
   }
