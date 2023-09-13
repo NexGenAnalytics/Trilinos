@@ -43,11 +43,12 @@
 // Multiple right-hand-sides are created randomly.
 // The initial guesses are all set to zero.
 
+/* Originally convert test here: belos/epetra/test/BlockCG/test_pseudo_cg_hb.cpp */
+
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
 #include "BelosPseudoBlockCGSolMgr.hpp"
-// #include "BelosEpetraUtils.h"
 
 #include <Trilinos_Util.h>
 
@@ -80,7 +81,7 @@ int run(int argc, char *argv[])
   using Teuchos::rcp;
 
   Teuchos::GlobalMPISession session(&argc, &argv, &std::cout);
-  RCP<const Comm<int> > comm = Tpetra::getDefaultComm();
+  RCP<const Comm<int>> comm = Tpetra::getDefaultComm();
   int MyPID = rank(*comm);
   
   bool success = false;
