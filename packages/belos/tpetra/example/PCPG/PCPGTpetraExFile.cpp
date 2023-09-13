@@ -67,11 +67,6 @@
 //
 // \data Last modified 2007 December 11
 
-// Belos
-#include <BelosLinearProblem.hpp>
-#include <BelosPCPGSolMgr.hpp>
-#include <BelosTpetraAdapter.hpp>
-
 // Tpetra
 #include <TpetraExt_MatrixMatrix.hpp>
 #include <Tpetra_Core.hpp>
@@ -95,6 +90,11 @@
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_VerboseObject.hpp>
 
+// Belos
+#include "BelosLinearProblem.hpp"
+#include "BelosPCPGSolMgr.hpp"
+#include "BelosTpetraAdapter.hpp"
+
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
   //
@@ -104,10 +104,10 @@ int run(int argc, char *argv[]) {
 
   using std::cout;
   using std::endl;
+  using Teuchos::ParameterList;
   using Teuchos::RCP;
   using Teuchos::rcp;
   using Teuchos::tuple;
-  using Teuchos::ParameterList;
 
   using ST = typename Tpetra::MultiVector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
@@ -125,7 +125,7 @@ int run(int argc, char *argv[]) {
   using MT = typename SCT::magnitudeType;
 
   using LinearProblem = typename Belos::LinearProblem<ST, MV, OP>;
-  using Solver = ::Belos::PCPGSolMgr<ST, MV, OP>;
+  using PCPGSolMgr = ::Belos::PCPGSolMgr<ST, MV, OP>;
 
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
   RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
@@ -134,7 +134,7 @@ int run(int argc, char *argv[]) {
   bool success = true;
 
   try {
-    bool proc_verbose = false;
+    bool procVerbose = false;
     int frequency = -1;  // frequency of status test output.
     int blocksize = 1;   // blocksize, PCPGIter
     int numRhs = 1;      // number of right-hand sides to solve for
@@ -181,7 +181,7 @@ int run(int argc, char *argv[]) {
     //
     // *************Form the problem*********************
     //
-    int num_time_step = 4;
+    int numTimeStep = 4;
     GO numElePerDirection = 14 * comm->getSize();  // 5 -> 20
     size_t numNodes = (numElePerDirection - 1) * (numElePerDirection - 1);
 
@@ -263,17 +263,15 @@ int run(int argc, char *argv[]) {
     ST hdt = .00005;  // half time step
 
     // A = Mass+Stiff*dt/2
-    RCP<MAT> A = Tpetra::MatrixMatrix::add(one, false, *mass, hdt, false,
-                                           *stiff);  // A = Mass+Stiff*dt/2
+    RCP<MAT> A = Tpetra::MatrixMatrix::add(one, false, *mass, hdt, false, *stiff);
 
     // B = Mass-Stiff*dt/2
     hdt = -hdt;
-    RCP<MAT> B = Tpetra::MatrixMatrix::add(one, false, *mass, hdt, false,
-                                           *stiff);  // B = Mass-Stiff*dt/2
+    RCP<MAT> B = Tpetra::MatrixMatrix::add(one, false, *mass, hdt, false, *stiff);
 
     B->apply(*vecLHS, *vecRHS);
 
-    proc_verbose = verbose && (comm->getRank() == 0);  // Only print on the zero processor
+    procVerbose = verbose && (comm->getRank() == 0);  // Only print on the zero processor
 
     LHS = Teuchos::rcp_implicit_cast<MV>(vecLHS);
     RHS = Teuchos::rcp_implicit_cast<MV>(vecRHS);
@@ -347,20 +345,20 @@ int run(int argc, char *argv[]) {
 
     bool set = problem->setProblem();
     if (set == false) {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
 
     // Create an iterative solver manager.
-    RCP<Solver> solver = rcp(new Solver(problem, belosList));
+    RCP<PCPGSolMgr> solver = rcp(new PCPGSolMgr(problem, belosList));
 
     //
     // *******************************************************************
     // ************************* Iterate PCPG ****************************
     // *******************************************************************
     //
-    if (proc_verbose) {
+    if (procVerbose) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numRhs << std::endl;
@@ -370,18 +368,18 @@ int run(int argc, char *argv[]) {
       std::cout << std::endl;
     }
     bool badRes;
-    for (int time_step = 0; time_step < num_time_step; time_step++) {
-      if (time_step) {
+    for (int timeStep = 0; timeStep < numTimeStep; timeStep++) {
+      if (timeStep) {
         // old epetra B->multiply(false, *vecLHS, *vecRHS); // rhs_new :=
         // B*lhs_old,
         B->apply(*LHS, *RHS);  // rhs_new := B*lhs_old,
         set = problem->setProblem(LHS, RHS);
         if (set == false) {
-          if (proc_verbose)
+          if (procVerbose)
             std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
           return -1;
         }
-      }  // if time_step
+      }  // if timeStep
       std::vector<ST> rhs_norm(numRhs);
       MVT::MvNorm(*RHS, rhs_norm);
       std::cout << "                  RHS norm is ... " << rhs_norm[0] << std::endl;
@@ -401,7 +399,7 @@ int run(int argc, char *argv[]) {
       MVT::MvNorm(*RHS, rhs_norm);
       std::cout << "                    RHS norm is ... " << rhs_norm[0] << std::endl;
 
-      if (proc_verbose) {
+      if (procVerbose) {
         std::cout << "---------- Actual Residuals (normalized) ----------" << std::endl << std::endl;
         for (int i = 0; i < numRhs; i++) {
           double actRes = actual_resids[i] / rhs_norm[i];
@@ -414,9 +412,9 @@ int run(int argc, char *argv[]) {
         success = false;
         break;
       }
-    }  // for time_step
+    }  // for timeStep
 
-    if (proc_verbose) {
+    if (procVerbose) {
       if (success)
         std::cout << std::endl << "SUCCESS:  Belos converged!" << std::endl;
       else
