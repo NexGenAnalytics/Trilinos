@@ -87,7 +87,7 @@ int run(int argc, char *argv[])
 
   using MT = typename Teuchos::ScalarTraits<ST>::magnitudeType;
   using STM = Teuchos::ScalarTraits<MT>;
-  using STS = Teuchos::ScalarTraits<Scalar>;
+  using STS = Teuchos::ScalarTraits<ST>;
 
   using LinearProblem = typename Belos::LinearProblem<ST, MV, OP>;
   using Solver = ::Belos::LSQRSolMgr<ST, MV, OP>;
