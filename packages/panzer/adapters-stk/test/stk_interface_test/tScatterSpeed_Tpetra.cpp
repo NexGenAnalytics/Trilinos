@@ -44,9 +44,9 @@ using Teuchos::TimeMonitor;
 
 typedef double Scalar;
 typedef Kokkos::DynRankView<Scalar, PHX::Device> FieldContainer;
-typedef Tpetra::Map<panzer::LocalOrdinal, panzer::GlobalOrdinal, PHX::Device> Map;
-typedef Tpetra::CrsMatrix<Scalar, panzer::LocalOrdinal, panzer::GlobalOrdinal, PHX::Device> CrsMatrix;
-typedef Tpetra::CrsGraph<panzer::LocalOrdinal, panzer::GlobalOrdinal, PHX::Device> CrsGraph;
+typedef Tpetra::Map<panzer::LocalOrdinal, panzer::GlobalOrdinal> Map;
+typedef Tpetra::CrsMatrix<Scalar, panzer::LocalOrdinal, panzer::GlobalOrdinal> CrsMatrix;
+typedef Tpetra::CrsGraph<panzer::LocalOrdinal, panzer::GlobalOrdinal> CrsGraph;
 
 //****************************Function Definitions******************************
 void newAssembly(Teuchos::FancyOStream &out);
