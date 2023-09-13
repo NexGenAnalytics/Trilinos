@@ -35,6 +35,14 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils)
     STANDARD_PASS_OUTPUT 
   )
 
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    Tpetra_resolve_cg_hb
+    SOURCES test_resolve_cg_hb.cpp 
+    COMM serial mpi
+    ARGS "--verbose --filename=bcsstk14.hb"
+    STANDARD_PASS_OUTPUT 
+  )
+
   ASSERT_DEFINED(Tpetra_INST_COMPLEX_DOUBLE)
   IF (Tpetra_INST_COMPLEX_DOUBLE)
 
