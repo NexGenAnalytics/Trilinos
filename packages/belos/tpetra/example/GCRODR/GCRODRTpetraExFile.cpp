@@ -53,12 +53,6 @@
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
-// Belos
-#include "BelosConfigDefs.hpp"
-#include "BelosGCRODRSolMgr.hpp"
-#include "BelosLinearProblem.hpp"
-#include "BelosTpetraTestFramework.hpp"
-
 // Teuchos
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_Comm.hpp>
@@ -67,6 +61,12 @@
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_CommandLineProcessor.hpp"
+
+// Belos
+#include "BelosConfigDefs.hpp"
+#include "BelosGCRODRSolMgr.hpp"
+#include "BelosLinearProblem.hpp"
+#include "BelosTpetraTestFramework.hpp"
 
 
 template <typename ScalarType>
