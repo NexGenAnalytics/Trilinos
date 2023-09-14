@@ -58,3 +58,4 @@ jobs:
           output-to: step-summary
           fail-on-error: 'true'
           list-tests: 'failed'
+          only-summary: 'true'
