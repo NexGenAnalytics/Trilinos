@@ -58,9 +58,6 @@
 #include "BelosTpetraAdapter.hpp"
 #include "BelosRCGSolMgr.hpp"
 
-// Trilinos
-#include <Trilinos_Util.h>
-
 // Teuchos
 #include <Teuchos_CommandLineProcessor.hpp>
 #include <Teuchos_ParameterList.hpp>
