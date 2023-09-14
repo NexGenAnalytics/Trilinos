@@ -67,13 +67,13 @@ using namespace Belos;
 //************************************************************************************************
 
 template<class MV>
-class Vector_Operator
+class VectorOperator
 {
   public:
 
-    Vector_Operator(int m_in, int n_in) : m(m_in), n(n_in) {};
+    VectorOperator(int m_in, int n_in) : m(m_in), n(n_in) {};
 
-    virtual ~Vector_Operator() {};
+    virtual ~VectorOperator() {};
 
     virtual void operator () (const MV &x, MV &y) = 0;
 
@@ -86,21 +86,21 @@ class Vector_Operator
   private:
 
     // Not allowing copy construction.
-    Vector_Operator( const Vector_Operator& ): m(0), n(0) {};
-    Vector_Operator* operator=( const Vector_Operator& ) { return NULL; };
+    VectorOperator( const VectorOperator& ): m(0), n(0) {};
+    VectorOperator* operator=( const VectorOperator& ) { return NULL; };
 
 };
 
 //************************************************************************************************
 
 template<class ST, class MV>
-class Diagonal_Operator : public Vector_Operator<MV>
+class DiagonalOperator : public VectorOperator<MV>
 {
   public:
 
-    Diagonal_Operator(int n_in, ST v_in) : Vector_Operator<MV>(n_in, n_in), v(v_in) { };
+    DiagonalOperator(int n_in, ST v_in) : VectorOperator<MV>(n_in, n_in), v(v_in) { };
 
-    ~Diagonal_Operator() { };
+    ~DiagonalOperator() { };
 
     void operator () (const MV &x, MV &y)
     {
@@ -115,14 +115,14 @@ class Diagonal_Operator : public Vector_Operator<MV>
 //************************************************************************************************
 
 template<class ST, class MV>
-class Diagonal_Operator_2 : public Vector_Operator<MV>
+class DiagonalOperator2 : public VectorOperator<MV>
 {
   public:
 
-    Diagonal_Operator_2<ST,MV>(int n_in, int min_gid_in, ST v_in)
-    : Vector_Operator<MV>(n_in, n_in), min_gid(min_gid_in), v(v_in) {}
+    DiagonalOperator2<ST,MV>(int n_in, int min_gid_in, ST v_in)
+    : VectorOperator<MV>(n_in, n_in), min_gid(min_gid_in), v(v_in) {}
 
-    ~Diagonal_Operator_2() { };
+    ~DiagonalOperator2() { };
 
     void operator () (const MV &x, MV &y)
     {
@@ -145,34 +145,34 @@ class Diagonal_Operator_2 : public Vector_Operator<MV>
 //************************************************************************************************
 
 template<class MV>
-class Composed_Operator : public Vector_Operator<MV>
+class ComposedOperator : public VectorOperator<MV>
 {
   public:
 
-    Composed_Operator(int n,
-        const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
-        const Teuchos::RCP<Vector_Operator<MV>>& pB_in);
+    ComposedOperator(int n,
+        const Teuchos::RCP<VectorOperator<MV>>& pA_in,
+        const Teuchos::RCP<VectorOperator<MV>>& pB_in);
 
-    virtual ~Composed_Operator() {};
+    virtual ~ComposedOperator() {};
 
     virtual void operator () (const MV &x, MV &y);
 
   private:
 
-    Teuchos::RCP<Vector_Operator<MV>> pA;
-    Teuchos::RCP<Vector_Operator<MV>> pB;
+    Teuchos::RCP<VectorOperator<MV>> pA;
+    Teuchos::RCP<VectorOperator<MV>> pB;
 };
 
 template<class MV>
-Composed_Operator<MV>::Composed_Operator(int n_in,
-    const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
-    const Teuchos::RCP<Vector_Operator<MV>>& pB_in)
-: Vector_Operator<MV>(n_in, n_in), pA(pA_in), pB(pB_in)
+ComposedOperator<MV>::ComposedOperator(int n_in,
+    const Teuchos::RCP<VectorOperator<MV>>& pA_in,
+    const Teuchos::RCP<VectorOperator<MV>>& pB_in)
+: VectorOperator<MV>(n_in, n_in), pA(pA_in), pB(pB_in)
 {
 }
 
 template<class MV>
-void Composed_Operator<MV>::operator () (const MV &x, MV &y)
+void ComposedOperator<MV>::operator () (const MV &x, MV &y)
 {
   MV ytemp(y.getMap(), y.getNumVectors(), false);
   (*pB)( x, ytemp );
@@ -182,11 +182,11 @@ void Composed_Operator<MV>::operator () (const MV &x, MV &y)
 //************************************************************************************************
 
 template<class OP, class ST, class MP, class MV>
-class Trilinos_Interface : public OP
+class TrilinosInterface : public OP
 {
   public:
 
-    Trilinos_Interface(const Teuchos::RCP<Vector_Operator<MV>> pA_in,
+    TrilinosInterface(const Teuchos::RCP<VectorOperator<MV>> pA_in,
         const Teuchos::RCP<const Teuchos::Comm<int>> pComm_in,
         const Teuchos::RCP<const MP> pMap_in)
       : pA (pA_in),
@@ -201,7 +201,7 @@ class Trilinos_Interface : public OP
                 ST alpha = Teuchos::ScalarTraits<ST>::one(),
                 ST beta = Teuchos::ScalarTraits<ST>::zero()) const override;
 
-    virtual ~Trilinos_Interface() {};
+    virtual ~TrilinosInterface() {};
 
     bool hasTransposeApply() const {return(use_transpose);};
 
@@ -211,7 +211,7 @@ class Trilinos_Interface : public OP
 
   private:
 
-    Teuchos::RCP<Vector_Operator<MV>> pA;
+    Teuchos::RCP<VectorOperator<MV>> pA;
     Teuchos::RCP<const Teuchos::Comm<int>> pComm;
     Teuchos::RCP<const MP> pMap;
 
@@ -219,7 +219,7 @@ class Trilinos_Interface : public OP
 };
 
 template<class OP, class ST, class MP, class MV>
-void Trilinos_Interface<OP, ST, MP, MV>::apply (const MV &X, MV &Y,
+void TrilinosInterface<OP, ST, MP, MV>::apply (const MV &X, MV &Y,
                                                 Teuchos::ETransp mode, ST alpha, ST beta) const
 {
   (*pA)(X,Y);
@@ -228,21 +228,21 @@ void Trilinos_Interface<OP, ST, MP, MV>::apply (const MV &X, MV &Y,
 //************************************************************************************************
 
 template<class OP, class ST, class MP, class MV>
-class Iterative_Inverse_Operator : public Vector_Operator<MV>
+class IterativeInverseOperator : public VectorOperator<MV>
 {
   public:
 
-  Iterative_Inverse_Operator(int n_in, int blocksize,
-    const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
+  IterativeInverseOperator(int n_in, int blocksize,
+    const Teuchos::RCP<VectorOperator<MV>>& pA_in,
     std::string opString="Iterative Solver", bool print_in=false);
 
-  virtual ~Iterative_Inverse_Operator() {}
+  virtual ~IterativeInverseOperator() {}
 
   virtual void operator () (const MV &b, MV &x);
 
   private:
 
-  Teuchos::RCP<Vector_Operator<MV>> pA;       // operator which will be inverted
+  Teuchos::RCP<VectorOperator<MV>> pA;       // operator which will be inverted
   // supplies a matrix std::vector multiply
   const bool print;
 
@@ -257,21 +257,21 @@ class Iterative_Inverse_Operator : public Vector_Operator<MV>
 };
 
 template<class OP, class ST, class MP, class MV>
-Iterative_Inverse_Operator<OP, ST, MP, MV>::Iterative_Inverse_Operator(int n_in, int blocksize,
-  const Teuchos::RCP<Vector_Operator<MV>>& pA_in,
+IterativeInverseOperator<OP, ST, MP, MV>::IterativeInverseOperator(int n_in, int blocksize,
+  const Teuchos::RCP<VectorOperator<MV>>& pA_in,
   std::string opString, bool print_in)
-: Vector_Operator<MV>(n_in, n_in),      // square operator
+: VectorOperator<MV>(n_in, n_in),      // square operator
   pA(pA_in),
   print(print_in),
   timer(opString)
 {
-  int n_global;
+  int nGlobal;
 
-  MPI_Allreduce(&n_in, &n_global, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&n_in, &nGlobal, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
   pComm = Tpetra::getDefaultComm();
 
-  pMap = Teuchos::rcp( new MP(n_global, n_in, 0, pComm) );
-  pPE = Teuchos::rcp( new Trilinos_Interface<OP, ST, MP, MV>(pA, pComm, pMap ) );
+  pMap = Teuchos::rcp( new MP(nGlobal, n_in, 0, pComm) );
+  pPE = Teuchos::rcp( new TrilinosInterface<OP, ST, MP, MV>(pA, pComm, pMap ) );
 
   pProb = Teuchos::rcp( new LinearProblem<ST,MV,OP>() );
   pProb->setOperator( pPE );
@@ -291,7 +291,7 @@ Iterative_Inverse_Operator<OP, ST, MP, MV>::Iterative_Inverse_Operator(int n_in,
 }
 
 template<class OP, class ST, class MP, class MV>
-void Iterative_Inverse_Operator<OP, ST, MP, MV>::operator () (const MV &b, MV &x)
+void IterativeInverseOperator<OP, ST, MP, MV>::operator () (const MV &b, MV &x)
 {
   int pid = pComm->getRank();
 
@@ -338,8 +338,8 @@ int run(int argc, char *argv[])
   using Teuchos::rcp;
 
   Teuchos::GlobalMPISession session(&argc, &argv, NULL);
-  RCP<const Teuchos::Comm<int> > Comm = Tpetra::getDefaultComm();
-  int pid = rank(*Comm);
+  RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm();
+  int pid = rank(*comm);
 
   bool verbose = false;
   bool success = true;
@@ -350,14 +350,14 @@ int run(int argc, char *argv[])
     int n(10);
     int numRHS=1;
 
-    RCP<MP> map = RCP(new MP(n, 0, Comm));
+    RCP<MP> map = RCP(new MP(n, 0, comm));
     MV X(map, numRHS), Y(map, numRHS);
 
     X.putScalar(1.0);
 
     // Inner computes inv(D2)*y
-    RCP<Diagonal_Operator_2<ST,MV>> D2 = rcp(new Diagonal_Operator_2<ST,MV>(n, map->getMinGlobalIndex(), 1.0));
-    Iterative_Inverse_Operator<OP, ST, MP, MV> A2(n, 1, D2, "Belos (inv(D2))", true);
+    RCP<DiagonalOperator2<ST,MV>> D2 = rcp(new DiagonalOperator2<ST,MV>(n, map->getMinGlobalIndex(), 1.0));
+    IterativeInverseOperator<OP, ST, MP, MV> A2(n, 1, D2, "Belos (inv(D2))", true);
 
     // should return x=(1, 1/2, 1/3, ..., 1/10)
     A2(X,Y);
@@ -368,17 +368,17 @@ int run(int argc, char *argv[])
     Y.print(std::cout);
 
     // Inner computes inv(D)*x
-    RCP<Diagonal_Operator<ST,MV>> D = Teuchos::rcp(new Diagonal_Operator<ST,MV>(n, 4.0));
-    RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Inner =
-      rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, D, "Belos (inv(D))", false));
+    RCP<DiagonalOperator<ST,MV>> D = rcp(new DiagonalOperator<ST,MV>(n, 4.0));
+    RCP<IterativeInverseOperator<OP, ST, MP, MV>> Inner =
+      rcp(new IterativeInverseOperator<OP, ST, MP, MV>(n, 1, D, "Belos (inv(D))", false));
 
     // Composed_Operator computed inv(D)*B*x
-    RCP<Diagonal_Operator<ST,MV>> B = rcp(new Diagonal_Operator<ST,MV>(n, 4.0));
-    RCP<Composed_Operator<MV>> C = rcp(new Composed_Operator<MV>(n, Inner, B));
+    RCP<DiagonalOperator<ST,MV>> B = rcp(new DiagonalOperator<ST,MV>(n, 4.0));
+    RCP<ComposedOperator<MV>> C = rcp(new ComposedOperator<MV>(n, Inner, B));
 
     // Outer computes inv(C) = inv(inv(D)*B)*x = inv(B)*D*x = x
-    Teuchos::RCP<Iterative_Inverse_Operator<OP, ST, MP, MV>> Outer =
-      Teuchos::rcp(new Iterative_Inverse_Operator<OP, ST, MP, MV>(n, 1, C, "Belos (inv(C)=inv(inv(D)*B))", true));
+    RCP<IterativeInverseOperator<OP, ST, MP, MV>> Outer =
+      rcp(new IterativeInverseOperator<OP, ST, MP, MV>(n, 1, C, "Belos (inv(C)=inv(inv(D)*B))", true));
 
     // should return x=1/4
     (*Inner)(X,Y);
@@ -421,7 +421,7 @@ int run(int argc, char *argv[])
 }
 
 int main(int argc, char *argv[]) {
-  run<double>(argc, argv);
+  return run<double>(argc, argv);
 
   // wrapped with a check: CMake option Trilinos_ENABLE_FLOAT=ON
   // run<float>(argc, argv);

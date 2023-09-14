@@ -116,7 +116,7 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("explicit","implicit-only",&explicitTest,"Compute explicit residuals.");
     cmdp.setOption("recursive","native",&compRecursive,"Compute recursive residuals.");
     cmdp.setOption("pseudo","not-pseudo",&pseudo,"Use pseudo-block TFQMR solver.");
-    cmdp.setOption("tol",&tol,"Relative residual tolerance used by TFQMD or pseudo-block TFQMR solver.");
+    cmdp.setOption("tol",&tol,"Relative residual tolerance used by TFQMR or pseudo-block TFQMR solver.");
     cmdp.setOption("filename",&filename,"Filename for Harwell-Boeing test matrix.");
     cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
     cmdp.setOption("max-iters",&maxiters,"Maximum number of iterations per linear system (-1 := adapted to problem/block size).");
@@ -198,18 +198,18 @@ int run(int argc, char *argv[]) {
 
     // Compute actual residuals.
     bool badRes = false;
-    std::vector<MT> actual_resids( numrhs );
-    std::vector<MT> rhs_norm( numrhs );
+    std::vector<MT> actualResids( numrhs );
+    std::vector<MT> rhsNorm( numrhs );
     MV resid(map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -one, resid, one, *B, resid );
-    MVT::MvNorm( resid, actual_resids );
-    MVT::MvNorm( *B, rhs_norm );
+    MVT::MvNorm( resid, actualResids );
+    MVT::MvNorm( *B, rhsNorm );
     
     if (procVerbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
-        MT actRes = actual_resids[i]/rhs_norm[i];
+        MT actRes = actualResids[i]/rhsNorm[i];
         if (procVerbose) {
           std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         }
@@ -233,7 +233,7 @@ int run(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-  run<double>(argc,argv);
+  return run<double>(argc,argv);
 
   // wrapped with a check: CMake option Trilinos_ENABLE_FLOAT=ON
   // run<float>(argc,argv);

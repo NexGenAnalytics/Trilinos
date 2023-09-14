@@ -98,9 +98,9 @@ int run(int argc, char *argv[]) {
   bool verbose = false;
   
   try {
-    bool proc_verbose = false;
+    bool procVerbose = false;
     bool leftprec = true; // use left preconditioning to solve these linear systems
-    bool explicit_test = true;
+    bool explicitTest = true;
     bool pseudo = false;
     int frequency = -1;  // how often residuals are printed by solver
     int numrhs = 1;
@@ -111,7 +111,7 @@ int run(int argc, char *argv[]) {
     Teuchos::CommandLineProcessor cmdp(false,true);
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
     cmdp.setOption("left-prec","right-prec",&leftprec,"Left preconditioning or right.");
-    cmdp.setOption("explicit","implicit-only",&explicit_test,"Compute explicit residuals.");
+    cmdp.setOption("explicit","implicit-only",&explicitTest,"Compute explicit residuals.");
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
     cmdp.setOption("filename",&filename,"Filename for Harwell-Boeing test matrix.");
     cmdp.setOption("pseudo","not-pseudo",&pseudo,"Use pseudo-block TFQMR solver.");
@@ -128,23 +128,23 @@ int run(int argc, char *argv[]) {
     Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
     RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
     RCP<const tmap_t> map = A->getDomainMap();
-    proc_verbose = verbose && (MyPID==0); /* Only print on zero processor */
+    procVerbose = verbose && (MyPID==0); /* Only print on zero processor */
     
     // *****Construct the Preconditioner*****
-    if (proc_verbose) std::cout << std::endl << std::endl;
-    if (proc_verbose) std::cout << "Constructing ILU preconditioner" << std::endl;
+    if (procVerbose) std::cout << std::endl << std::endl;
+    if (procVerbose) std::cout << "Constructing ILU preconditioner" << std::endl;
     int Lfill = 2;
     // if (argc > 2) Lfill = atoi(argv[2]);
-    if (proc_verbose) std::cout << "Using Lfill = " << Lfill << std::endl;
+    if (procVerbose) std::cout << "Using Lfill = " << Lfill << std::endl;
     int Overlap = 2;
     // if (argc > 3) Overlap = atoi(argv[3]);
-    if (proc_verbose) std::cout << "Using Level Overlap = " << Overlap << std::endl;
+    if (procVerbose) std::cout << "Using Level Overlap = " << Overlap << std::endl;
     double Athresh = 0.0;
     // if (argc > 4) Athresh = atof(argv[4]);
-    if (proc_verbose) std::cout << "Using Absolute Threshold Value of " << Athresh << std::endl;
+    if (procVerbose) std::cout << "Using Absolute Threshold Value of " << Athresh << std::endl;
     double Rthresh = 1.0;
     // if (argc >5) Rthresh = atof(argv[5]);
-    if (proc_verbose) std::cout << "Using Relative Threshold Value of " << Rthresh << std::endl;
+    if (procVerbose) std::cout << "Using Relative Threshold Value of " << Rthresh << std::endl;
     
     // Init Ifpack2 classes
     RCP<Ifpack2::IlukGraph> ilukGraph;
@@ -169,7 +169,7 @@ int run(int argc, char *argv[]) {
     bool transA = false;
     double Cond_Est;
     ilukFactors->Condest(transA, Cond_Est);
-    if (proc_verbose) {
+    if (procVerbose) {
       std::cout << "Condition number estimate for this preconditoner = " << Cond_Est << std::endl;
       std::cout << std::endl;
     }
@@ -202,13 +202,13 @@ int run(int argc, char *argv[]) {
       belosList.set( "Verbosity", Belos::Errors + Belos::Warnings );
     
     // *****Construct solution std::vector and random right-hand-sides *****
-    RCP<Epetra_MultiVector> X = rcp( new Epetra_MultiVector(Map, numrhs) );
-    RCP<Epetra_MultiVector> B = rcp( new Epetra_MultiVector(Map, numrhs) );
+    RCP<MV> X = rcp( new MV(Map, numrhs) );
+    RCP<MV> B = rcp( new MV(Map, numrhs) );
     MVT::MvRandom( *X );
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
 
-    Belos::LinearProblem<double,MV,OP> problem( A, X, B );
+    Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     if (leftprec)
       problem.setLeftPrec( Prec );
     else
@@ -216,7 +216,7 @@ int run(int argc, char *argv[]) {
 
     bool set = problem.setProblem();
     if (set == false) {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
@@ -229,7 +229,7 @@ int run(int argc, char *argv[]) {
       solver = rcp( new Belos::TFQMRSolMgr<ST,MV,OP>(rcp(&problem, false), rcp(&belosList, false)));
     
     // Print out information about problem
-    if (proc_verbose) {
+    if (procVerbose) {
       std::cout << std::endl << std::endl;
       std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numrhs << std::endl;
@@ -243,17 +243,17 @@ int run(int argc, char *argv[]) {
 
     // Compute actual residuals.
     bool badRes = false;
-    std::vector<double> actual_resids( numrhs );
-    std::vector<double> rhs_norm( numrhs );
-    Epetra_MultiVector R(Map, numrhs);
+    std::vector<ST> actualResids( numrhs );
+    std::vector<ST> rhsNorm( numrhs );
+    MV R(Map, numrhs);
     OPT::Apply( *A, *X, R );
     MVT::MvAddMv( -1.0, R, 1.0, *B, R );
-    MVT::MvNorm( R, actual_resids );
-    MVT::MvNorm( *B, rhs_norm );
-    if (proc_verbose) {
+    MVT::MvNorm( R, actualResids );
+    MVT::MvNorm( *B, rhsNorm );
+    if (procVerbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
-        double actRes = actual_resids[i]/rhs_norm[i];
+        ST actRes = actualResids[i]/rhsNorm[i];
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > tol ) badRes = true;
       }
@@ -262,10 +262,10 @@ int run(int argc, char *argv[]) {
     success = ret==Belos::Converged && !badRes;
 
     if (success) {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << "End Result: TEST PASSED" << std::endl;
     } else {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << "End Result: TEST FAILED" << std::endl;
     }
   }
@@ -275,7 +275,7 @@ int run(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-  run<double>(argc,argv);
+  return run<double>(argc,argv);
 
   // wrapped with a check: CMake option Trilinos_ENABLE_FLOAT=ON
   // run<float>(argc,argv);
