@@ -147,9 +147,7 @@ int run(int argc, char *argv[]) {
     if (!verbose)
       frequency = -1;  // reset frequency if test is not verbose
 
-    //
-    // *************Get the problem*********************
-    //
+    // Get the problem
     Belos::Tpetra::HarwellBoeingReader<MAT> reader(comm);
     RCP<MAT> A = reader.readFromFile(filename);
     RCP<const MAP> map = A->getDomainMap();
@@ -337,4 +335,5 @@ int run(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   return run<double>(argc, argv);
+  // return run<float>(argc, argv);
 }  // end PrecLSQRTpetraExFile.cpp
