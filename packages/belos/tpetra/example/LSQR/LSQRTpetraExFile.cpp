@@ -47,14 +47,18 @@
 // NOTE: No preconditioner is used in this example.
 //
 
-#include <MatrixMarket_Tpetra.hpp>
+// Teuchos
 #include <Teuchos_CommandLineProcessor.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_ParameterList.hpp>
 #include <Teuchos_StandardCatchMacros.hpp>
+
+// Tpetra
+#include <MatrixMarket_Tpetra.hpp>
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
+// Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosLSQRSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
@@ -122,17 +126,21 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("verbose", "quiet", &verbose, "Print messages and results.");
     cmdp.setOption("debug", "nondebug", &debug, "Print debugging information from solver.");
     cmdp.setOption("frequency", &frequency, "Solvers frequency for printing residuals (#iters).");
-    cmdp.setOption("filename", &filename,
-                   "Filename for test matrix.  Acceptable file extensions: *.hb,*.mtx,*.triU,*.triS");
-    cmdp.setOption("rhsFilename", &filenameRHS, "Filename for right-hand side.  Acceptable file extension: *.mtx");
+    cmdp.setOption(
+        "filename", &filename,
+        "Filename for test matrix.  Acceptable file extensions: *.hb,*.mtx,*.triU,*.triS");
+    cmdp.setOption("rhsFilename", &filenameRHS,
+                   "Filename for right-hand side.  Acceptable file extension: *.mtx");
     cmdp.setOption("lambda", &damp, "Regularization parameter");
     cmdp.setOption("tol", &relResTol, "Relative residual tolerance");
     cmdp.setOption("matrixTol", &relMatTol, "Relative error in Matrix");
     cmdp.setOption("max-cond", &maxCond, "Maximum condition number");
     cmdp.setOption("num-rhs", &numRHS, "Number of right-hand sides to be solved for.");
-    cmdp.setOption("block-size", &blockSize, "Block size used by LSQR.");  // must be one at this point
-    cmdp.setOption("max-iters", &maxiters,
-                   "Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
+    cmdp.setOption("block-size", &blockSize,
+                   "Block size used by LSQR.");  // must be one at this point
+    cmdp.setOption(
+        "max-iters", &maxiters,
+        "Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
 
     if (cmdp.parse(argc, argv) != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
       return -1;
@@ -151,7 +159,7 @@ int run(int argc, char *argv[]) {
     RCP<MV> B, X;
 
     // Rectangular matrices are embedded in square matrices.  vecX := 0,  vecB = A*randVec
-    procVerbose = verbose && (comm->getRank() == 0); // Only print on the zero processor
+    procVerbose = verbose && (comm->getRank() == 0);  // Only print on the zero processor
 
     bool isRHS = false;
     if (filenameRHS != "") {
@@ -231,7 +239,8 @@ int run(int argc, char *argv[]) {
     bool set = problem->setProblem();
     if (set == false) {
       if (procVerbose) {
-        std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
+        std::cout << std::endl
+                  << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       }
       return -1;
     }
