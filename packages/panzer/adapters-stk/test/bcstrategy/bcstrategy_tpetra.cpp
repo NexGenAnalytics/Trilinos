@@ -64,7 +64,6 @@
 #include "Panzer_STK_WorksetFactory.hpp"
 #include "Panzer_WorksetContainer.hpp"
 #include "Panzer_Workset_Builder.hpp"
-//#include "Panzer_BlockedEpetraLinearObjFactory.hpp"
 #include "Panzer_AssemblyEngine.hpp"
 #include "Panzer_AssemblyEngine_InArgs.hpp"
 #include "Panzer_AssemblyEngine_TemplateBuilder.hpp"
@@ -74,8 +73,6 @@
 #include "Panzer_GlobalData.hpp"
 #include "user_app_ClosureModel_Factory_TemplateBuilder.hpp"
 #include "user_app_EquationSetFactory.hpp"
-
-//#include "Epetra_MpiComm.h"
 
 using ST = double;
 using LO = panzer::LocalOrdinal;
@@ -117,8 +114,6 @@ TEUCHOS_UNIT_TEST(bcstrategy, constant_bc_strategy_tpetra) {
   using std::cout;
   using std::endl;
   using Teuchos::RCP;
-
-  // pause_to_attach();
 
   auto pl = rcp(new Teuchos::ParameterList);
   pl->set("X Blocks", 1);

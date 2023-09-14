@@ -55,7 +55,6 @@ using Teuchos::rcp;
 #include "Panzer_STK_WorksetFactory.hpp"
 #include "Panzer_WorksetContainer.hpp"
 #include "Panzer_Workset_Builder.hpp"
-//#include "Panzer_BlockedEpetraLinearObjFactory.hpp"
 #include "Panzer_AssemblyEngine.hpp"
 #include "Panzer_AssemblyEngine_InArgs.hpp"
 #include "Panzer_AssemblyEngine_TemplateBuilder.hpp"
@@ -80,8 +79,6 @@ using Teuchos::rcp;
 
 #include "Teuchos_DefaultMpiComm.hpp"
 #include "Teuchos_OpaqueWrapper.hpp"
-
-//#include "Epetra_MpiComm.h"
 
 #include <cstdio> // for get char
 #include <string>
