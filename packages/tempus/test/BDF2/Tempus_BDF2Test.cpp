@@ -17,6 +17,7 @@
 
 #include "../TestModels/SinCosModel.hpp"
 #include "../TestModels/CDR_Model.hpp"
+#include "../TestModels/CDR_Model_Tpetra.hpp"
 #include "../TestModels/VanDerPolModel.hpp"
 #include "../TestUtils/Tempus_ConvergenceTestUtils.hpp"
 

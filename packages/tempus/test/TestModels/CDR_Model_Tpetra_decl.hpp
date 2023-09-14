@@ -51,7 +51,7 @@ public:
   using tpetra_extract = ::Thyra::TpetraOperatorVectorExtraction<SC,LO,GO,Node>;
 
   CDR_Model_Tpetra(const Teuchos::RCP<const Teuchos::Comm<int>>& comm,
-            const int num_global_elements,
+            const GO num_global_elements,
             const SC z_min,
             const SC z_max,
             const SC a,  // convection
@@ -114,7 +114,7 @@ private: // data members
   Teuchos::RCP<const ::Thyra::VectorSpaceBase<SC> > f_space_;
   Teuchos::RCP<const tpetra_map>   f_owned_map_;
 
-  Teuchos::RCP<tpetra_graph>  W_graph_;
+  Teuchos::RCP<const tpetra_graph>  W_graph_;
 
   Teuchos::RCP<const ::Thyra::LinearOpWithSolveFactoryBase<SC> > W_factory_;
 
