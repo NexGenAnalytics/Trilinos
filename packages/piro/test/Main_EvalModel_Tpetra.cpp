@@ -49,26 +49,26 @@
 #include <Teuchos_StandardCatchMacros.hpp>
 
 #include <Thyra_ModelEvaluator.hpp>
+#include <Thyra_ModelEvaluatorBase_decl.hpp>
+#include <Thyra_TpetraVector_decl.hpp>
 
 #include <Tpetra_Core.hpp>
-#include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
-template <typename ScalarType>
-int run(int argc, char *argv[]) {
-  using ST = ScalarType;
-
+template<class ScalarType>
+int run(int argc, char *argv[])
+{
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
   using NT = typename Tpetra::Vector<>::node_type;
 
   using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
+    
+  using tcrsmatrix_t  = Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
-  using Tpetra_Vector = Tpetra::Vector<ST>;
-  using Tpetra_Matrix = Tpetra::CrsMatrix<ST,LO,GO,NT>;
-  using MEB = Thyra::ModelEvaluatorBase;
-
+  using tvector_t = Thyra::TpetraVector<ST,LO,GO,NT>;
 
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -81,46 +81,81 @@ int run(int argc, char *argv[]) {
   int Proc = mpiSession.getRank();
   auto appComm = Tpetra::getDefaultComm();
 
-  try {
-    // TODO: Display like for Epetra version (currently minimal working)
-    const RCP<Thyra::ModelEvaluator<ST>> me = rcp(new MockModelEval_A_Tpetra(appComm));
+  try
+  {
+    const RCP<Thyra::ModelEvaluator<ST>> Model = rcp(new MockModelEval_A_Tpetra(appComm));
 
-    MEB::Evaluation<Thyra::VectorBase<double> > g = Thyra::createMember(*me->get_g_space(0));
-    MEB::Evaluation<Thyra::VectorBase<double> > x = Thyra::createMember(*me->get_x_space());
+    // Set input arguments to evalModel call
+    Thyra::ModelEvaluatorBase::InArgs inArgs = Model->createInArgs();
+    RCP<tvector_t> x = rcp(new tvector_t(/*Teuchos::null*/));
+    inArgs.set_x(x);
 
-    MEB::InArgs<ST>  in_args = me->createInArgs();
-    in_args.set_x(x);
+    // Number of *vectors* of parameters
+    int num_p = inArgs.Np();  
+    RCP<tvector_t> p1;
+    if (num_p > 0) {
+      p1 = rcp(new tvector_t(/*Teuchos::null*/));
+      inArgs.set_p(0, p1);
+    }
 
-    MEB::OutArgs<ST> out_args = me->createOutArgs();
-    out_args.set_g(0,g);
+    // Number of parameters in p1 vector
+    int numParams = p1->getTpetraVector()->getLocalLength(); 
 
-    me->evalModel(in_args, out_args);
+    // Set output arguments to evalModel call
+    Thyra::ModelEvaluatorBase::OutArgs outArgs = Model->createOutArgs();
+    // TO FIX & UNCOMMENT: RCP<tvector_t> f;
+    // TO FIX & UNCOMMENT: f.initialize(/*XXXXX*/, x->getTpetraVector()->getMap());
+    // TO FIX & UNCOMMENT: outArgs.set_f(f);  
 
+    // Number of *vectors* of responses
+    int num_g = outArgs.Ng(); 
+    Thyra::ModelEvaluatorBase::Evaluation<Thyra::VectorBase<ST>> g1(Teuchos::null);
+    if (num_g > 0) {
+      outArgs.set_g(0, g1);
+    }
+
+    // Create a LinearOpWithSolveBase object for W to be evaluated
+    // TO FIX & UNCOMMENT: RCP<OP> W_op = Model->create_W();
+    // TO UNCOMMENT: outArgs.set_W(W_op);
+    
+    // TO FIX & UNCOMMENT: RCP<MV> dfdp = rcp(new MV(Teuchos::null, numParams));
+    // TO UNCOMMENT: outArgs.set_DfDp(0, dfdp);
+
+    // TO FIX & UNCOMMENT: RCP<MV> dgdp = rcp(new MV(g1->getMap(), numParams));
+    // TO UNCOMMENT: outArgs.set_DgDp(0, 0, dgdp);
+    
+    // TO FIX & UNCOMMENT: RCP<MV> dgdx = rcp(new MV(x->getMap(), g1->getLocalLength()));
+    // TO UNCOMMENT: outArgs.set_DgDx(0, dgdx);
+    
+    // Now, evaluate the model!
+    Model->evalModel(inArgs, outArgs);
+     
     // Print out everything
     if (Proc == 0)
       std::cout << "Finished Model Evaluation: Printing everything {Exact in brackets}" 
         << "\n-----------------------------------------------------------------"
         << std::setprecision(9) << std::endl;
-
-      // TODO: Display like for Epetra version
+      x->getTpetraVector()->print(std::cout << "\nSolution vector! {3,3,3,3}\n");
+      if (num_p>0) p1->getTpetraVector()->print(std::cout << "\nParameters! {1,1}\n");
+      // TO FIX & UNCOMMENT:f->print(std::cout << "\nResidual! {8,5,0,-7}\n");
+      // TO FIX & UNCOMMENT:if (num_g>0) g1->print(std::cout << "\nResponses! {2}\n");
+      // TO UNCOMMENT: RCP<tcrsmatrix_t> W = Teuchos::rcp_dynamic_cast<tcrsmatrix_t>(W_op, true);
+      // TO UNCOMMENT: W->print(std::cout << "\nJacobian! {6 on diags}\n");
+      // TO FIX & UNCOMMENT: dfdp.describe(std::cout << "\nDfDp sensitivity MultiVector! {-1,0,0,0}{0,-4,-6,-8}\n"); 
+      // TO FIX & UNCOMMENT: dgdp.print(std::cout << "\nDgDp response sensitivity MultiVector!{2,2}\n");
+      // TO FIX & UNCOMMENT: dgdx->print(std::cout << "\nDgDx^T response gradient MultiVector! {-2,-2,-2,-2}\n");
 
       if (Proc == 0)
-      std::cout << "\n-----------------------------------------------------------------\n";
+        std::cout << "\n-----------------------------------------------------------------\n";
+  
   } // try
   TEUCHOS_STANDARD_CATCH_STATEMENTS(true, std::cerr, success);
   
-  if (Proc==0) {
-    if (status==0) 
-      std::cout << "TEST PASSED" << std::endl;
-    else 
-      std::cout << "TEST Failed" << std::endl;
-  }
-
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
-int main(int argc, char *argv[])
-{  
+int main(int argc, char *argv[]) {
+  // run with different scalar types
   return run<double>(argc, argv);
   // return run<float>(argc, argv);
 }
