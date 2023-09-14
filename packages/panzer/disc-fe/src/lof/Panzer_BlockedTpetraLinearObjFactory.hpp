@@ -168,7 +168,7 @@ public:
    template <typename EvalT>
    Teuchos::RCP<panzer::CloneableEvaluator> buildScatter() const
    {
-      if(gidProviders_[0]->containsBlockedDOFManager()) {
+      if(gidProviders_.front()->containsBlockedDOFManager()) {
          return Teuchos::rcp(new ScatterResidual_BlockedTpetra<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT,NodeT>(getGlobalIndexer()));
       }
       return Teuchos::rcp(new ScatterResidual_Tpetra<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT,NodeT>(getRangeGlobalIndexer()));
@@ -178,7 +178,7 @@ public:
    template <typename EvalT>
    Teuchos::RCP<panzer::CloneableEvaluator > buildGather() const
    {
-      if(gidProviders_[0]->containsBlockedDOFManager()) {
+      if(gidProviders_.front()->containsBlockedDOFManager()) {
          return Teuchos::rcp(new GatherSolution_BlockedTpetra<EvalT,Traits,ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>(getGlobalIndexer()));
       }
       return Teuchos::rcp(new GatherSolution_Tpetra<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT,NodeT>(getRangeGlobalIndexer()));
@@ -188,7 +188,7 @@ public:
    template <typename EvalT>
    Teuchos::RCP<panzer::CloneableEvaluator > buildGatherTangent() const
    {
-      if(gidProviders_[0]->containsBlockedDOFManager()) {
+      if(gidProviders_.front()->containsBlockedDOFManager()) {
          return Teuchos::rcp(new GatherTangent_BlockedTpetra<EvalT,Traits,ScalarT,LocalOrdinalT,GlobalOrdinalT,NodeT>(getGlobalIndexer()));
       }
       return Teuchos::rcp(new GatherTangent_Tpetra<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT,NodeT>(getRangeGlobalIndexer()));
@@ -208,7 +208,7 @@ public:
    template <typename EvalT>
    Teuchos::RCP<panzer::CloneableEvaluator > buildGatherOrientation() const
    {
-      if(gidProviders_[0]->containsBlockedDOFManager()) {
+      if(gidProviders_.front()->containsBlockedDOFManager()) {
          return Teuchos::rcp(new GatherOrientation<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT>(nc2c_vector(getGlobalIndexer()->getFieldDOFManagers())));
       }
       return Teuchos::rcp(new GatherOrientation<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT>(getRangeGlobalIndexer()));
@@ -218,7 +218,7 @@ public:
    template <typename EvalT>
    Teuchos::RCP<panzer::CloneableEvaluator> buildScatterDirichlet() const
    {
-      if(gidProviders_[0]->containsBlockedDOFManager()) {
+      if(gidProviders_.front()->containsBlockedDOFManager()) {
          return Teuchos::rcp(new ScatterDirichletResidual_BlockedTpetra<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT,NodeT>(getGlobalIndexer()));
       }
       return Teuchos::rcp(new ScatterDirichletResidual_Tpetra<EvalT,Traits,LocalOrdinalT,GlobalOrdinalT,NodeT>(getRangeGlobalIndexer()));
@@ -345,7 +345,7 @@ public:
    Teuchos::RCP<const panzer::BlockedDOFManager> getGlobalIndexer() const
    {
       TEUCHOS_ASSERT(!gidProviders_.empty());
-      return gidProviders_[0]->getBlockedIndexer();
+      return gidProviders_.front()->getBlockedIndexer();
    }
 
    //! Get the domain unique global indexer this factory was created with.
@@ -366,7 +366,7 @@ public:
    Teuchos::RCP<const panzer::GlobalIndexer> getRangeGlobalIndexer() const
    {
       TEUCHOS_ASSERT(!gidProviders_.empty());
-      return gidProviders_[0]->getGlobalIndexer();
+      return gidProviders_.front()->getGlobalIndexer();
    }
 
 protected:
