@@ -45,28 +45,28 @@
 
 #include "MockModelEval_A_Tpetra.hpp"
 
-#include "Teuchos_GlobalMPISession.hpp"
-#include "Teuchos_StandardCatchMacros.hpp"
+#include <Teuchos_GlobalMPISession.hpp>
+#include <Teuchos_StandardCatchMacros.hpp>
 
-#include "Thyra_ModelEvaluator.hpp"
+#include <Thyra_ModelEvaluator.hpp>
 
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
+template <typename ScalarType>
 int run(int argc, char *argv[]) {
-  // Model is currently supporting double
-  using Scalar = double;
+  using ST = ScalarType;
 
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
   using NT = typename Tpetra::Vector<>::node_type;
 
-  using OP = typename Tpetra::Operator<Scalar,LO,GO,NT>;
-  using MV = typename Tpetra::MultiVector<Scalar,LO,GO,NT>;
+  using OP = typename Tpetra::Operator<ST,LO,GO,NT>;
+  using MV = typename Tpetra::MultiVector<ST,LO,GO,NT>;
 
-  using Tpetra_Vector = Tpetra::Vector<Scalar>;
-  using Tpetra_Matrix = Tpetra::CrsMatrix<Scalar,LO,GO,NT>;
+  using Tpetra_Vector = Tpetra::Vector<ST>;
+  using Tpetra_Matrix = Tpetra::CrsMatrix<ST,LO,GO,NT>;
   using MEB = Thyra::ModelEvaluatorBase;
 
 
@@ -83,15 +83,15 @@ int run(int argc, char *argv[]) {
 
   try {
     // TODO: Display like for Epetra version (currently minimal working)
-    const RCP<Thyra::ModelEvaluator<Scalar>> me = rcp(new MockModelEval_A_Tpetra(appComm));
+    const RCP<Thyra::ModelEvaluator<ST>> me = rcp(new MockModelEval_A_Tpetra(appComm));
 
     MEB::Evaluation<Thyra::VectorBase<double> > g = Thyra::createMember(*me->get_g_space(0));
     MEB::Evaluation<Thyra::VectorBase<double> > x = Thyra::createMember(*me->get_x_space());
 
-    MEB::InArgs<Scalar>  in_args = me->createInArgs();
+    MEB::InArgs<ST>  in_args = me->createInArgs();
     in_args.set_x(x);
 
-    MEB::OutArgs<Scalar> out_args = me->createOutArgs();
+    MEB::OutArgs<ST> out_args = me->createOutArgs();
     out_args.set_g(0,g);
 
     me->evalModel(in_args, out_args);
@@ -119,12 +119,8 @@ int run(int argc, char *argv[]) {
   return (success ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
-int main(int argc, char *argv[]) {
-  // to change Scalar we should also template the Model class
-  // run with different scalar types
-  // run<double>(argc, argv);
-  // run<float>(argc, argv);
-  
-  // run with double scalar type 
-  run(argc, argv);
+int main(int argc, char *argv[])
+{  
+  return run<double>(argc, argv);
+  // return run<float>(argc, argv);
 }
