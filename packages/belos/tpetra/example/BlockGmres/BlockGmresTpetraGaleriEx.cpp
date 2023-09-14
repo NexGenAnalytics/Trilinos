@@ -39,11 +39,6 @@
 // ***********************************************************************
 // @HEADER
 
-// Belos
-#include "BelosTpetraAdapter.hpp"
-#include "BelosBlockGmresSolMgr.hpp"
-#include "BelosPseudoBlockGmresSolMgr.hpp"
-
 // Tpetra
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
@@ -65,6 +60,10 @@
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_CommandLineProcessor.hpp"
 
+// Belos
+#include "BelosTpetraAdapter.hpp"
+#include "BelosBlockGmresSolMgr.hpp"
+#include "BelosPseudoBlockGmresSolMgr.hpp"
 
 // ****************************************************************************
 // BEGIN RUN ROUTINE
@@ -105,22 +104,22 @@ int run(int argc, char *argv[]) {
   using Teuchos::ParameterList;
 
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
-  const auto Comm = Tpetra::getDefaultComm();
-  const int MyPID = Comm->getRank();
+  const auto comm = Tpetra::getDefaultComm();
+  const int myPID = comm->getRank();
 
   bool verbose = false;
   bool success = true;
 
   try {
-    bool proc_verbose = false;
+    bool procVerbose = false;
     bool debug = false;
     bool pseudo = false;       // use pseudo-block or block gmres
     int frequency = -1;        // frequency of status test output
-    int blocksize = 1;         // blocksize
+    int blockSize = 1;         // blockSize
     int numrhs = 1;            // number of right-hand sides to solve for
-    int maxiters = -1;         // maximum number of iterations allowed per linear system
-    int maxsubspace = 50;      // maximum number of blocks the solver can use for the subspace
-    int maxrestarts = 15;      // number of restarts allowed
+    int maxIters = -1;         // maximum number of iterations allowed per linear system
+    int maxSubspace = 50;      // maximum number of blocks the solver can use for the subspace
+    int maxRestarts = 15;      // number of restarts allowed
     int nx = 10;               // number of discretization points in each direction
     MT tol = 1.0e-5;           // relative residual tolerance
     std::string ortho = "DGKS";// orthogonalization method
@@ -132,10 +131,10 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
     cmdp.setOption("tol",&tol,"Relative residual tolerance used by GMRES solver.");
     cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
-    cmdp.setOption("block-size",&blocksize,"Block size used by GMRES.");
-    cmdp.setOption("max-iters",&maxiters,"Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
-    cmdp.setOption("max-subspace",&maxsubspace,"Maximum number of blocks the solver can use for the subspace.");
-    cmdp.setOption("max-restarts",&maxrestarts,"Maximum number of restarts allowed for GMRES solver.");
+    cmdp.setOption("block-size",&blockSize,"Block size used by GMRES.");
+    cmdp.setOption("max-iters",&maxIters,"Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
+    cmdp.setOption("max-subspace",&maxSubspace,"Maximum number of blocks the solver can use for the subspace.");
+    cmdp.setOption("max-restarts",&maxRestarts,"Maximum number of restarts allowed for GMRES solver.");
     cmdp.setOption("nx",&nx,"Number of discretization points in each direction of 3D Laplacian.");
     cmdp.setOption("ortho",&ortho,"Orthogonalization being used by GMRES solver.");
     if (cmdp.parse(argc,argv) != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
@@ -144,9 +143,9 @@ int run(int argc, char *argv[]) {
     if (!verbose)
       frequency = -1;  // reset frequency if test is not verbose
 
-    proc_verbose = ( verbose && (MyPID==0) ); // Only print on the zero processor
+    procVerbose = ( verbose && (myPID==0) ); // Only print on the zero processor
 
-    if (proc_verbose) {
+    if (procVerbose) {
       std::cout << Belos::Belos_Version() << std::endl << std::endl;
     }
 
@@ -162,7 +161,7 @@ int run(int argc, char *argv[]) {
     GaleriList.set ("ny", nx);
     GaleriList.set ("nz", nx);
 
-    auto Map = RCP{Galeri::Xpetra::CreateMap<ST,GO,tmap_t>("Cartesian3D", Comm, GaleriList)};
+    auto Map = RCP{Galeri::Xpetra::CreateMap<ST,GO,tmap_t>("Cartesian3D", comm, GaleriList)};
     auto GaleriProblem = Galeri::Xpetra::BuildProblem<ST,LO,GO,tmap_t,tcrsmatrix_t,MV>("Laplace3D", Map, GaleriList);
 
     // Create matrix from problem
@@ -179,15 +178,15 @@ int run(int argc, char *argv[]) {
     // ********Other information used by block solver***********
     // *****************(can be user specified)******************
 
-    const int NumGlobalElements = B->getGlobalLength();
-    if (maxiters == -1)
-      maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
+    const int numGlobalElements = B->getGlobalLength();
+    if (maxIters == -1)
+      maxIters = numGlobalElements/blockSize - 1; // maximum number of iterations to run
 
     ParameterList belosList;
-    belosList.set( "Num Blocks", maxsubspace);             // Maximum number of blocks in Krylov factorization
-    belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
-    belosList.set( "Maximum Iterations", maxiters );       // Maximum number of iterations allowed
-    belosList.set( "Maximum Restarts", maxrestarts );      // Maximum number of restarts allowed
+    belosList.set( "Num Blocks", maxSubspace);             // Maximum number of blocks in Krylov factorization
+    belosList.set( "Block Size", blockSize );              // BlockSize to be used by iterative solver
+    belosList.set( "Maximum Iterations", maxIters );       // Maximum number of iterations allowed
+    belosList.set( "Maximum Restarts", maxRestarts );      // Maximum number of restarts allowed
     belosList.set( "Convergence Tolerance", tol );         // Relative convergence tolerance requested
     belosList.set( "Orthogonalization", ortho );           // Orthogonalization used by iterative solver
     int verbosity = Belos::Errors + Belos::Warnings;
@@ -205,7 +204,7 @@ int run(int argc, char *argv[]) {
     Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     bool set = problem.setProblem();
     if (set == false) {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
@@ -216,20 +215,20 @@ int run(int argc, char *argv[]) {
 
     // Create an iterative solver manager.
     RCP< Belos::SolverManager<ST,MV,OP> > newSolver;
-    if (pseudo && (blocksize == 1))
+    if (pseudo && (blockSize == 1))
       newSolver = rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)));
     else
       newSolver = rcp( new Belos::BlockGmresSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)));
 
     // **********Print out information about problem*******************
 
-    if (proc_verbose) {
+    if (procVerbose) {
       std::cout << std::endl << std::endl;
-      std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
+      std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numrhs << std::endl;
-      std::cout << "Block size used by solver: " << blocksize << std::endl;
-      std::cout << "Max number of restarts allowed: " << maxrestarts << std::endl;
-      std::cout << "Max number of Gmres iterations per linear system: " << maxiters << std::endl;
+      std::cout << "Block size used by solver: " << blockSize << std::endl;
+      std::cout << "Max number of restarts allowed: " << maxRestarts << std::endl;
+      std::cout << "Max number of Gmres iterations per linear system: " << maxIters << std::endl;
       std::cout << "Relative residual tolerance: " << tol << std::endl;
       std::cout << std::endl;
     }
@@ -239,22 +238,22 @@ int run(int argc, char *argv[]) {
 
     // Get the number of iterations for this solve.
     int numIters = newSolver->getNumIters();
-    if (proc_verbose)
+    if (procVerbose)
       std::cout << "Number of iterations performed for this solve: " << numIters << std::endl;
 
     // Compute actual residuals.
     bool badRes = false;
-    std::vector<ST> actual_resids( numrhs );
-    std::vector<ST> rhs_norm( numrhs );
+    std::vector<ST> actualResids( numrhs );
+    std::vector<ST> rhsNorm( numrhs );
     MV resid(Map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
-    MVT::MvNorm( resid, actual_resids );
-    MVT::MvNorm( *B, rhs_norm );
-    if (proc_verbose) {
+    MVT::MvNorm( resid, actualResids );
+    MVT::MvNorm( *B, rhsNorm );
+    if (procVerbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
-        ST actRes = actual_resids[i]/rhs_norm[i];
+        ST actRes = actualResids[i]/rhsNorm[i];
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > tol) badRes = true;
       }
@@ -262,10 +261,10 @@ int run(int argc, char *argv[]) {
 
     if (ret!=Belos::Converged || badRes) {
       success = false;
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << "End Result: TEST FAILED" << std::endl;
     } else {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << "End Result: TEST PASSED" << std::endl;
     }
   }
