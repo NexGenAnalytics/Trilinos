@@ -55,28 +55,19 @@
 
 // NOX Library
 #include "NOX.H"
-#include "NOX_Epetra.H"
 #include "NOX_SolverStats.hpp"
 
 // Trilinos Objects
+#include <Tpetra_Core.hpp>
 #include "Teuchos_StandardCatchMacros.hpp"
-#ifdef HAVE_MPI
-#include "Epetra_MpiComm.h"
-#else
-#include "Epetra_SerialComm.h"
-#endif
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_RowMatrix.h"
-#include "Epetra_CrsMatrix.h"
-#include "Epetra_Map.h"
-#include "Epetra_LinearProblem.h"
-#include "AztecOO.h"
+
+// #include "Epetra_LinearProblem.h"
+// #include "AztecOO.h"
 #include "Teuchos_TestingHelpers.hpp"
 
 // User's application specific files
-#include "Problem_Interface.H" // Interface file to NOX
-#include "DennisSchnabel.H"
+#include "Problem_Interface_Tpetra.hpp" // Interface file to NOX
+#include "DennisSchnabelTpetra.hpp"
 
 using namespace std;
 
@@ -85,16 +76,8 @@ int main(int argc, char *argv[])
   int i;
 
   // Initialize MPI
-#ifdef HAVE_MPI
-  (void) MPI_Init (&argc, &argv);
-#endif
-
-  // Create a communicator for Epetra objects
-#ifdef HAVE_MPI
-  Epetra_MpiComm Comm( MPI_COMM_WORLD );
-#else
-  Epetra_SerialComm Comm;
-#endif
+  Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
+  const auto Comm = Tpetra::getDefaultComm();
 
   bool verbose = false;
   if (argc > 1)
@@ -104,8 +87,8 @@ int main(int argc, char *argv[])
   bool success = true;
   try {
     // Get the process ID and the total number of processors
-    int MyPID = Comm.MyPID();
-    int NumProc = Comm.NumProc();
+    const int MyPID = comm->getRank();
+    const int NumProc = comm->getSize();
 
     int NumGlobalElements = 2;  // Hardcoded for D&S Example problem
 
@@ -121,8 +104,8 @@ int main(int argc, char *argv[])
     DennisSchnabel Problem(NumGlobalElements, Comm);
 
     // Get the vector from the Problem
-    Teuchos::RCP<Epetra_Vector> soln = Problem.getSolution();
-    NOX::Epetra::Vector noxSoln(soln, NOX::Epetra::Vector::CreateView);
+    Teuchos::RCP<TVector> soln = Problem.getSolution();
+    // NOX::Epetra::Vector noxSoln(soln, NOX::Epetra::Vector::CreateView);
 
     // Initialize Solution
     if (MyPID==0) {
@@ -204,19 +187,19 @@ int main(int argc, char *argv[])
 
     // Debugging output
 #ifdef HAVE_NOX_DEBUG
-#ifdef HAVE_NOX_EPETRAEXT
-    lsParams.set("Write Linear System", true);
-    lsParams.set("Write Linear System File Prefix", "LinSys_Output_Test");
-#endif
+// #ifdef HAVE_NOX_EPETRAEXT
+//     lsParams.set("Write Linear System", true);
+//     lsParams.set("Write Linear System File Prefix", "LinSys_Output_Test");
+// #endif
 #endif
 
     // Create the interface between the test problem and the nonlinear solver
     Teuchos::RCP<Problem_Interface> interface =
       Teuchos::rcp(new Problem_Interface(Problem));
 
-    // Create the Epetra_RowMatrix.  Uncomment one or more of the following:
-    // 1. User supplied (Epetra_RowMatrix)
-    Teuchos::RCP<Epetra_RowMatrix> A = Problem.getJacobian();
+    // Create the TRowMatrix.  Uncomment one or more of the following:
+    // 1. User supplied (TRowMatrix)
+    Teuchos::RCP<TRowMatrix> A = Problem.getJacobian();
 
     // Create the callback interfaces for filling the residual and Jacbian
     Teuchos::RCP<NOX::Epetra::Interface::Required> iReq = interface;
@@ -248,10 +231,10 @@ int main(int argc, char *argv[])
       NOX::Solver::buildSolver(grpPtr, combo, nlParamsPtr);
     NOX::StatusTest::StatusType status = solver->solve();
 
-    // Get the Epetra_Vector with the final solution from the solver
+    // Get the TVector with the final solution from the solver
     const NOX::Epetra::Group& finalGroup =
         dynamic_cast<const NOX::Epetra::Group&>(solver->getSolutionGroup());
-    const Epetra_Vector& finalSolution =
+    const TVector& finalSolution =
         (dynamic_cast<const NOX::Epetra::Vector&>(finalGroup.getX())).getEpetraVector();
 
     // End Nonlinear Solver **************************************
@@ -324,10 +307,6 @@ int main(int argc, char *argv[])
     }
   }
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
-
-#ifdef HAVE_MPI
-  (void) MPI_Finalize();
-#endif
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 } // end main

@@ -47,12 +47,11 @@
 
 // NOX
 #include "NOX_Common.H"
-#include "Nox_TpetraTypedefs.hpp"
 
-#include "DennisSchnabel.H"
+#include "DennisSchnabelTpetra.hpp"
 
 // Constructor - creates the Tpetra objects (maps and vectors)
-DennisSchnabel::DennisSchnabel(int numGlobalElements, Epetra_Comm& comm) :
+DennisSchnabel::DennisSchnabel(int numGlobalElements, const Teuchos::Comm<int> &comm) :
   flag(F_ONLY),
   soln(NULL),
   rhs(NULL),

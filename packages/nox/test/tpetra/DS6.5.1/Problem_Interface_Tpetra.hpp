@@ -54,11 +54,9 @@
 
 // ---------- Standard Includes ----------
 #include <iostream>
-#include "Epetra_Vector.h"
-#include "Epetra_Operator.h"
-#include "Epetra_RowMatrix.h"
-#include "NOX_Epetra_Interface_Required.H" // base class
-#include "NOX_Epetra_Interface_Jacobian.H" // base class
+#include <NOX_TpetraTypedefs.hpp>
+// #include "NOX_Epetra_Interface_Required.H" // base class
+// #include "NOX_Epetra_Interface_Jacobian.H" // base class
 
 // ---------- Forward Declarations ----------
 class DennisSchnabel;
@@ -71,11 +69,11 @@ public:
   ~Problem_Interface();
 
   //! Compute and return F.  Returns true if computation was successful.
-  bool computeF(const Epetra_Vector& x, Epetra_Vector& FVec,
+  bool computeF(const TVector& x, TVector& FVec,
                 NOX::Epetra::Interface::Required::FillType fillType);
 
   //! Compute an explicit Jacobian.  Returns true if computation was successful.
-  bool computeJacobian(const Epetra_Vector& x, Epetra_Operator& Jac);
+  bool computeJacobian(const TVector& x, TOperator& Jac);
 
   //! Application Operator: Object that points to the user's evaluation routines.
   /*! This is used to point to the actual routines and to store

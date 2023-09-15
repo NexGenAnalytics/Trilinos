@@ -46,8 +46,8 @@
 //@HEADER
 
 // ----------   Includes   ----------
-#include "Problem_Interface.H"
-#include "DennisSchnabel.H"
+#include "Problem_Interface_Tpetra.hpp"
+#include "DennisSchnabelTpetra.hpp"
 
 //-----------------------------------------------------------------------------
 Problem_Interface::Problem_Interface(DennisSchnabel& Problem) :
@@ -57,14 +57,14 @@ Problem_Interface::Problem_Interface(DennisSchnabel& Problem) :
 Problem_Interface::~Problem_Interface()
 { }
 
-bool Problem_Interface::computeF(const Epetra_Vector& x, Epetra_Vector& FVec,
+bool Problem_Interface::computeF(const TVector& x, TVector& FVec,
                      NOX::Epetra::Interface::Required::FillType fillType)
 {
   return problem.evaluate(fillType, &x, &FVec);
 }
 
-bool Problem_Interface::computeJacobian(const Epetra_Vector& x,
-                    Epetra_Operator& Jac)
+bool Problem_Interface::computeJacobian(const TVector& x,
+                    TOperator& Jac)
 {
   return problem.evaluate(NOX::Epetra::Interface::Required::Jac, &x, NULL);
 }
