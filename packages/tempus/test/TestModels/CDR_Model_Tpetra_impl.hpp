@@ -148,7 +148,6 @@ CDR_Model_Tpetra<SC, LO, GO, Node>::CDR_Model_Tpetra(
   Thyra::put_scalar(SC(0.0), x_dot_init.ptr());
   nominalValues_.set_x_dot(x_dot_init);
 
-  printf("CDR_Model_Tpetra::CDR_Model_Tpetra\n");
 }
 
 // Initializers/Accessors
@@ -161,7 +160,7 @@ CDR_Model_Tpetra<SC, LO, GO, Node>::createGraph()
   Teuchos::RCP<Teuchos::FancyOStream> fos =
       Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   auto W_graph = Teuchos::rcp(new tpetra_graph(x_owned_map_, 5));
-  W_graph->describe(*fos,Teuchos::VERB_EXTREME);
+  // W_graph->describe(*fos,Teuchos::VERB_EXTREME);
   W_graph->resumeFill();
 
   auto OverlapNumMyElements = static_cast<LO>(x_ghosted_map_->getLocalNumElements());
@@ -187,7 +186,6 @@ CDR_Model_Tpetra<SC, LO, GO, Node>::createGraph()
   }
   W_graph->fillComplete();
 
-  printf("CDR_Model_Tpetra::createGraph\n");
   return W_graph;
 }
 
@@ -200,14 +198,12 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::set_x0(
   Thyra::DetachedVectorView<SC> x0(x0_);
   x0.sv().values()().assign(x0_in);
 
-    printf("CDR_Model_Tpetra::set_x0\n");
 }
 
 template <typename SC, typename LO, typename GO, typename Node>
 void CDR_Model_Tpetra<SC, LO, GO, Node>::setShowGetInvalidArgs(
     bool showGetInvalidArg) {
   showGetInvalidArg_ = showGetInvalidArg;
-      printf("CDR_Model_Tpetra::setShowGetInvalidArgs\n");
 }
 
 template <typename SC, typename LO, typename GO, typename Node>
@@ -216,7 +212,6 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::set_W_factory(
         &W_factory) {
   W_factory_ = W_factory;
 
-  printf("CDR_Model_Tpetra::set_W_factory\n");
 }
 
 // Public functions overridden from ModelEvaluator
@@ -224,21 +219,18 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::set_W_factory(
 template <typename SC, typename LO, typename GO, typename Node>
 Teuchos::RCP<const Thyra::VectorSpaceBase<SC>>
 CDR_Model_Tpetra<SC, LO, GO, Node>::get_x_space() const {
-  printf("CDR_Model_Tpetra::get_x_space\n");
   return x_space_;
 }
 
 template <typename SC, typename LO, typename GO, typename Node>
 Teuchos::RCP<const Thyra::VectorSpaceBase<SC>>
 CDR_Model_Tpetra<SC, LO, GO, Node>::get_f_space() const {
-  printf("CDR_Model_Tpetra::get_f_space\n");
   return f_space_;
 }
 
 template <typename SC, typename LO, typename GO, typename Node>
 Thyra::ModelEvaluatorBase::InArgs<SC>
 CDR_Model_Tpetra<SC, LO, GO, Node>::getNominalValues() const {
-  printf("CDR_Model_Tpetra::getNominalValues\n");
   return nominalValues_;
 }
 
@@ -254,7 +246,6 @@ CDR_Model_Tpetra<SC, LO, GO, Node>::create_W() const {
   auto matrix = this->create_W_op();
   auto W = Thyra::linearOpWithSolve<SC>(*W_factory, matrix);
 
-  printf("CDR_Model_Tpetra::create_W\n");
   return W;
 }
 
@@ -263,7 +254,6 @@ Teuchos::RCP<Thyra::LinearOpBase<SC>>
 CDR_Model_Tpetra<SC, LO, GO, Node>::create_W_op() const {
   auto W_tpetra = Teuchos::rcp(new tpetra_matrix(W_graph_));
 
-  printf("CDR_Model_Tpetra::create_W_op\n");
   return Thyra::tpetraLinearOp<SC, LO, GO, Node>(f_space_, x_space_, W_tpetra);
 }
 
@@ -275,21 +265,18 @@ CDR_Model_Tpetra<SC, LO, GO, Node>::create_W_prec() const {
 
   prec->initializeRight(W_op);
 
-  printf("CDR_Model_Tpetra::create_W_prec\n");
   return prec;
 }
 
 template <typename SC, typename LO, typename GO, typename Node>
 Teuchos::RCP<const Thyra::LinearOpWithSolveFactoryBase<SC>>
 CDR_Model_Tpetra<SC, LO, GO, Node>::get_W_factory() const {
-  printf("CDR_Model_Tpetra::get_W_factory\n");
   return W_factory_;
 }
 
 template <typename SC, typename LO, typename GO, typename Node>
 Thyra::ModelEvaluatorBase::InArgs<SC>
 CDR_Model_Tpetra<SC, LO, GO, Node>::createInArgs() const {
-  printf("CDR_Model_Tpetra::createInArgs\n");
   return prototypeInArgs_;
 }
 
@@ -298,7 +285,6 @@ CDR_Model_Tpetra<SC, LO, GO, Node>::createInArgs() const {
 template <typename SC, typename LO, typename GO, typename Node>
 Thyra::ModelEvaluatorBase::OutArgs<SC>
 CDR_Model_Tpetra<SC, LO, GO, Node>::createOutArgsImpl() const {
-  printf("CDR_Model_Tpetra::createOutArgsImpl\n");
   return prototypeOutArgs_;
 }
 
@@ -425,7 +411,7 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::evalModelImpl(
           auto row = x_ghosted_map_->getGlobalElement(ne + i);
           // printf("Proc=%d GlobalRow=%d LocalRow=%d Owned=%d\n",
           //      getRank, row, ne+i,x_owned_map_.getGlobalElement(row));
-          if (x_owned_map_->getGlobalElement(row)) {
+          if (x_owned_map_->isNodeGlobalElement(row)) {
             if (nonnull(f)) {
               {
                 auto fView = f->getLocalViewHost(Tpetra::Access::ReadWrite);
@@ -452,7 +438,7 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::evalModelImpl(
           // Loop over Trial Functions
           if (nonnull(J)) {
             for (int j = 0; j < 2; j++) {
-              if (x_owned_map_->getGlobalElement(row)) {
+              if (x_owned_map_->isNodeGlobalElement(row)) {
                 auto column = x_ghosted_map_->getGlobalElement(ne + j);
                 double jac = basis.wt * basis.dz *
                              (alpha * basis.phi[i] * basis.phi[j] // transient
@@ -471,14 +457,16 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::evalModelImpl(
                 Teuchos::ArrayView<GO> colIndices(
                     &column, 1); // assuming int as the GlobalOrdinal type
 
+                J->resumeFill();
                 J->sumIntoGlobalValues(rowIndex[0], colIndices, values);
+                J->fillComplete();
               }
             }
           }
           if (nonnull(M_inv)) {
             M_inv->resumeFill();
             for (int j = 0; j < 2; j++) {
-              if (x_owned_map_->getGlobalElement(row)) {
+              if (x_owned_map_->isNodeGlobalElement(row)) {
                 auto column = x_ghosted_map_->getGlobalElement(ne + j);
                 // The prec will be the diagonal of J. No need to assemble the
                 // other entries
@@ -544,12 +532,13 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::evalModelImpl(
 
       auto &diag = *J_diagonal_;
 
-      diag.describe(*fos,Teuchos::VERB_EXTREME);
+      // diag.describe(*fos,Teuchos::VERB_EXTREME);
       M_inv->getLocalDiagCopy(diag);
 
-      diag.describe(*fos,Teuchos::VERB_EXTREME);
+      // diag.describe(*fos,Teuchos::VERB_EXTREME);
 
       diag.reciprocal(diag);
+
       M_inv->rightScale(diag);
       M_inv->rightScale(diag);
 
@@ -572,13 +561,10 @@ void CDR_Model_Tpetra<SC, LO, GO, Node>::evalModelImpl(
       //   }
       // }
       // M_inv->replaceGlobalValues (idOfFirstRow, rowinds, rowvals);
-
-      // M_inv->fillComplete();
-      M_inv->describe(*fos,Teuchos::VERB_EXTREME);
+     //  M_inv->describe(*fos,Teuchos::VERB_EXTREME);
     }
 
     TEUCHOS_ASSERT(ierr > -1);
-    printf("CDR_Model_Tpetra::evalModelImpl\n");
   }
 }
 
