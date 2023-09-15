@@ -46,11 +46,6 @@
 //
 // NOTE: No preconditioner is used in this example.
 //
-// Belos
-#include "BelosConfigDefs.hpp"
-#include "BelosLinearProblem.hpp"
-#include "BelosPseudoBlockCGSolMgr.hpp"
-#include "BelosTpetraTestFramework.hpp"
 
 // Tpetra
 #include <Tpetra_Map.hpp>
@@ -66,6 +61,12 @@
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_CommandLineProcessor.hpp"
+
+// Belos
+#include "BelosConfigDefs.hpp"
+#include "BelosLinearProblem.hpp"
+#include "BelosPseudoBlockCGSolMgr.hpp"
+#include "BelosTpetraTestFramework.hpp"
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {

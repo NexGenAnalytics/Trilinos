@@ -48,12 +48,6 @@
 // NOTE: No preconditioner is used in this example.
 //
 
-// Belos
-#include "BelosConfigDefs.hpp"
-#include "BelosBlockCGSolMgr.hpp"
-#include "BelosLinearProblem.hpp"
-#include "BelosTpetraTestFramework.hpp"
-
 // Tpetra
 #include <Tpetra_Map.hpp>
 #include <Tpetra_Core.hpp>
@@ -69,10 +63,16 @@
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_CommandLineProcessor.hpp"
 
+// Belos
+#include "BelosConfigDefs.hpp"
+#include "BelosBlockCGSolMgr.hpp"
+#include "BelosLinearProblem.hpp"
+#include "BelosTpetraTestFramework.hpp"
+
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
-  //
+
   using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
@@ -92,7 +92,7 @@ int run(int argc, char *argv[]) {
   using Teuchos::RCP;
   using Teuchos::rcp;
   using Teuchos::ParameterList;
-  //
+
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
   const auto Comm = Tpetra::getDefaultComm();
   const int MyPID = Comm->getRank();
@@ -100,11 +100,11 @@ int run(int argc, char *argv[]) {
   bool verbose = false;
   bool success = true;
   try {
-    bool proc_verbose = false;
+    bool procVerbose = false;
     int frequency = -1;        // frequency of status test output.
-    int blocksize = 1;         // blocksize
+    int blockSize = 1;         // blockSize
     int numrhs = 1;            // number of right-hand sides to solve for
-    int maxiters = -1;         // maximum number of iterations allowed per linear system
+    int maxIters = -1;         // maximum number of iterations allowed per linear system
     std::string filename("bcsstk14.hb");
     MT tol = 1.0e-5;           // relative residual tolerance
 
@@ -114,21 +114,33 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("filename",&filename,"Filename for test matrix.  Acceptable file extensions: *.hb,*.mtx,*.triU,*.triS");
     cmdp.setOption("tol",&tol,"Relative residual tolerance used by CG solver.");
     cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
-    cmdp.setOption("block-size",&blocksize,"Block size used by CG.");
-    cmdp.setOption("max-iters",&maxiters,"Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
+    cmdp.setOption("block-size",&blockSize,"Block size used by CG.");
+    cmdp.setOption("max-iters",&maxIters,"Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
     if (cmdp.parse(argc,argv) != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
       return -1;
     }
     if (!verbose)
       frequency = -1; // reset frequency if test is not verbose
 
-    proc_verbose = verbose && (MyPID==0);  /* Only print on the zero processor */
-    //
+    procVerbose = verbose && (MyPID==0);  /* Only print on the zero processor */
+
     // Get the problem
-    //
     Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( Comm );
     RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
     RCP<const tmap_t> Map = A->getDomainMap();
+
+    // // For debugging
+    // Teuchos::RCP<Teuchos::FancyOStream> outStream =
+    //     Teuchos::VerboseObjectBase::getDefaultOStream();
+    // Teuchos::EVerbosityLevel v=Teuchos::VERB_EXTREME;
+
+    // // print map
+    // std::cout << "================== PRINTING MAP ==================" << std::endl;
+    // Map->describe(*outStream,v);
+    // std::cout << "====================== DONE ======================" << std::endl;
+
+    // // print A
+    // // A->describe(*outStream,v);
 
     // Create initial vectors
     RCP<MV> B, X;
@@ -137,17 +149,19 @@ int run(int argc, char *argv[]) {
     B = rcp( new MV(Map,numrhs) );
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
-    //
+
     // ********Other information used by block solver************
     // *****************(can be user specified)******************
-    //
-    const int NumGlobalElements = B->getGlobalLength();
-    if (maxiters == -1)
-      maxiters = NumGlobalElements/blocksize - 1; // maximum number of iterations to run
+
+    const int numGlobalElements = B->getGlobalLength();
+    std::cout << "numGlobalElements: " << numGlobalElements << std::endl;
+
+    if (maxIters == -1)
+      maxIters = numGlobalElements/blockSize - 1; // maximum number of iterations to run
     //
     ParameterList belosList;
-    belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
-    belosList.set( "Maximum Iterations", maxiters );       // Maximum number of iterations allowed
+    belosList.set( "Block Size", blockSize );              // BlockSize to be used by iterative solver
+    belosList.set( "Maximum Iterations", maxIters );       // Maximum number of iterations allowed
     belosList.set( "Convergence Tolerance", tol );         // Relative convergence tolerance requested
     if (verbose) {
       belosList.set( "Verbosity", Belos::Errors + Belos::Warnings +
@@ -157,58 +171,53 @@ int run(int argc, char *argv[]) {
     }
     else
       belosList.set( "Verbosity", Belos::Errors + Belos::Warnings );
-    //
+
     // Construct an unpreconditioned linear problem instance.
-    //
     Belos::LinearProblem<ST,MV,OP> problem( A, X, B );
     bool set = problem.setProblem();
     if (set == false) {
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
-    //
+
     // Create an iterative solver manager.
-    //
     RCP< Belos::BlockCGSolMgr<ST,MV,OP> > newSolver
       = rcp( new Belos::BlockCGSolMgr<ST,MV,OP>(rcp(&problem,false), rcp(&belosList,false)) );
-    //
+
     // **********Print out information about problem*******************
-    //
-    if (proc_verbose) {
+
+    if (procVerbose) {
       std::cout << std::endl << std::endl;
-      std::cout << "Dimension of matrix: " << NumGlobalElements << std::endl;
+      std::cout << "Dimension of matrix: " << numGlobalElements << std::endl;
       std::cout << "Number of right-hand sides: " << numrhs << std::endl;
-      std::cout << "Max number of iterations allowed: " << maxiters << std::endl;
-      std::cout << "Block size used by solver: " << blocksize << std::endl;
+      std::cout << "Max number of iterations allowed: " << maxIters << std::endl;
+      std::cout << "Block size used by solver: " << blockSize << std::endl;
       std::cout << "Relative residual tolerance: " << tol << std::endl;
       std::cout << std::endl;
     }
-    //
+
     // Perform solve
-    //
     Belos::ReturnType ret = newSolver->solve();
-    //
+
     // Get the number of iterations for this solve.
-    //
     int numIters = newSolver->getNumIters();
-    if (proc_verbose)
+    if (procVerbose)
       std::cout << "Number of iterations performed for this solve: " << numIters << std::endl;
-    //
+
     // Compute actual residuals.
-    //
     bool badRes = false;
-    std::vector<ST> actual_resids( numrhs );
-    std::vector<ST> rhs_norm( numrhs );
+    std::vector<ST> actualResids( numrhs );
+    std::vector<ST> rhsNorm( numrhs );
     MV resid(Map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
-    MVT::MvNorm( resid, actual_resids );
-    MVT::MvNorm( *B, rhs_norm );
-    if (proc_verbose) {
+    MVT::MvNorm( resid, actualResids );
+    MVT::MvNorm( *B, rhsNorm );
+    if (procVerbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
-        ST actRes = actual_resids[i]/rhs_norm[i];
+        ST actRes = actualResids[i]/rhsNorm[i];
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > tol) badRes = true;
       }
@@ -216,11 +225,11 @@ int run(int argc, char *argv[]) {
 
     if (ret!=Belos::Converged || badRes) {
       success = false;
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "ERROR:  Belos did not converge!" << std::endl;
     } else {
       success = true;
-      if (proc_verbose)
+      if (procVerbose)
         std::cout << std::endl << "SUCCESS:  Belos converged!" << std::endl;
     }
   }
