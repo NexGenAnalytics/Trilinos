@@ -247,6 +247,6 @@ int run(int argc, char *argv[]){
 
 int main(int argc, char *argv[]) {
   // run with different scalar types
-  run<double>(argc, argv);
-  // run<float>(argc, argv);
+  return run<double>(argc, argv);
+  // return run<float>(argc, argv);
 }
