@@ -78,14 +78,14 @@ class DennisSchnabel {
 public:
 
   // Constructor
-  DennisSchnabel(int NumGlobalElements, const Teuchos::Comm<int> &Comm);
+  DennisSchnabel(int NumGlobalElements, Teuchos::RCP< const Teuchos::Comm<int> > &Comm);
 
   // Destructor
   ~DennisSchnabel();
 
   // Evaluates the function (RHS) and/or the Jacobian using the solution
   // values in solnVector.
-  bool evaluate( NOX::Epetra::Interface::Required::FillType fillType,
+  bool evaluate( Tpetra::CombineMode fillType, // CWS: check
                  const TVector *solnVector, TVector *rhsVector);
 
   // Return a reference to the TVector with the initial guess
@@ -112,7 +112,7 @@ private:
   TVector *rhs;
   TCrsGraph *AA;
   Teuchos::RCP<TCrsMatrix> A;
-  const Teuchos::Comm<int> *Comm;
+  Teuchos::RCP< const Teuchos::Comm<int> > Comm;
 
   int MyPID;              // Process number
   int NumProc;            // Total number of processes

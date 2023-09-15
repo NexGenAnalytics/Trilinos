@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 
     // Identify the test problem
     if (printing.isPrintType(NOX::Utils::TestDetails))
-      std::cout << "Starting epetra/DS6.5.1/DS_6_5_1.exe" << std::endl;
+      std::cout << "Starting tpetra/DS6.5.1/DS_6_5_1.exe" << std::endl;
 
     // Identify processor information
 #ifdef HAVE_MPI
@@ -187,10 +187,8 @@ int main(int argc, char *argv[])
 
     // Debugging output
 #ifdef HAVE_NOX_DEBUG
-// #ifdef HAVE_NOX_EPETRAEXT
-//     lsParams.set("Write Linear System", true);
-//     lsParams.set("Write Linear System File Prefix", "LinSys_Output_Test");
-// #endif
+    lsParams.set("Write Linear System", true);
+    lsParams.set("Write Linear System File Prefix", "LinSys_Output_Test");
 #endif
 
     // Create the interface between the test problem and the nonlinear solver
@@ -232,10 +230,10 @@ int main(int argc, char *argv[])
     NOX::StatusTest::StatusType status = solver->solve();
 
     // Get the TVector with the final solution from the solver
-    const NOX::Epetra::Group& finalGroup =
-        dynamic_cast<const NOX::Epetra::Group&>(solver->getSolutionGroup());
+    const NOX::Thyra::Group& finalGroup =
+        dynamic_cast<const NOX::Thyra::Group&>(solver->getSolutionGroup());
     const TVector& finalSolution =
-        (dynamic_cast<const NOX::Epetra::Vector&>(finalGroup.getX())).getEpetraVector();
+        (dynamic_cast<const NOX::Thyra::Vector&>(finalGroup.getX())).getTetraVector();
 
     // End Nonlinear Solver **************************************
 
@@ -250,10 +248,10 @@ int main(int argc, char *argv[])
     // Print solution
     char file_name[25];
     FILE *ifp;
-    int NumMyElements = soln->Map().NumMyElements();
+    int numLocalElements = soln->Map().getNumLocalElements();
     (void) sprintf(file_name, "output.%d",MyPID);
     ifp = fopen(file_name, "w");
-    for (i=0; i<NumMyElements; i++)
+    for (i=0; i<numLocalElements; i++)
       fprintf(ifp, "%d  %E\n", soln->Map().MinMyGID()+i, finalSolution[i]);
     fclose(ifp);
 

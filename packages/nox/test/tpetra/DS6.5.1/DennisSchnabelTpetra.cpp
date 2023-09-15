@@ -51,7 +51,7 @@
 #include "DennisSchnabelTpetra.hpp"
 
 // Constructor - creates the Tpetra objects (maps and vectors)
-DennisSchnabel::DennisSchnabel(int numGlobalElements, const Teuchos::Comm<int> &comm) :
+DennisSchnabel::DennisSchnabel(int numGlobalElements, Teuchos::RCP<const Teuchos::Comm<int> > &comm) :
   flag(F_ONLY),
   soln(NULL),
   rhs(NULL),
@@ -61,15 +61,15 @@ DennisSchnabel::DennisSchnabel(int numGlobalElements, const Teuchos::Comm<int> &
 
   // Commonly used variables
   int i;
-  MyPID = Comm->MyPID();      // Process ID
-  NumProc = Comm->NumProc();  // Total number of processes
+  MyPID = Comm->getRank();      // Process ID
+  NumProc = Comm->getSize();    // Total number of processes
 
   // Construct a Source Map that puts approximately the same
   // Number of equations on each processor in uniform global ordering
   StandardMap = new TMap(NumGlobalElements, 0, *Comm);
 
   // Get the number of elements owned by this processor
-  NumMyElements = StandardMap->NumMyElements();
+  LocalNumElements = StandardMap->getLocalNumElements();
 
   // Construct an overlaped map for the fill calls **********************
   /* The overlap map is needed for multiprocessor jobs.  The unknowns
@@ -86,13 +86,13 @@ DennisSchnabel::DennisSchnabel(int numGlobalElements, const Teuchos::Comm<int> &
   }
   else {
 
-    int OverlapNumMyElements = 2;
+    int OverlapLocalNumElements = 2;
     int OverlapMyGlobalElements[2];
 
-    for (i = 0; i < OverlapNumMyElements; i ++)
+    for (i = 0; i < OverlapLocalNumElements; i ++)
       OverlapMyGlobalElements[i] = i;
 
-    OverlapMap = new TMap(-1, OverlapNumMyElements,
+    OverlapMap = new TMap(-1, OverlapLocalNumElements,
                 OverlapMyGlobalElements, 0, *Comm);
   } // End Overlap map construction *************************************
 
@@ -109,7 +109,7 @@ DennisSchnabel::DennisSchnabel(int numGlobalElements, const Teuchos::Comm<int> &
 
   // Transform the global matrix coordinates to local so the matrix can
   // be operated upon.
-  A->FillComplete();
+  A->fillComplete();
 }
 
 // Destructor
@@ -123,7 +123,7 @@ DennisSchnabel::~DennisSchnabel()
 
 // Matrix and Residual Fills
 bool DennisSchnabel::evaluate(
-             NOX::Epetra::Interface::Required::FillType fillType,
+             Tpetra::CombineMode fillType, // CWS: check
              const TVector* soln,
              TVector* tmp_rhs)
 {
@@ -139,13 +139,13 @@ bool DennisSchnabel::evaluate(
 
   // Export Solution to Overlap vector so we have all unknowns required
   // for function and Jacobian evaluations.
-  u.Import(*soln, *Importer, Insert);
+  u.doImport(*soln, *Importer, Insert);
 
   // Begin F fill
   if((flag == F_ONLY) || (flag == ALL)) {
 
     // Zero out the F vector
-    rhs->PutScalar(0.0);
+    rhs->putScalar(0.0);
 
     // Processor 0 always fills the first equation.
     if (MyPID==0) {
@@ -174,26 +174,26 @@ bool DennisSchnabel::evaluate(
   if((flag == MATRIX_ONLY) || (flag == ALL)) {
 
     // Zero out Jacobian
-    A->PutScalar(0.0);
+    A->putScalar(0.0);
 
     if (MyPID==0) {
       // Processor 0 always fills the first equation.
       jac[0] = 2.*u[0];
       jac[1] = 2.*u[1];
-      A->ReplaceGlobalValues(0, 2, jac, column);
+      A->replaceGlobalValues(0, 2, jac, column); // CWS: these won't work initially
 
       // If it's a single processor job, fill the second equation on proc 0.
       if (NumProc==1) {
     jac[0] = exp(u[0]-1.);
     jac[1] = 3.*u[1]*u[1];
-    A->ReplaceGlobalValues(1, 2, jac, column);
+    A->replaceGlobalValues(1, 2, jac, column); // CWS: these won't work initially
       }
     }
     // Multiprocessor job puts the second equation on processor 1.
     else {
       jac[0] = exp(u[0]-1.);
       jac[1] = 3.*u[1]*u[1];
-      A->ReplaceGlobalValues(1, 2, jac, column);
+      A->replaceGlobalValues(1, 2, jac, column); // CWS: these won't work initially
     }
   }
 
@@ -204,7 +204,7 @@ bool DennisSchnabel::evaluate(
   Comm->Barrier();
 
   // Transform matrix so it can be operated upon.
-  A->FillComplete();
+  A->fillComplete();
 
   return true;
 }
@@ -227,22 +227,22 @@ TCrsGraph& DennisSchnabel::generateGraph(TCrsGraph& AA)
   if (MyPID==0) {
     index[0]=0;
     index[1]=1;
-    AA.InsertGlobalIndices(0, 2, index);
+    AA.insertGlobalIndices(0, 2, index); // CWS: these will not work at first
 
     if (NumProc==1) {
       index[0]=0;
       index[1]=1;
-      AA.InsertGlobalIndices(1, 2, index);
+      AA.insertGlobalIndices(1, 2, index); // CWS: these will not work at first
     }
   } else {
     index[0]=0;
     index[1]=1;
-    AA.InsertGlobalIndices(1, 2, index);
+    AA.insertGlobalIndices(1, 2, index); // CWS: these will not work at first
   }
 
   delete [] index;
 
-  AA.FillComplete();
+  AA.fillComplete();
 //   AA.SortIndices();
 //   AA.RemoveRedundantIndices();
   return AA;

@@ -55,22 +55,23 @@
 // ---------- Standard Includes ----------
 #include <iostream>
 #include <NOX_TpetraTypedefs.hpp>
+
+#include "NOX_Thyra_MatrixFreeJacobianOperator.hpp"
+
 // #include "NOX_Epetra_Interface_Required.H" // base class
 // #include "NOX_Epetra_Interface_Jacobian.H" // base class
 
 // ---------- Forward Declarations ----------
 class DennisSchnabel;
 
-class  Problem_Interface : public NOX::Epetra::Interface::Required,
-                           public NOX::Epetra::Interface::Jacobian
+class  Problem_Interface : public NOX::Thyra::MatrixFreeJacobianOperator
 {
 public:
   Problem_Interface(DennisSchnabel& Problem);
   ~Problem_Interface();
 
   //! Compute and return F.  Returns true if computation was successful.
-  bool computeF(const TVector& x, TVector& FVec,
-                NOX::Epetra::Interface::Required::FillType fillType);
+  bool computeF(const TVector& x, TVector& FVec);
 
   //! Compute an explicit Jacobian.  Returns true if computation was successful.
   bool computeJacobian(const TVector& x, TOperator& Jac);

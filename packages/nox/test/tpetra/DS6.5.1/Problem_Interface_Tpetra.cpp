@@ -57,16 +57,15 @@ Problem_Interface::Problem_Interface(DennisSchnabel& Problem) :
 Problem_Interface::~Problem_Interface()
 { }
 
-bool Problem_Interface::computeF(const TVector& x, TVector& FVec,
-                     NOX::Epetra::Interface::Required::FillType fillType)
+bool Problem_Interface::computeF(const TVector& x, TVector& FVec)
 {
-  return problem.evaluate(fillType, &x, &FVec);
+  return problem.evaluate(&x, &FVec);
 }
 
 bool Problem_Interface::computeJacobian(const TVector& x,
                     TOperator& Jac)
 {
-  return problem.evaluate(NOX::Epetra::Interface::Required::Jac, &x, NULL);
+  return problem.evaluate(&x, NULL);
 }
 
 //-----------------------------------------------------------------------------
