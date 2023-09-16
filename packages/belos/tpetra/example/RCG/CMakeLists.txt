@@ -10,7 +10,7 @@ IF (${PACKAGE_NAME}_ENABLE_Tpetra)
   ASSERT_DEFINED(Anasazi_SOURCE_DIR)
 
   TRIBITS_COPY_FILES_TO_BINARY_DIR(
-    CopyExampleRCGFiles
+    Tpetra_CopyExampleRCGFiles
     SOURCE_DIR ${Anasazi_SOURCE_DIR}/testmatrices
     SOURCE_FILES bcsstk14.hb
     EXEDEPS RCG_Tpetra_Ex_File
