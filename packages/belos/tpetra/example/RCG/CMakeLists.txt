@@ -1,9 +1,9 @@
-ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_TpetraExt)
+ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Tpetra)
 
-IF (${PACKAGE_NAME}_ENABLE_TpetraExt)    
+IF (${PACKAGE_NAME}_ENABLE_Tpetra)
   TRIBITS_ADD_EXECUTABLE(
     RCG_Tpetra_Ex_File
-    SOURCES RCGTpetraExFile.cpp 
+    SOURCES RCGTpetraExFile.cpp
     COMM serial mpi
   )
 
@@ -12,7 +12,7 @@ IF (${PACKAGE_NAME}_ENABLE_TpetraExt)
   TRIBITS_COPY_FILES_TO_BINARY_DIR(
     CopyExampleRCGFiles
     SOURCE_DIR ${Anasazi_SOURCE_DIR}/testmatrices
-    SOURCE_FILES bcsstk14.hb 
+    SOURCE_FILES bcsstk14.hb
     EXEDEPS RCG_Tpetra_Ex_File
   )
 ENDIF()
