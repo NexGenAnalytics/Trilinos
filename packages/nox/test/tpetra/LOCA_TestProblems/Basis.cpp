@@ -48,8 +48,8 @@
 // ************************************************************************
 //@HEADER
 
-#include "NOX_Common.H"
-#include "Basis.H"
+// #include "NOX_Common.H"
+#include "Basis.hpp"
 #include <cstddef>
 #include <cmath>
 
