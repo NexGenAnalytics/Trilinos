@@ -55,6 +55,7 @@
 
 // NOX Library
 #include "NOX.H"
+#include "NOX_Thyra.H"
 #include "NOX_SolverStats.hpp"
 
 // Trilinos Objects
@@ -71,13 +72,27 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
+template <typename ScalarType>
+int run(int argc, char *argv[])
 {
+
+  using Teuchos::RCP;
+  using Teuchos::rcp;
+  using Teuchos::ParameterList;
+
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NT = typename Tpetra::Map<>::node_type;
+
+  using tvector_t = typename Tpetra::Vector<ST,LO,GO>;
+  using trowmatrix_t = typename Tpetra::RowMatrix<ST,LO,GO,NT>;
+
   int i;
 
   // Initialize MPI
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
-  const auto Comm = Tpetra::getDefaultComm();
+  const auto comm = Tpetra::getDefaultComm();
 
   bool verbose = false;
   if (argc > 1)
@@ -101,11 +116,11 @@ int main(int argc, char *argv[])
     // Create the Problem class.  This creates all required
     // Epetra objects for the problem and allows calls to the
     // function (RHS) and Jacobian evaluation routines.
-    DennisSchnabel Problem(NumGlobalElements, Comm);
+    DennisSchnabel<ST> Problem(NumGlobalElements, comm);
 
     // Get the vector from the Problem
-    Teuchos::RCP<TVector> soln = Problem.getSolution();
-    // NOX::Epetra::Vector noxSoln(soln, NOX::Epetra::Vector::CreateView);
+    Teuchos::RCP<tvector_t> soln = Problem.getSolution();
+    NOX::Thyra::Vector noxSoln(soln);
 
     // Initialize Solution
     if (MyPID==0) {
@@ -157,10 +172,10 @@ int main(int argc, char *argv[])
       std::cout << "Number of processors = " << NumProc << std::endl;
       std::cout << "Print Process = " << MyPID << std::endl;
     }
-    Comm.Barrier();
+    comm->barrier();
     if (printing.isPrintType(NOX::Utils::TestDetails))
       std::cout << "Process " << MyPID << " is alive!" << std::endl;
-    Comm.Barrier();
+    comm->barrier();
 #else
     if (printing.isPrintType(NOX::Utils::TestDetails))
       std::cout << "Serial Run" << std::endl;
@@ -192,25 +207,25 @@ int main(int argc, char *argv[])
 #endif
 
     // Create the interface between the test problem and the nonlinear solver
-    Teuchos::RCP<Problem_Interface> interface =
-      Teuchos::rcp(new Problem_Interface(Problem));
+    Teuchos::RCP< Problem_Interface<ST> > interface =
+      Teuchos::rcp(new Problem_Interface<ST>(Problem));
 
-    // Create the TRowMatrix.  Uncomment one or more of the following:
-    // 1. User supplied (TRowMatrix)
-    Teuchos::RCP<TRowMatrix> A = Problem.getJacobian();
+    // Create the Tpetra::RowMatrix.  Uncomment one or more of the following:
+    // 1. User supplied (trowmatrix_t)
+    Teuchos::RCP<trowmatrix_t> A = Problem.getJacobian();
 
     // Create the callback interfaces for filling the residual and Jacbian
     Teuchos::RCP<NOX::Epetra::Interface::Required> iReq = interface;
     Teuchos::RCP<NOX::Epetra::Interface::Jacobian> iJac = interface;
 
-    // Create the Linear System
-    Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linSys =
-      Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(printParams, lsParams,
-                                iReq, iJac, A, noxSoln));
+    // Create the Linear System // CWS:: FIND REPLACEMENT
+    // Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linSys =
+    //   Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(printParams, lsParams,
+    //                             iReq, iJac, A, noxSoln));
 
-    // Create the Group
-    Teuchos::RCP<NOX::Epetra::Group> grpPtr =
-      Teuchos::rcp(new NOX::Epetra::Group(printParams,
+    // Create the Group // CWS: FIND REPLACEMENT
+    Teuchos::RCP<NOX::Thyra::Group> grpPtr =
+      Teuchos::rcp(new NOX::Thyra::Group(printParams,
                       iReq,
                       noxSoln,
                       linSys));
@@ -229,11 +244,11 @@ int main(int argc, char *argv[])
       NOX::Solver::buildSolver(grpPtr, combo, nlParamsPtr);
     NOX::StatusTest::StatusType status = solver->solve();
 
-    // Get the TVector with the final solution from the solver
+    // Get the tvector_t with the final solution from the solver
     const NOX::Thyra::Group& finalGroup =
         dynamic_cast<const NOX::Thyra::Group&>(solver->getSolutionGroup());
-    const TVector& finalSolution =
-        (dynamic_cast<const NOX::Thyra::Vector&>(finalGroup.getX())).getTetraVector();
+    const tvector_t& finalSolution =
+        (dynamic_cast<const NOX::Thyra::Vector&>(finalGroup.getX())).getThyraVector();
 
     // End Nonlinear Solver **************************************
 
@@ -307,4 +322,9 @@ int main(int argc, char *argv[])
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
-} // end main
+} // end run
+
+int main(int argc, char *argv[]) {
+  return run<double>(argc, argv);
+  // return run<float>(argc, argv);
+}

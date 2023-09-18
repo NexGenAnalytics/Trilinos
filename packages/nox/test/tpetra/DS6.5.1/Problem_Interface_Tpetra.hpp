@@ -46,43 +46,55 @@
 //@HEADER
 
 //-----------------------------------------------------------------------------
-#ifndef Problem_Interface_H
-#define Problem_Interface_H
+#ifndef Problem_Interface_HPP
+#define Problem_Interface_HPP
 
 // Interface to the NLS_PetraGroup to provide for
 // residual and matrix fill routines.
 
 // ---------- Standard Includes ----------
 #include <iostream>
-#include <NOX_TpetraTypedefs.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_Operator.hpp>
+#include <Tpetra_RowMatrix.hpp>
 
-#include "NOX_Thyra_MatrixFreeJacobianOperator.hpp"
+// #include "NOX_Thyra_MatrixFreeJacobianOperator.hpp"
 
 // #include "NOX_Epetra_Interface_Required.H" // base class
 // #include "NOX_Epetra_Interface_Jacobian.H" // base class
 
 // ---------- Forward Declarations ----------
+template <typename ScalarType>
 class DennisSchnabel;
 
-class  Problem_Interface : public NOX::Thyra::MatrixFreeJacobianOperator
-{
-public:
-  Problem_Interface(DennisSchnabel& Problem);
-  ~Problem_Interface();
+template <typename ScalarType>
+class  Problem_Interface/* : public NOX::Thyra::MatrixFreeJacobianOperator */{
 
-  //! Compute and return F.  Returns true if computation was successful.
-  bool computeF(const TVector& x, TVector& FVec);
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
 
-  //! Compute an explicit Jacobian.  Returns true if computation was successful.
-  bool computeJacobian(const TVector& x, TOperator& Jac);
+  using tvector_t     = typename Tpetra::Vector<ST, LO, GO>;
+  using toperator_t   = typename Tpetra::Operator<ST, LO, GO>;
+  using trowmatrix_t  = typename Tpetra::RowMatrix<ST, LO, GO>;
 
-  //! Application Operator: Object that points to the user's evaluation routines.
-  /*! This is used to point to the actual routines and to store
-   *  auxiliary data required by the user's application for function/Jacobian
-   *  evaluations that NOX does not need to know about.  This is a type of
-   *  passdown class design by the application code.
-   */
-  DennisSchnabel& problem;
+  public:
+    Problem_Interface(DennisSchnabel<ST>& Problem);
+    ~Problem_Interface();
+
+    //! Compute and return F.  Returns true if computation was successful.
+    bool computeF(const tvector_t& x, tvector_t& FVec);
+
+    //! Compute an explicit Jacobian.  Returns true if computation was successful.
+    bool computeJacobian(const tvector_t& x, toperator_t& Jac);
+
+    //! Application Operator: Object that points to the user's evaluation routines.
+    /*! This is used to point to the actual routines and to store
+    *  auxiliary data required by the user's application for function/Jacobian
+    *  evaluations that NOX does not need to know about.  This is a type of
+    *  passdown class design by the application code.
+    */
+    DennisSchnabel<ST>& problem;
 };
 
 #endif

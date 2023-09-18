@@ -49,23 +49,29 @@
 #include "Problem_Interface_Tpetra.hpp"
 #include "DennisSchnabelTpetra.hpp"
 
+
 //-----------------------------------------------------------------------------
-Problem_Interface::Problem_Interface(DennisSchnabel& Problem) :
+
+template <typename ST>
+Problem_Interface<ST>::Problem_Interface(DennisSchnabel<ST>& Problem) :
   problem(Problem)
 { }
 
-Problem_Interface::~Problem_Interface()
+template <typename ST>
+Problem_Interface<ST>::~Problem_Interface()
 { }
 
-bool Problem_Interface::computeF(const TVector& x, TVector& FVec)
+template <typename ST>
+bool Problem_Interface<ST>::computeF(const tvector_t& x, tvector_t& FVec)
 {
-  return problem.evaluate(&x, &FVec);
+  return problem.evaluate(&x, &FVec, nullptr);
 }
 
-bool Problem_Interface::computeJacobian(const TVector& x,
-                    TOperator& Jac)
+template <typename ST>
+bool Problem_Interface<ST>::computeJacobian(const tvector_t& x,
+                    toperator_t& Jac)
 {
-  return problem.evaluate(&x, NULL);
+  return problem.evaluate(&x, 0, 0);
 }
 
 //-----------------------------------------------------------------------------

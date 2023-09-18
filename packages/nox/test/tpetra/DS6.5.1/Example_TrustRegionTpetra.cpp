@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
   // Initialize MPI
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
-  const auto Comm = Tpetra::getDefaultComm();
+  const auto comm = Tpetra::getDefaultComm();
 
   bool verbose = false;
   if (argc > 1)
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     // Create the Problem class.  This creates all required
     // Epetra objects for the problem and allows calls to the
     // function (RHS) and Jacobian evaluation routines.
-    DennisSchnabel Problem(NumGlobalElements, Comm);
+    DennisSchnabel Problem(NumGlobalElements, comm);
 
     // Get the vector from the Problem
     Teuchos::RCP<TVector> soln = Problem.getSolution();
@@ -158,10 +158,10 @@ int main(int argc, char *argv[])
       std::cout << "Number of processors = " << NumProc << std::endl;
       std::cout << "Print Process = " << MyPID << std::endl;
     }
-    Comm.Barrier();
+    comm.barrier();
     if (printing.isPrintType(NOX::Utils::TestDetails))
       std::cout << "Process " << MyPID << " is alive!" << std::endl;
-    Comm.Barrier();
+    comm.barrier();
 #else
     if (printing.isPrintType(NOX::Utils::TestDetails))
       std::cout << "Serial Run" << std::endl;
@@ -192,9 +192,9 @@ int main(int argc, char *argv[])
     Teuchos::RCP<Problem_Interface> interface =
       Teuchos::rcp(new Problem_Interface(Problem));
 
-    // Create the TRowMatrix.  Uncomment one or more of the following:
-    // 1. User supplied (TRowMatrix)
-    Teuchos::RCP<TRowMatrix> A = Problem.getJacobian();
+    // Create the Tpetra::RowMatrix.  Uncomment one or more of the following:
+    // 1. User supplied (TPetra::RowMatrix)
+    Teuchos::RCP<trowmatrix_t> A = Problem.getJacobian();
 
     // Create the callback interfaces for filling the residual and Jacbian
     Teuchos::RCP<NOX::Epetra::Interface::Required> iReq = interface;

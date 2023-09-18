@@ -51,7 +51,8 @@
 #include "DennisSchnabelTpetra.hpp"
 
 // Constructor - creates the Tpetra objects (maps and vectors)
-DennisSchnabel::DennisSchnabel(int numGlobalElements, Teuchos::RCP<const Teuchos::Comm<int> > &comm) :
+template typename<ST>
+DennisSchnabel<ST>::DennisSchnabel(int numGlobalElements, Teuchos::RCP<const Teuchos::Comm<int> > &comm) :
   flag(F_ONLY),
   soln(NULL),
   rhs(NULL),
@@ -66,7 +67,7 @@ DennisSchnabel::DennisSchnabel(int numGlobalElements, Teuchos::RCP<const Teuchos
 
   // Construct a Source Map that puts approximately the same
   // Number of equations on each processor in uniform global ordering
-  StandardMap = new TMap(NumGlobalElements, 0, *Comm);
+  StandardMap = new tmap_t(NumGlobalElements, 0, *Comm);
 
   // Get the number of elements owned by this processor
   LocalNumElements = StandardMap->getLocalNumElements();
@@ -82,7 +83,7 @@ DennisSchnabel::DennisSchnabel(int numGlobalElements, Teuchos::RCP<const Teuchos
    */
   // For single processor jobs, the overlap and standard map are the same
   if (NumProc == 1) {
-    OverlapMap = new TMap(*StandardMap);
+    OverlapMap = new tmap_t(*StandardMap);
   }
   else {
 
@@ -92,20 +93,20 @@ DennisSchnabel::DennisSchnabel(int numGlobalElements, Teuchos::RCP<const Teuchos
     for (i = 0; i < OverlapLocalNumElements; i ++)
       OverlapMyGlobalElements[i] = i;
 
-    OverlapMap = new TMap(-1, OverlapLocalNumElements,
+    OverlapMap = new tmap_t(-1, OverlapLocalNumElements,
                 OverlapMyGlobalElements, 0, *Comm);
   } // End Overlap map construction *************************************
 
   // Construct Linear Objects
-  Importer = new TImport(*OverlapMap, *StandardMap);
-  initialSolution = Teuchos::rcp(new TVector(*StandardMap));
-  AA = new TCrsGraph(Copy, *StandardMap, 5);
+  Importer = new timport_t(*OverlapMap, *StandardMap);
+  initialSolution = Teuchos::rcp(new tvector_t(*StandardMap));
+  AA = new tcrsgraph_t(Teuchos::Copy, *StandardMap, 5);
 
   // Allocate the memory for a matrix dynamically (i.e. the graph is dynamic).
   generateGraph(*AA);
 
   // Use the graph AA to create a Matrix.
-  A = Teuchos::rcp(new TCrsMatrix (Copy, *AA));
+  A = Teuchos::rcp(new tcrsmatrix_t (Teuchos::Copy, *AA));
 
   // Transform the global matrix coordinates to local so the matrix can
   // be operated upon.
@@ -113,7 +114,8 @@ DennisSchnabel::DennisSchnabel(int numGlobalElements, Teuchos::RCP<const Teuchos
 }
 
 // Destructor
-DennisSchnabel::~DennisSchnabel()
+template typename<ST>
+DennisSchnabel<ST>::~DennisSchnabel()
 {
   delete AA;
   delete Importer;
@@ -122,10 +124,11 @@ DennisSchnabel::~DennisSchnabel()
 }
 
 // Matrix and Residual Fills
-bool DennisSchnabel::evaluate(
-             Tpetra::CombineMode fillType, // CWS: check
-             const TVector* soln,
-             TVector* tmp_rhs)
+template typename<ST>
+bool DennisSchnabel<ST>::evaluate(
+             /*NOX::Epetra::Interface::Required::FillType fType,*/ // CWS: check
+             const tvector_t* soln,
+             tvector_t* tmp_rhs)
 {
   flag = MATRIX_ONLY;
 
@@ -135,11 +138,11 @@ bool DennisSchnabel::evaluate(
   }
 
   // Create the overlapped solution
-  TVector u(*OverlapMap);
+  tvector_t u(*OverlapMap);
 
   // Export Solution to Overlap vector so we have all unknowns required
   // for function and Jacobian evaluations.
-  u.doImport(*soln, *Importer, Insert);
+  u.doImport(*soln, *Importer, Tpetra::INSERT);
 
   // Begin F fill
   if((flag == F_ONLY) || (flag == ALL)) {
@@ -209,17 +212,20 @@ bool DennisSchnabel::evaluate(
   return true;
 }
 
-Teuchos::RCP<TVector> DennisSchnabel::getSolution()
+template typename<ST>
+Teuchos::RCP<tvector_t> DennisSchnabel<ST>::getSolution()
 {
   return initialSolution;
 }
 
-Teuchos::RCP<TCrsMatrix> DennisSchnabel::getJacobian()
+template typename<ST>
+Teuchos::RCP<tcrsmatrix_t> DennisSchnabel<ST>::getJacobian()
 {
   return A;
 }
 
-TCrsGraph& DennisSchnabel::generateGraph(TCrsGraph& AA)
+template typename<ST>
+tcrsgraph_t& DennisSchnabel::generateGraph<ST>(tcrsgraph_t& AA)
 {
 
   int* index = new int[2];
