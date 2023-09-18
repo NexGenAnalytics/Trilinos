@@ -63,9 +63,9 @@
 //       by counting the numbers of iterations.
 //
 //
-// \author David M. Day
-//
-// \data Last modified 2007 December 11
+// Adapted from PCPGEpetraExFile.cpp by David M. Day (with original comments)
+
+// All preconditioning has been commented out
 
 // Tpetra
 #include <TpetraExt_MatrixMatrix.hpp>
