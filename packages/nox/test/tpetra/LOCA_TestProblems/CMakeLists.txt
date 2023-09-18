@@ -15,7 +15,6 @@ APPEND_SET(HEADERS
 )
 
 APPEND_SET(SOURCES
-  Basis.cpp
 #  Problem_Interface.cpp
 #  Tcubed_FiniteElementProblem.cpp
 #  Pitchfork_FiniteElementProblem.cpp
