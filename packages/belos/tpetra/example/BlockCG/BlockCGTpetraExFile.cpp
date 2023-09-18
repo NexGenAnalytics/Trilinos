@@ -53,6 +53,9 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+// I/O for Harwell-Boeing files
+#define HIDE_TPETRA_INOUT_IMPLEMENTATIONS
+#include <Tpetra_MatrixIO.hpp>
 
 // Teuchos
 #include <Teuchos_RCP.hpp>
@@ -67,7 +70,7 @@
 #include "BelosConfigDefs.hpp"
 #include "BelosBlockCGSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
-#include "BelosTpetraTestFramework.hpp"
+#include "BelosTpetraAdapter.hpp"
 
 
 template <typename ScalarType>
@@ -125,8 +128,12 @@ int run(int argc, char *argv[]) {
     procVerbose = verbose && (MyPID==0);  /* Only print on the zero processor */
 
     // Get the problem
-    Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( Comm );
-    RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
+    // With the following Belos HarwellBoeingReader it fails
+    // Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( Comm );
+    // RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
+    // RCP<const tmap_t> Map = A->getDomainMap();
+    RCP<tcrsmatrix_t> A;
+    Tpetra::Utils::readHBMatrix(filename,Comm,A);
     RCP<const tmap_t> Map = A->getDomainMap();
 
     // // For debugging
