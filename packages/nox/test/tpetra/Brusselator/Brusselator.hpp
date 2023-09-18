@@ -264,10 +264,10 @@ public:
 
     // Create the nodal coordinates
     xptr = Teuchos::rcp(new tvector_t(*StandardNodeMap));
-    double Length= xmax - xmin;
-    dx=Length/((double) NumGlobalNodes-1);
+    ST Length= xmax - xmin;
+    dx=Length/((ST) NumGlobalNodes-1);
     for (i=0; i < NumMyNodes; i++) {
-      (*xptr)[i]=xmin + dx*((double) StandardNodeMap->MinMyGID()+i);
+      (*xptr)[i]=xmin + dx*((ST) StandardNodeMap->MinMyGID()+i);
     }
 
     initializeSoln();
@@ -290,7 +290,7 @@ public:
     // Here we do a sinusoidal perturbation of the unstable
     // steady state.
 
-    double pi = 4.*atan(1.0);
+    ST pi = 4.*atan(1.0);
 
     for (int i=0; i<x.MyLength(); i++) {
       soln[2*i] = 0.6 + 1.e-1*sin(1.0*pi*x[i]);
@@ -349,15 +349,15 @@ public:
     int OverlapNumMyNodes = OverlapNodeMap->NumMyElements();
 
     int row1, row2, column1, column2;
-    double term1, term2;
-    double Dcoeff1 = 0.025;
-    double Dcoeff2 = 0.025;
-    double alpha = 0.6;
-    double beta = 2.0;
-    double jac11, jac12, jac21, jac22;
-    double xx[2];
-    double uu[2*NUMSPECIES] = {0.0}; // Use of the anonymous enum is needed for SGI builds
-    double uuold[2*NUMSPECIES] = {0.0};
+    ST term1, term2;
+    ST Dcoeff1 = 0.025;
+    ST Dcoeff2 = 0.025;
+    ST alpha = 0.6;
+    ST beta = 2.0;
+    ST jac11, jac12, jac21, jac22;
+    ST xx[2];
+    ST uu[2*NUMSPECIES] = {0.0}; // Use of the anonymous enum is needed for SGI builds
+    ST uuold[2*NUMSPECIES] = {0.0};
     Basis basis(NumSpecies);
 
     // Zero out the objects that will be filled
@@ -454,7 +454,7 @@ public:
       }
       if ((flag == MATRIX_ONLY) || (flag == ALL)) {
         int column=0;
-        double jac=1.0;
+        ST jac=1.0;
         A->ReplaceGlobalValues(0, 1, &jac, &column);
         column++;
         A->ReplaceGlobalValues(1, 1, &jac, &column);
@@ -481,7 +481,7 @@ public:
       if ((flag == MATRIX_ONLY) || (flag == ALL)) {
         int row=StandardMap->MaxAllGID() - 1;
         int column = row;
-        double jac = 1.0;
+        ST jac = 1.0;
         A->ReplaceGlobalValues(row++, 1, &jac, &column);
         column++;
         A->ReplaceGlobalValues(row, 1, &jac, &column);

@@ -108,10 +108,10 @@ class Basis
     int NumSpecies;
     // Variables that are calculated at the gauss point
     stdVector phi, dphide;
-    double xx, eta, wt;
+    ScalarType xx, eta, wt;
     stdVector uu, duu;
     stdVector uuold, duuold;
-    double dx;
+    ScalarType dx;
 };
 
 #endif

@@ -12,7 +12,6 @@
 template <typename ScalarType>
 int run(int argc, char *argv[])
 {
-  using Teuchos::Comm;
   using Teuchos::RCP;
   using Teuchos::rcp;
   using Teuchos::ParameterList;
@@ -24,9 +23,9 @@ int run(int argc, char *argv[])
   using tvector_t = typename Tpetra::Vector<ST, LO, GO>;
 
   Teuchos::GlobalMPISession mpiSession(&argc, &argv, &std::cout);
-  RCP<const Comm<int>> comm = Tpetra::getDefaultComm();
-  const int MyPID = rank(*comm);
-  const int NumProc = comm->getSize();
+  auto Comm = Tpetra::getDefaultComm();
+  const int MyPID = Comm->getRank();
+  const int NumProc = Comm->getSize();
 
   bool verbose = true;
   bool success = false;
@@ -54,21 +53,21 @@ int run(int argc, char *argv[])
     // Create the Brusselator problem class. This creates all required
     // Tpetra objects for the problem and allows calls to the
     // function (F) and Jacobian evaluation routines.
-    Brusselator::OverlapType OType = Brusselator::NODES;
-    RCP<Brusselator<double>> Problem = rcp(new Brusselator(NumGlobalNodes, comm, OType));
+    Brusselator<ScalarType>::OverlapType OType = Brusselator<ScalarType>::NODES;                            // AM: TOFIX
+    RCP<Brusselator<ScalarType>> Problem = rcp(new Brusselator<ScalarType>(NumGlobalNodes, Comm, OType));   // AM: TOFIX
 
-    /*
     // Get the vector from the Problem
     RCP<tvector_t> soln = Problem->getSolution();
-    NOX::Epetra::Vector noxSoln(soln, NOX::Epetra::Vector::CreateView);
+    // NOX::Epetra::Vector noxSoln(soln, NOX::Epetra::Vector::CreateView);    // AM: TOFIX
 
     // Begin Nonlinear Solver ************************************
 
     // Create the top level parameter list
     RCP<ParameterList> nlParamsPtr = rcp(new ParameterList);
     Teuchos::ParameterList& nlParams = *(nlParamsPtr.get());
-    */
 
+
+    // AM: TODO below vvvvvv
     // AM: TODO below vvvvvv
 
 
