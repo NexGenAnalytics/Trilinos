@@ -19,6 +19,9 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v3
+      - name: Clear Docker cache
+        run: |
+          docker system prune -af
       - name: CI Variables
         run: echo "DOCKER_TAG=nga-fy23-develop" >> $GITHUB_ENV
       - name: Set up Docker Buildx
@@ -41,8 +44,8 @@ jobs:
         uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
-          name: Artifacts
-          path: /tmp/artifacts/*
+          name: LastTestLog
+          path: /tmp/artifacts/LastTest.log
           if-no-files-found: ignore
       - name: Report Test results
         uses: phoenix-actions/test-reporting@v12
@@ -53,3 +56,5 @@ jobs:
           reporter: java-junit
           output-to: step-summary
           fail-on-error: 'true'
+          list-tests: 'failed'
+          only-summary: 'true'
