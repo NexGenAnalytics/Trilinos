@@ -102,8 +102,6 @@ int run(int argc, char *argv[]) {
   // regular mesh, Q1 finite elements
   //
 
-  using std::cout;
-  using std::endl;
   using Teuchos::ParameterList;
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -179,7 +177,7 @@ int run(int argc, char *argv[]) {
       frequency = -1;  // reset frequency if test is not verbose
 
     //
-    // *************Form the problem*********************
+    // *************Form the problem****************
     //
     int numTimeStep = 4;
     GO numElePerDirection = 14 * comm->getSize();  // 5 -> 20
@@ -277,21 +275,20 @@ int run(int argc, char *argv[]) {
     RHS = Teuchos::rcp_implicit_cast<MV>(vecRHS);
 
     //
-    // ************Construct preconditioner*************
+    // **********Construct preconditioner***********
     //
+
     // Teuchos::ParameterList MLList; // Set MLList for Smoothed Aggregation
+    // ML_Tpetra::SetDefaults("SA",MLList); // reset parameters ML User's Guide
+    // MLList.set("smoother: type","CHEBYSHEV"); // Chebyshev smoother  ... aztec??
+    // MLList.set("smoother: sweeps",3);
+    // MLList.set("smoother: pre or post", "both"); // both pre- and post-smoothing
 
-    // ML_Tpetra::SetDefaults("SA", MLList); // reset parameters ML User's Guide
-    // MLList.set("smoother: type","Chebyshev"); // Chebyshev smoother  ...
-    // aztec?? MLList.set("smoother: sweeps",3); MLList.set("smoother: pre or
-    // post", "both"); // both pre- and post-smoothing
-
-    //
-    // #ifdef HAVE_ML_AMESOS
-    //     MLList.set("coarse: type","Amesos-KLU"); // solve with serial direct
+    // #ifdef HAVE_MUELU_AMESOS2
+    //     MueLuList.set("coarse: type", "KLU2"); // solve with serial direct
     //     solver KLU
     // #else
-    //     MLList.set("coarse: type","Jacobi");     // not recommended
+    //     MLList.set("coarse: type", "Jacobi");     // not recommended
     //     puts("Warning: Iterative coarse grid solve");
     // #endif
 
@@ -305,13 +302,11 @@ int run(int argc, char *argv[]) {
     // RCP<Belos::EpetraPrecOp> belosPrec = rcp( new Belos::EpetraPrecOp( Prec )
     // );
 
-    //
-    // *****Create parameter list for the PCPG solver manager*****
-    //
+    // Create parameter list for the PCPG solver manager
     const int numGlobalElements = RHS->getGlobalLength();
     if (maxIters == -1)
       maxIters = numGlobalElements / blocksize - 1;  // maximum number of iterations to run
-    //
+
     RCP<ParameterList> belosList = rcp(new ParameterList());
     belosList->set("Block Size",
                    blocksize);  // Blocksize to be used by iterative solver
@@ -336,9 +331,8 @@ int run(int argc, char *argv[]) {
         belosList->set("Output Frequency", frequency);
     } else
       belosList->set("Verbosity", Belos::Errors + Belos::Warnings + Belos::FinalSummary);
-    //
-    // *******Construct a preconditioned linear problem********
-    //
+
+    // Construct a preconditioned linear problem
     RCP<LinearProblem> problem = rcp(new LinearProblem(A, LHS, RHS));
 
     // problem->setLeftPrec( prec );
@@ -385,16 +379,14 @@ int run(int argc, char *argv[]) {
       std::vector<ST> rhs_norm(numRhs);
       MVT::MvNorm(*RHS, rhs_norm);
       std::cout << "                  RHS norm is ... " << rhs_norm[0] << std::endl;
-      //
+
       // Perform solve
-      //
       Belos::ReturnType ret = solver->solve();
-      //
+
       // Compute actual residuals.
-      //
       badRes = false;
       std::vector<ST> actual_resids(numRhs);
-      MV resid(map, numRhs);  // Epetra_MultiVector resid(*Map, numRhs);
+      MV resid(map, numRhs);
       OPT::Apply(*A, *LHS, resid);
       MVT::MvAddMv(-1.0, resid, 1.0, *RHS, resid);
       MVT::MvNorm(resid, actual_resids);
