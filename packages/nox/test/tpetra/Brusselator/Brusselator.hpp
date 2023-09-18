@@ -66,14 +66,12 @@
 #include <Tpetra_Import.hpp>
 #include <Tpetra_CrsGraph.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+#include <Tpetra_CombineMode.hpp>
 
 #include "Basis.hpp"
 
 // Flag to tell the evaluate routine what objects to fill
 enum FillType { F_ONLY, MATRIX_ONLY, ALL };
-
-// Flag to tell how to order the unknowns - Currently not used
-enum StoreUnknowns {Interleaved, Staggered};
 
 // Finite Element Problem Class
 template<typename ScalarType>
@@ -96,7 +94,7 @@ public:
 
   // Constructor
   Brusselator(int NumGlobalUnknowns_,
-              const Teuchos::Comm<int> &Comm_,
+              Teuchos::RCP<const Teuchos::Comm<int>> &comm_,
               OverlapType OType_ = ELEMENTS) :
     xmin(0.0),
     xmax(1.0),
@@ -105,13 +103,13 @@ public:
     overlapType(OType_),
     ColumnToOverlapImporter(0),
     rhs(NULL),
-    Comm(&Comm_),
+    Comm(&comm_),
     NumGlobalNodes(NumGlobalUnknowns_)
   {
     // Commonly used variables
     int i;
-    MyPID = rank(Comm);        // Process ID
-    NumProc = Comm.getSize();  // Total number of processes
+    MyPID = Comm->getRank();     // Process ID
+    NumProc = Comm->getSize();  // Total number of processes
 
     // Here we assume a 2-species Brusselator model, ie 2 dofs per node
     // Note that this needs to be echoed in thew anonymous enum for NUMSPECIES.
@@ -122,7 +120,7 @@ public:
     // number of equations on each processor
 
     // Begin by distributing nodes fairly equally
-    StandardNodeMap = new tmap_t(NumGlobalNodes, 0, Comm);
+    StandardNodeMap = new tmap_t(NumGlobalNodes, 0, *Comm);
 
     // Get the number of nodes owned by this processor
     NumMyNodes = StandardNodeMap->NumMyElements();
@@ -152,10 +150,7 @@ public:
         for (i = 0; i < OverlapNumMyNodes; i ++)
           OverlapMyGlobalNodes[i] = OverlapMinMyNodeGID + i;
 
-        OverlapNodeMap = new tmap_t(-1, OverlapNumMyNodes,
-                                  OverlapMyGlobalNodes, 0, Comm);
-
-        // delete [] OverlapMyGlobalNodes; // REMOVE
+        OverlapNodeMap = new tmap_t(-1, OverlapNumMyNodes, OverlapMyGlobalNodes, 0, *Comm);
       }
 
       else { // overlapType == NODES
@@ -176,10 +171,7 @@ public:
           for (i = 0; i < OverlapNumMyNodes; i ++)
           OverlapMyGlobalNodes[i] = OverlapMinMyNodeGID + i;
 
-        OverlapNodeMap = new tmap_t(-1, OverlapNumMyNodes,
-                    OverlapMyGlobalNodes, 0, Comm);
-
-        //delete [] OverlapMyGlobalNodes; // REMOVE
+        OverlapNodeMap = new tmap_t(-1, OverlapNumMyNodes, OverlapMyGlobalNodes, 0, *Comm);
       }
     } // End Overlap node map construction ********************************
 
@@ -195,9 +187,7 @@ public:
                 NumSpecies * StandardNodeMap->GID(i) + k;
 
     StandardMap = new tmap_t(-1, NumMyUnknowns, StandardMyGlobalUnknowns,
-                                  0, Comm);
-
-    // delete [] StandardMyGlobalUnknowns;  // REMOVE
+                                  0, *Comm);
 
     assert(StandardMap->NumGlobalElements() == NumGlobalUnknowns);
 
@@ -213,11 +203,7 @@ public:
           OverlapMyGlobalUnknowns[ NumSpecies * i + k ] =
                   NumSpecies * OverlapNodeMap->GID(i) + k;
 
-      OverlapMap = new tmap_t(-1, OverlapNumMyUnknowns,
-                                  OverlapMyGlobalUnknowns, 0, Comm);
-      
-      //delete [] OverlapMyGlobalUnknowns; // REMOVE
-
+      OverlapMap = new tmap_t(-1, OverlapNumMyUnknowns, OverlapMyGlobalUnknowns, 0, *Comm);
     } // End Overlap unknowns map construction ***************************
 
 
@@ -315,11 +301,12 @@ public:
 
   // Evaluates the function (F) and/or the Jacobian using the solution
   // values in solnVector.
-  bool evaluate(const tvector_t *soln,
+  bool evaluate(/*NOX::Epetra::Interface::Required::FillType fType,*/ // AM: TOFIX
+                const tvector_t *soln,
                 tvector_t *tmp_rhs,
                 tvector_t *tmp_matrix)
   {
-    if( fType == NOX::Epetra::Interface::Required::Jac ) {
+    /*if( fType == Tpetra::Jac ) {*/    // AM: TOFIX
       if( overlapType == NODES ) {
         std::cout << "This problem only works for Finite-Difference Based Jacobians"
             << std::endl << "when overlapping nodes." << std::endl
@@ -327,19 +314,19 @@ public:
         exit(1);
       }
       flag = MATRIX_ONLY;
-    }
-    else {
+    /*} else {*/      // AM: TOFIX
       flag = F_ONLY;
-      if( overlapType == NODES )
-        rhs = new Epetra_Vector(*OverlapMap);
-      else
+      if( overlapType == NODES ){
+        rhs = new tvector_t(*OverlapMap);
+      }else{
         rhs = tmp_rhs;
-    }
+      }
+    /*}*/   // AM: TOFIX
 
     // Create the overlapped solution and position vectors
-    Epetra_Vector u(*OverlapMap);
-    Epetra_Vector uold(*OverlapMap);
-    Epetra_Vector xvec(*OverlapNodeMap);
+    tvector_t u(*OverlapMap);
+    tvector_t uold(*OverlapMap);
+    tvector_t xvec(*OverlapNodeMap);
 
     // Export Solution to Overlap vector
     // If the vector to be used in the fill is already in the Overlap form,
@@ -348,15 +335,14 @@ public:
     // needs to be sent to an OverlapMap (ghosted) vector.  The conditional
     // treatment for the current soution vector arises from use of
     // FD coloring in parallel.
-    uold.Import(*oldSolution, *Importer, Insert);
-    xvec.Import(*xptr, *nodeImporter, Insert);
-    if( (overlapType == ELEMENTS) &&
-        (fType == NOX::Epetra::Interface::Required::FD_Res))
+    uold.doImport(*oldSolution, Importer, Tpetra::INSERT);
+    xvec.doImport(*xptr, *nodeImporter, Tpetra::INSERT);
+    if( (overlapType == ELEMENTS) /*&& (fType == Tpetra::FD_Res)*/)               // AM: TOFIX
       // Overlap vector for solution received from FD coloring, so simply reorder
       // on processor
-      u.Export(*soln, *ColumnToOverlapImporter, Insert);
+      u.Export(*soln, *ColumnToOverlapImporter, Tpetra::INSERT);
     else // Communication to Overlap vector is needed
-      u.Import(*soln, *Importer, Insert);
+      u.doImport(*soln, *Importer, Tpetra::INSERT);
 
     // Declare required variables
     int i,j;
@@ -514,11 +500,11 @@ public:
     }
 
     // Sync up processors to be safe
-    Comm->Barrier();
+    Comm->barrier();
 
     // Do an assemble for overlap nodes
     if( overlapType == NODES )
-      tmp_rhs->Export(*rhs, *Importer, Add);
+      tmp_rhs->Export(*rhs, *Importer, Tpetra::ADD);
 
     //  Comm->Barrier();
     //  std::cout << "Returned tmp_rhs residual vector :\n" << std::endl << *tmp_rhs << std::endl;
@@ -660,20 +646,20 @@ private:
   FillType flag;
   OverlapType overlapType;
   
-  tmap_t StandardNodeMap;
-  tmap_t OverlapNodeMap;
-  tmap_t StandardMap;
-  tmap_t OverlapMap;
-  timport_t Importer;
-  timport_t nodeImporter;
-  timport_t ColumnToOverlapImporter;
+  tmap_t *StandardNodeMap;
+  tmap_t *OverlapNodeMap;
+  tmap_t *StandardMap;
+  tmap_t *OverlapMap;
+  timport_t *Importer;
+  timport_t *nodeImporter;
+  timport_t *ColumnToOverlapImporter;
   Teuchos::RCP<tvector_t> xptr;
   Teuchos::RCP<tvector_t> initialSolution;
-  tvector_t oldSolution;
-  tvector_t rhs;
+  tvector_t *oldSolution;
+  tvector_t *rhs;
   Teuchos::RCP<tcrsgraph_t> AA;
   Teuchos::RCP<tcrsmatrix_t> A;
-  Teuchos::Comm<int> Comm;
+  Teuchos::RCP<const Teuchos::Comm<int>> Comm;
 
   int MyPID;              // Process number
 
