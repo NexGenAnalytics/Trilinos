@@ -330,8 +330,8 @@ int run(int argc, char *argv[]) {
                      true);  // although numRhs = 1.
     }
     if (verbose) {
-      belosList->set("Verbosity", Belos::Errors + Belos::Warnings + Belos::TimingDetails + Belos::FinalSummary +
-                                      Belos::StatusTestDetails);
+      belosList->set("Verbosity", Belos::Errors + Belos::Warnings + Belos::TimingDetails +
+                                      Belos::FinalSummary + Belos::StatusTestDetails);
       if (frequency > 0)
         belosList->set("Output Frequency", frequency);
     } else
@@ -346,7 +346,8 @@ int run(int argc, char *argv[]) {
     bool set = problem->setProblem();
     if (set == false) {
       if (procVerbose)
-        std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
+        std::cout << std::endl
+                  << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
       return -1;
     }
 
@@ -376,7 +377,8 @@ int run(int argc, char *argv[]) {
         set = problem->setProblem(LHS, RHS);
         if (set == false) {
           if (procVerbose)
-            std::cout << std::endl << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
+            std::cout << std::endl
+                      << "ERROR:  Belos::LinearProblem failed to set up correctly!" << std::endl;
           return -1;
         }
       }  // if timeStep
@@ -400,7 +402,8 @@ int run(int argc, char *argv[]) {
       std::cout << "                    RHS norm is ... " << rhs_norm[0] << std::endl;
 
       if (procVerbose) {
-        std::cout << "---------- Actual Residuals (normalized) ----------" << std::endl << std::endl;
+        std::cout << "---------- Actual Residuals (normalized) ----------" << std::endl
+                  << std::endl;
         for (int i = 0; i < numRhs; i++) {
           double actRes = actual_resids[i] / rhs_norm[i];
           std::cout << "Problem " << i << " : \t" << actRes << std::endl;
@@ -426,6 +429,9 @@ int run(int argc, char *argv[]) {
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-int main(int argc, char *argv[]) { return run<double>(argc, argv); }
-// return run<float>(argc, argv); }
+int main(int argc, char *argv[]) { 
+  return run<double>(argc, argv);
+  // return run<float>(argc, argv); }
+}
+
 // end PCPGTpetraExFile.cpp
