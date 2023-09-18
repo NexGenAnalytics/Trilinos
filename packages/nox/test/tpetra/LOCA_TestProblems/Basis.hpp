@@ -53,29 +53,69 @@
 #ifndef _NOX_EXAMPLE_TPETRA_LINEAR_BASIS_H
 #define _NOX_EXAMPLE_TPETRA_LINEAR_BASIS_H
 
-class Basis {
+// #include "NOX_Common.H"
+#include <cstddef>
+#include <cmath>
+#include <vector>
 
- public:
+template<typename ScalarType>
+class Basis
+{
+  using stdVector = typename std::vector<ScalarType>;
 
-  // Constructor
-  Basis();
+  public:
+    // Constructor
+    Basis() :
+      phi(NULL),
+      dphide(NULL),
+      uu(0.0),
+      xx(0.0),
+      duu(0.0),
+      eta(0.0),
+      wt(0.0),
+      dx(0.0)
+    {
+      phi(2);
+      dphide(2);
+    }
 
-  // Destructor
-  ~Basis();
+    // Calculates the values of u and x at the specified gauss point
+    void getBasis(int gp, stdVector x, stdVector u)
+    {
+      int N = 2;
+      if (gp==0) {eta=-1.0/std::sqrt(3.0); wt=1.0;}
+      if (gp==1) {eta=1.0/std::sqrt(3.0); wt=1.0;}
 
-  // Calculates the values of u and x at the specified gauss point
-  void getBasis(int gp, double *x, double *u);
+      // Calculate basis function and derivatives at nodel pts
+      phi[0]=(1.0-eta)/2.0;
+      phi[1]=(1.0+eta)/2.0;
+      dphide[0]=-0.5;
+      dphide[1]=0.5;
 
- private:
-  // Private to prohibit copying
-  Basis(const Basis&);
-  Basis& operator=(const Basis&);
+      // Caculate basis function and derivative at GP.
+      dx=0.5*(x[1]-x[0]);
+      xx=0.0;
+      uu=0.0;
+      duu=0.0;
+      for (int i=0; i < N; i++) {
+        xx += x[i] * phi[i];
+        uu += u[i] * phi[i];
+        duu += u[i] * dphide[i];
+      }
 
- public:
-  // Variables that are calculated at the gauss point
-  double *phi, *dphide;
-  double uu, xx, duu, eta, wt;
-  double dx;
+      return;
+    }
+
+  private:
+    // Private to prohibit copying
+    Basis(const Basis&);
+    Basis& operator=(const Basis&);
+
+  public:
+    // Variables that are calculated at the gauss point
+    stdVector phi, dphide;
+    ScalarType uu, xx, duu, eta, wt;
+    ScalarType dx;
 };
 
 #endif
