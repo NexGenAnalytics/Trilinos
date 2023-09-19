@@ -47,40 +47,43 @@
 
 // NOX headers
 #include "NOX.H"
-#include "NOX_Epetra.H"
+#include "NOX_Thyra.H"
 #include "NOX_TestCompare.H" // Test Suite headers
-#include "NOX_Epetra_DebugTools.H"
+// #include "NOX_Epetra_DebugTools.H" // CWS: necessary?
 
 // Trilinos headers
-#ifdef HAVE_MPI
-#include "Epetra_MpiComm.h"
-#else
-#include "Epetra_SerialComm.h"
-#endif
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_RowMatrix.h"
-#include "Epetra_CrsMatrix.h"
-#include "Epetra_Map.h"
-#include "Epetra_LinearProblem.h"
-#include "AztecOO.h"
+// #include "AztecOO.h"
+
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Map.hpp>
+#include <Tpetra_RowMatrix.hpp>
+#include <Tpetra_CrsMatrix>
+
 #include "Teuchos_StandardCatchMacros.hpp"
 
 
-int main(int argc, char *argv[])
+template <typename ScalarType>
+int run(int argc, char *argv[])
 {
+
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NO = typename Tpetra::Map<>::node_type;
+
+  using tmap_t       = typename Tpetra::Map<ST,LO,GO>;
+  using tvector_t    = typename Tpetra::Vector<ST,LO,GO,NT>
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO>;
+  using tcrsgraph_t  = typename Tpetra::CrsGraph<LO,GO,NO>;
+
   // Initialize MPI
-  Teuchos::GlobalMPISession session(&argc, &argv, NULL);
+  Teuchos::GlobalMPISession session(&argc, &argv, nullptr);
 
   bool success = false;
   bool verbose = false;
   try {
-  // Create a communicator for Epetra objects
-#ifdef HAVE_MPI
-    Epetra_MpiComm Comm( MPI_COMM_WORLD );
-#else
-    Epetra_SerialComm Comm;
-#endif
+
+    const auto Comm = Tpetra::getDefaultComm();
 
     int * testInt = new int[100];
     delete [] testInt;
@@ -90,8 +93,8 @@ int main(int argc, char *argv[])
         verbose = true;
 
     // Get the process ID and the total number of processors
-    int MyPID = Comm.MyPID();
-    int NumProc = Comm.NumProc();
+    int MyPID = Comm->getRank();
+    int NumProc = Comm->getSize();
 
     // Set up theolver options parameter list
     Teuchos::RCP<Teuchos::ParameterList> noxParamsPtr = Teuchos::rcp(new Teuchos::ParameterList);
@@ -142,15 +145,15 @@ int main(int argc, char *argv[])
     int status = 0;
 
     // Create a TestCompare class
-    NOX::Epetra::TestCompare tester( printing->out(), *printing);
+    NOX::TestCompare tester( printing->out(), *printing);
     double abstol = 1.e-4;
     double reltol = 1.e-4 ;
 
     // Test NOX::Epetra::BroydenOperator
     int numGlobalElems = 3 * NumProc;
-    Epetra_Map      broydenRowMap   ( numGlobalElems, 0, Comm );
-    Epetra_Vector   broydenWorkVec  ( broydenRowMap );
-    Epetra_CrsGraph broydenWorkGraph( Copy, broydenRowMap, 0 );
+    tmap_t      broydenRowMap   ( numGlobalElems, 0, Comm );
+    tvector_t   broydenWorkVec  ( broydenRowMap );
+    tcrsgraph_t broydenWorkGraph( Teuchos::Copy, broydenRowMap, 0 );
     std::vector<int> globalIndices(3);
     for( int lcol = 0; lcol < 3; ++lcol )
       globalIndices[lcol] = 3 * MyPID + lcol;
@@ -160,24 +163,24 @@ int main(int argc, char *argv[])
     // Row 1 structure
     myGlobalIndices[0] = globalIndices[0];
     myGlobalIndices[1] = globalIndices[2];
-    broydenWorkGraph.InsertGlobalIndices( globalIndices[0], 2, &myGlobalIndices[0] );
+    broydenWorkGraph.insertGlobalIndices( globalIndices[0], 2, &myGlobalIndices[0] );
     // Row 2 structure
     myGlobalIndices[0] = globalIndices[0];
     myGlobalIndices[1] = globalIndices[1];
-    broydenWorkGraph.InsertGlobalIndices( globalIndices[1], 2, &myGlobalIndices[0] );
+    broydenWorkGraph.insertGlobalIndices( globalIndices[1], 2, &myGlobalIndices[0] );
     // Row 3 structure
     myGlobalIndices[0] = globalIndices[1];
     myGlobalIndices[1] = globalIndices[2];
-    broydenWorkGraph.InsertGlobalIndices( globalIndices[2], 2, &myGlobalIndices[0] );
+    broydenWorkGraph.insertGlobalIndices( globalIndices[2], 2, &myGlobalIndices[0] );
 
     broydenWorkGraph.FillComplete();
 
-    Teuchos::RCP<Epetra_CrsMatrix> broydenWorkMatrix =
-      Teuchos::rcp( new Epetra_CrsMatrix( Copy, broydenWorkGraph ) );
+    Teuchos::RCP<tcrsmatrix_t> broydenWorkMatrix =
+      Teuchos::rcp( new tcrsmatrix_t( Teuchos::Copy, broydenWorkGraph ) );
 
     // Create an identity matrix
-    broydenWorkVec.PutScalar(1.0);
-    broydenWorkMatrix->ReplaceDiagonalValues(broydenWorkVec);
+    broydenWorkVec.putScalar(1.0);
+    broydenWorkMatrix->replaceDiagonalValues(broydenWorkVec);
 
     NOX::Epetra::BroydenOperator broydenOp( noxParams, printing, broydenWorkVec, broydenWorkMatrix, true );
 
@@ -194,7 +197,7 @@ int main(int argc, char *argv[])
     broydenOp.computeSparseBroydenUpdate();
 
     // Create the gold matrix for comparison
-    Teuchos::RCP<Epetra_CrsMatrix> goldMatrix = Teuchos::rcp( new Epetra_CrsMatrix( Copy, broydenWorkGraph ) );
+    Teuchos::RCP<tcrsmatrix_t> goldMatrix = Teuchos::rcp( new tcrsmatrix_t( Teuchos::Copy, broydenWorkGraph ) );
 
     int      numCols ;
     double * values  ;
@@ -219,7 +222,7 @@ int main(int argc, char *argv[])
 
 
     // Now try a dense Broyden Update
-    Epetra_CrsGraph broydenWorkGraph2( Copy, broydenRowMap, 0 );
+    tcrsgraph_t broydenWorkGraph2( Teuchos::Copy, broydenRowMap, 0 );
 
     myGlobalIndices.resize(3);
 
@@ -233,11 +236,11 @@ int main(int argc, char *argv[])
 
     broydenWorkGraph2.FillComplete();
 
-    Teuchos::RCP<Epetra_CrsMatrix> broydenWorkMatrix2 = Teuchos::rcp( new Epetra_CrsMatrix( Copy, broydenWorkGraph2 ) );
+    Teuchos::RCP<tcrsmatrix_t> broydenWorkMatrix2 = Teuchos::rcp( new tcrsmatrix_t( Teuchos::Copy, broydenWorkGraph2 ) );
 
     // Create an identity matrix
-    broydenWorkVec.PutScalar(1.0);
-    broydenWorkMatrix2->ReplaceDiagonalValues(broydenWorkVec);
+    broydenWorkVec.putScalar(1.0);
+    broydenWorkMatrix2->replaceDiagonalValues(broydenWorkVec);
 
     NOX::Epetra::BroydenOperator broydenOp2( noxParams, printing, broydenWorkVec, broydenWorkMatrix2, true );
 
@@ -254,7 +257,7 @@ int main(int argc, char *argv[])
     broydenOp2.computeSparseBroydenUpdate();
 
     // Create the gold matrix for comparison
-    Teuchos::RCP<Epetra_CrsMatrix> goldMatrix2 = Teuchos::rcp( new Epetra_CrsMatrix( Copy, broydenWorkGraph2 ) );
+    Teuchos::RCP<tcrsmatrix_t> goldMatrix2 = Teuchos::rcp( new tcrsmatrix_t( Teuchos::Copy, broydenWorkGraph2 ) );
 
     // Row 1 answers
     goldMatrix2->ExtractMyRowView( 0, numCols, values );
@@ -279,14 +282,14 @@ int main(int argc, char *argv[])
         "Broyden Sparse Operator Update Test (Dense)" );
 
     // Now test the ability to remove active entries in the Broyden update
-    Epetra_CrsGraph inactiveGraph( Copy, broydenRowMap, 0 );
+    tcrsgraph_t inactiveGraph( Teuchos::Copy, broydenRowMap, 0 );
 
     // Row 1 structure
-    inactiveGraph.InsertGlobalIndices( globalIndices[0], 1, &myGlobalIndices[1] );
+    inactiveGraph.insertGlobalIndices( globalIndices[0], 1, &myGlobalIndices[1] );
     // Row 2 structure
-    inactiveGraph.InsertGlobalIndices( globalIndices[1], 1, &myGlobalIndices[2] );
+    inactiveGraph.insertGlobalIndices( globalIndices[1], 1, &myGlobalIndices[2] );
     // Row 3 structure
-    inactiveGraph.InsertGlobalIndices( globalIndices[2], 1, &myGlobalIndices[0] );
+    inactiveGraph.insertGlobalIndices( globalIndices[2], 1, &myGlobalIndices[0] );
 
     inactiveGraph.FillComplete();
 
@@ -318,7 +321,11 @@ int main(int argc, char *argv[])
   TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
   return ( success ? EXIT_SUCCESS : EXIT_FAILURE );
+} // run
+
+int main(int argc, char *argv[]) {
+  // templated to run on different ST
+  return run<double>(argc,argv);
+  // return run<float>(argc,argv);
 }
-/*
-  end of file test.C
-*/
+
