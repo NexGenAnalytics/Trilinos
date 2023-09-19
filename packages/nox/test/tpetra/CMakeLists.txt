@@ -29,6 +29,11 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_THYRA AND
     )
 
   TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    Tpetra_test_BroydenOp
+    SOURCES  ${UNIT_TEST_DRIVER} Tpetra_test_BroydenOp.cpp
+    )
+
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
     Tpetra_1DFEM_ME_UnitTests
     SOURCES  ${UNIT_TEST_DRIVER} ME_Tpetra_1DFEM.hpp ME_Tpetra_1DFEM_def.hpp tTpetra_1DFEM_ME_UnitTests.cpp
     )
