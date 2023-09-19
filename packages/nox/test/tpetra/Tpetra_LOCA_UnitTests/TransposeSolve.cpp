@@ -49,38 +49,39 @@
 //@HEADER
 
 #include "LOCA.H"
-#include "LOCA_Epetra.H"
+// #include "LOCA_Epetra.H" // CWS: FIND REPLACEMENT
 
 #include "NOX_TestCompare.H"
 
+#include "NOX_Thyra.H"
+#include <LOCA_Thyra_Group.H>
+
 // Trilinos Objects
-#ifdef HAVE_MPI
-#include "Epetra_MpiComm.h"
-#else
-#include "Epetra_SerialComm.h"
-#endif
-#include "Epetra_Map.h"
-#include "Epetra_RowMatrix.h"
-#include "Epetra_CrsMatrix.h"
+#include <Tpetra_Map.hpp>
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_RowMatrix.hpp>
+#include <Tpetra_CrsMatrix.hpp>
 
 // User's application specific files
 #include "Problem_Interface.H"
 #include "Tcubed_FiniteElementProblem.H"
 
+template <typename ST, class tvector_t, class trowmatrix_t>
 int testTransposeSolve(
          int NumGlobalElements,
          int nRHS,
-         double reltol,
-         double abstol,
-         Epetra_Comm& Comm,
+         ST reltol,
+         ST abstol,
+         Teuchos::RCP< const Teuchos::Comm<int> >& Comm,
          const Teuchos::RCP<LOCA::GlobalData>& globalData,
          const Teuchos::RCP<Teuchos::ParameterList>& paramList)
 {
   int ierr = 0;
 
-  double left_bc = 0.0;
-  double right_bc = 1.0;
-  double nonlinear_factor = 1.0;
+  ST left_bc = 0.0;
+  ST right_bc = 1.0;
+  ST nonlinear_factor = 1.0;
 
   // Create the FiniteElementProblem class.  This creates all required
   // Epetra objects for the problem and allows calls to the
@@ -88,10 +89,10 @@ int testTransposeSolve(
   Tcubed_FiniteElementProblem Problem(NumGlobalElements, Comm);
 
   // Get the vector from the Problem
-  Epetra_Vector& soln = Problem.getSolution();
+  tvector_t& soln = Problem.getSolution();
 
   // Initialize Solution
-  soln.PutScalar(0.0);
+  soln.putScalar(0.0);
 
   // Create and initialize the parameter vector
   LOCA::ParameterVector pVector;
@@ -104,11 +105,11 @@ int testTransposeSolve(
   // class:
   Teuchos::RCP<Problem_Interface> interface =
     Teuchos::rcp(new Problem_Interface(Problem));
-  Teuchos::RCP<LOCA::Epetra::Interface::Required> iReq = interface;
-  Teuchos::RCP<NOX::Epetra::Interface::Jacobian> iJac = interface;
+  // Teuchos::RCP<LOCA::Epetra::Interface::Required> iReq = interface;
+  // Teuchos::RCP<NOX::Epetra::Interface::Jacobian> iJac = interface;
 
-  // Create the Epetra_RowMatrixfor the Jacobian/Preconditioner
-  Teuchos::RCP<Epetra_RowMatrix> Amat =
+  // Create the Tpetra::RowMatrix for the Jacobian/Preconditioner
+  Teuchos::RCP<trowmatrix_t> Amat =
     Teuchos::rcp(&Problem.getJacobian(),false);
 
   // Get sublists
@@ -119,29 +120,29 @@ int testTransposeSolve(
   Teuchos::ParameterList& lsParams = newParams.sublist("Linear Solver");
 
   // Create the linear systems
-  Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linsys =
-    Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(nlPrintParams,
-                              lsParams, iReq, iJac,
-                              Amat, soln));
+  // Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linsys =
+  //   Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(nlPrintParams,
+  //                             lsParams, iReq, iJac,
+  //                             Amat, soln));
 
   // Create the loca vector
-  NOX::Epetra::Vector locaSoln(soln);
+  NOX::Thyra::Vector locaSoln(soln);
 
   // Create the Group
-  Teuchos::RCP<LOCA::Epetra::Group> grp_tp =
-    Teuchos::rcp(new LOCA::Epetra::Group(globalData, nlPrintParams,
+  Teuchos::RCP<LOCA::Thyra::Group> grp_tp =
+    Teuchos::rcp(new LOCA::Thyra::Group(globalData, nlPrintParams,
                      iReq, locaSoln,
                      linsys, pVector));
 
   // Create the Group
-  Teuchos::RCP<LOCA::Epetra::Group> grp_lp =
-    Teuchos::rcp(new LOCA::Epetra::Group(globalData, nlPrintParams,
+  Teuchos::RCP<LOCA::Thyra::Group> grp_lp =
+    Teuchos::rcp(new LOCA::Thyra::Group(globalData, nlPrintParams,
                      iReq, locaSoln,
                      linsys, pVector));
 
   // Create the Group
-  Teuchos::RCP<LOCA::Epetra::Group> grp_ep =
-    Teuchos::rcp(new LOCA::Epetra::Group(globalData, nlPrintParams,
+  Teuchos::RCP<LOCA::Thyra::Group> grp_ep =
+    Teuchos::rcp(new LOCA::Thyra::Group(globalData, nlPrintParams,
                      iReq, locaSoln,
                      linsys, pVector));
 
@@ -233,7 +234,7 @@ int testTransposeSolve(
                      "Residual");
   }
 
-#ifdef HAVE_NOX_EPETRAEXT
+// #ifdef HAVE_NOX_EPETRAEXT
   // Test transpose solve with explicit preconditioner
   if (globalData->locaUtils->isPrintType(NOX::Utils::TestDetails))
     globalData->locaUtils->out() << std::endl <<
@@ -248,7 +249,7 @@ int testTransposeSolve(
   status = grp_ep->applyJacobianTransposeMultiVector(*X_ep, *R_ep);
   ierr += testCompare->testMultiVector(*R_ep, *F, reltol, abstol,
                        "Residual");
-#endif
+// #endif
 
 
   // Compare solutions
@@ -263,7 +264,7 @@ int testTransposeSolve(
                      reltol, abstol, "Solution");
   }
 
-#ifdef HAVE_NOX_EPETRAEXT
+// #ifdef HAVE_NOX_EPETRAEXT
   if (globalData->locaUtils->isPrintType(NOX::Utils::TestDetails))
     globalData->locaUtils->out() << std::endl <<
       "\t***** " <<
@@ -272,38 +273,42 @@ int testTransposeSolve(
       " *****" << std::endl;
   ierr += testCompare->testMultiVector(*X_ep, *X_tp,
                        reltol, abstol, "Solution");
-#endif
+// #endif
 
   return ierr;
 }
-int main(int argc, char *argv[])
+
+template <typename ScalarType>
+int run(int argc, char *argv[])
 {
+
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NO = typename Tpetra::Map<>::node_type;
+
+  using tmap_t       = typename Tpetra::Map<ST,LO,GO>;
+  using tvector_t    = typename Tpetra::Vector<ST,LO,GO,NT>
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO>;
+  using tcrsgraph_t  = typename Tpetra::CrsGraph<LO,GO,NO>;
+
   int ierr = 0;
   int MyPID = 0;
 
   int nRHS = 7;
-  double reltol = 1.0e-8;
-  double abstol = 1.0e-8;
-  double lstol = 1.0e-11;
+  ST reltol = 1.0e-8;
+  ST abstol = 1.0e-8;
+  ST lstol = 1.0e-11;
   int ls_its = 100;
 
   try {
 
-    // Initialize MPI
-#ifdef HAVE_MPI
-    MPI_Init(&argc,&argv);
-#endif
+    // Create a communicator for Tpetra objects
+    Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
+    const auto Comm = Tpetra::getDefaultComm();
 
-    // Create a communicator for Epetra objects
-#ifdef HAVE_MPI
-    Epetra_MpiComm Comm( MPI_COMM_WORLD );
-#else
-    Epetra_SerialComm Comm;
-#endif
-
-    // Get the total number of processors
-    MyPID = Comm.MyPID();
-    int NumProc = Comm.NumProc();
+    MyPID = Comm->getRank();
+    int NumProc = Comm->getSize();
 
     bool verbose = false;
     // Check for verbose output
@@ -367,13 +372,13 @@ int main(int argc, char *argv[])
     //lsParams.set("Fill Factor", 2.0);
     //lsParams.set("Drop Tolerance", 1.0e-12);
 
-    // Create Epetra factory
-    Teuchos::RCP<LOCA::Abstract::Factory> epetraFactory =
-      Teuchos::rcp(new LOCA::Epetra::Factory);
+    // Create Tpetra factory
+    Teuchos::RCP<LOCA::Abstract::Factory> tpetraFactory =
+      Teuchos::rcp(new LOCA::Tpetra::Factory);
 
     // Create global data object
     Teuchos::RCP<LOCA::GlobalData> globalData =
-      LOCA::createGlobalData(paramList, epetraFactory);
+      LOCA::createGlobalData(paramList, tpetraFactory);
 
     // Test transpose solves with Ifpack preconditioner
     if (globalData->locaUtils->isPrintType(NOX::Utils::TestDetails))
@@ -382,7 +387,7 @@ int main(int argc, char *argv[])
     "Testing Transpose Solves With Ifpack Preconditioner" <<
     " **********" << std::endl;
     lsParams.set("Preconditioner", "Ifpack");
-    ierr += testTransposeSolve(NumGlobalElements, nRHS, reltol, abstol,
+    ierr += testTransposeSolve<ST,tvector_t,trow_matrix>(NumGlobalElements, nRHS, reltol, abstol,
                    Comm, globalData, paramList);
 
     // Test transpose solves with no preconditioner
@@ -393,7 +398,7 @@ int main(int argc, char *argv[])
     " **********" << std::endl;
     lsParams.set("Preconditioner", "None");
     lsParams.set("Max Iterations", NumGlobalElements+1);
-    ierr += testTransposeSolve(NumGlobalElements, nRHS, reltol, abstol,
+    ierr += testTransposeSolve<ST,tvector_t,trow_matrix>(NumGlobalElements, nRHS, reltol, abstol,
                    Comm, globalData, paramList);
 
     LOCA::destroyGlobalData(globalData);
@@ -419,9 +424,10 @@ int main(int argc, char *argv[])
       std::cout << ierr << " test(s) failed!" << std::endl;
   }
 
-#ifdef HAVE_MPI
-  MPI_Finalize() ;
-#endif
-
   return ierr;
+} // run
+
+int main(int argc, char *argv[]) {
+  return run<double>(argc,argv);
+  // return run<float>(argc,argv);
 }

@@ -49,50 +49,52 @@
 //@HEADER
 
 #include "LOCA.H"
-#include "LOCA_Epetra.H"
+// #include "LOCA_Epetra.H" // CWS: find replacement
 
 #include "LOCA_MultiContinuation_CompositeConstraint.H"
 #include "NOX_TestCompare.H"
 
+#include "NOX_Thyra.H"
+
 // Trilinos Objects
-#ifdef HAVE_MPI
-#include "Epetra_MpiComm.h"
-#else
-#include "Epetra_SerialComm.h"
-#endif
-#include "Epetra_Map.h"
-#include "Epetra_RowMatrix.h"
-#include "Epetra_CrsMatrix.h"
+#include <Tpetra_Map.hpp>
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_RowMatrix.hpp>
+#include <Tpetra_CrsMatrix.hpp>
 
 // User's application specific files
 #include "LOCALinearConstraint.H"
 
-int main(int argc, char *argv[])
-{
+template <typename ScalarType>
+int run(int argc, char *argv[]) {
+
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NO = typename Tpetra::Map<>::node_type;
+
+  using tmap_t       = typename Tpetra::Map<ST,LO,GO>;
+  using tvector_t    = typename Tpetra::Vector<ST,LO,GO,NT>
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO>;
+  using tcrsgraph_t  = typename Tpetra::CrsGraph<LO,GO,NO>;
+
   int n = 10;
   int ierr = 0;
-  double reltol = 1.0e-14;
-  double abstol = 1.0e-14;
+  ST reltol = 1.0e-14;
+  ST abstol = 1.0e-14;
   int MyPID = 0;
 
   try {
 
-    // Initialize MPI
-#ifdef HAVE_MPI
-    MPI_Init(&argc,&argv);
-#endif
+    // Create a communicator for Tpetra objects
+    Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
+    const auto Comm = Tpetra::getDefaultComm();
 
-    // Create a communicator for Epetra objects
-#ifdef HAVE_MPI
-    Epetra_MpiComm Comm( MPI_COMM_WORLD );
-#else
-    Epetra_SerialComm Comm;
-#endif
-
-    MyPID = Comm.MyPID();
+    MyPID = Comm->getRank();
 
     // Create the map
-    Epetra_Map map(n, 0, Comm);
+    tmap_t map(n, 0, Comm);
 
     bool verbose = false;
     // Check for verbose output
@@ -103,7 +105,7 @@ int main(int argc, char *argv[])
     // Seed the random number generator in Teuchos.  We create random
     // bordering matrices and it is possible different processors might generate
     // different matrices.  By setting the seed, this shouldn't happen.
-    Teuchos::ScalarTraits<double>::seedrandom(12345);
+    Teuchos::ScalarTraits<ST>::seedrandom(12345);
 
     // Create and initialize the parameter vector
     LOCA::ParameterVector pVector;
@@ -137,8 +139,9 @@ int main(int argc, char *argv[])
     Teuchos::RCP<LOCA::GlobalData> globalData =
       LOCA::createGlobalData(paramList);
 
-    Epetra_Vector clone_vec(map);
-    NOX::Epetra::Vector nox_clone_vec(clone_vec);
+    // Teuchos::RCP<tvector_t> clone_vec = Teuchos::rcp (new tvector_t(map));
+    tvector_t clone_vec(map);
+    NOX::Thyra::Vector nox_clone_vec(clone_vec);
 
     Teuchos::RCP<NOX::Abstract::Vector> x =
       nox_clone_vec.clone(NOX::ShapeCopy);
@@ -365,9 +368,10 @@ int main(int argc, char *argv[])
       std::cout << ierr << " test(s) failed!" << std::endl;
   }
 
-#ifdef HAVE_MPI
-  MPI_Finalize() ;
-#endif
-
   return ierr;
+}
+
+int main(int argc, char *argv[]) {
+  return run<double>(argc,argv);
+  // return run<float>(argc,argv);
 }

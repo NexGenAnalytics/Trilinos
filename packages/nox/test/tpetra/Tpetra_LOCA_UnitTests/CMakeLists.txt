@@ -14,7 +14,7 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_TPETRA AND NOX_ENABLE_LOCA)
     HouseholderBorderedSolve.cpp
     COMM serial mpi
     NUM_MPI_PROCS 2
-    TESTONLYLIBS noxtestutils locaepetratestproblems
+    TESTONLYLIBS noxtestutils locatpetratestproblems
     ARGS -v
     PASS_REGULAR_EXPRESSION "All tests passed"
     )
@@ -25,7 +25,7 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_TPETRA AND NOX_ENABLE_LOCA)
     HouseholderTransposeBorderedSolve.cpp
     COMM serial mpi
     NUM_MPI_PROCS 2
-    TESTONLYLIBS noxtestutils locaepetratestproblems
+    TESTONLYLIBS noxtestutils locatpetratestproblems
     ARGS -v
     PASS_REGULAR_EXPRESSION "All tests passed"
     )
@@ -36,7 +36,7 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_TPETRA AND NOX_ENABLE_LOCA)
     TransposeSolve.cpp
     COMM serial mpi
     NUM_MPI_PROCS 2
-    TESTONLYLIBS noxtestutils locaepetratestproblems
+    TESTONLYLIBS noxtestutils locatpetratestproblems
     ARGS -v
     PASS_REGULAR_EXPRESSION "All tests passed"
     )
@@ -47,7 +47,7 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_TPETRA AND NOX_ENABLE_LOCA)
     CompositeConstraint.cpp
     COMM serial mpi
     NUM_MPI_PROCS 2
-    TESTONLYLIBS noxtestutils locaepetratestproblems
+    TESTONLYLIBS noxtestutils locatpetratestproblems
     ARGS -v
     PASS_REGULAR_EXPRESSION "All tests passed"
     )
@@ -58,7 +58,7 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_TPETRA AND NOX_ENABLE_LOCA)
     CompositeConstraintMVDX.cpp
     COMM serial mpi
     NUM_MPI_PROCS 2
-    TESTONLYLIBS noxtestutils locaepetratestproblems
+    TESTONLYLIBS noxtestutils locatpetratestproblems
     ARGS -v
     PASS_REGULAR_EXPRESSION "All tests passed"
     )
@@ -69,7 +69,7 @@ IF(NOX_ENABLE_ABSTRACT_IMPLEMENTATION_TPETRA AND NOX_ENABLE_LOCA)
     NaturalContResidualFills.cpp
     COMM serial mpi
     NUM_MPI_PROCS 2
-    TESTONLYLIBS noxtestutils locaepetratestproblems
+    TESTONLYLIBS noxtestutils locatpetratestproblems
     ARGS -v
     PASS_REGULAR_EXPRESSION "All tests passed"
     )

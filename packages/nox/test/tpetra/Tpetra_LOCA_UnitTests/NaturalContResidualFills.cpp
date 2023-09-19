@@ -62,22 +62,21 @@
 
 // LOCA Objects
 #include "LOCA.H"
-#include "LOCA_Epetra.H"
+// #include "LOCA_Epetra.H" // CWS: FIND REPLACEMENT
 #include "NOX_TestCompare.H"
 
+#include "NOX_Thyra.H"
+#include <LOCA_Thyra_Group.H>
+
 // Trilinos Objects
-#ifdef HAVE_MPI
-#include "Epetra_MpiComm.h"
-#else
-#include "Epetra_SerialComm.h"
-#endif
-#include "Epetra_Map.h"
-#include "Epetra_Vector.h"
-#include "Epetra_RowMatrix.h"
-#include "Epetra_CrsMatrix.h"
-#include "Epetra_Map.h"
-#include "Epetra_LinearProblem.h"
-#include "AztecOO.h"
+#include <Tpetra_Map.hpp>
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_RowMatrix.hpp>
+#include <Tpetra_CrsMatrix.hpp>
+// #include "Epetra_LinearProblem.h" // CWS: FIND REPLACEMENT
+
+// #include "AztecOO.h" // CWS: FIND REPLACEMENT
 
 // User's application specific files
 #include "Problem_Interface.H" // Interface file to NOX
@@ -85,31 +84,33 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
-{
+template <typename ScalarType>
+int run(int argc, char *argv[]) {
+
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NO = typename Tpetra::Map<>::node_type;
+
+  using tmap_t       = typename Tpetra::Map<ST,LO,GO>;
+  using tvector_t    = typename Tpetra::Vector<ST,LO,GO,NT>
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO>;
+  using tcrsgraph_t  = typename Tpetra::CrsGraph<LO,GO,NO>;
+
   int ierr = 0;
   int MyPID = 0;
 
   try {
 
     // scale factor to test arc-length scaling
-    double scale = 1.0;
+    ST scale = 1.0;
 
-    // Initialize MPI
-#ifdef HAVE_MPI
-    MPI_Init(&argc,&argv);
-#endif
+    // Create a communicator for Tpetra objects
+    Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
+    const auto Comm = Tpetra::getDefaultComm();
 
-    // Create a communicator for Epetra objects
-#ifdef HAVE_MPI
-    Epetra_MpiComm Comm( MPI_COMM_WORLD );
-#else
-    Epetra_SerialComm Comm;
-#endif
-
-    // Get the process ID and the total number of processors
-    MyPID = Comm.MyPID();
-    int NumProc = Comm.NumProc();
+    MyPID = Comm->getRank();
+    int NumProc = Comm->getSize();
 
     // Check for verbose output
     bool verbose = false;
@@ -140,10 +141,10 @@ int main(int argc, char *argv[])
     Tcubed_FiniteElementProblem Problem(NumGlobalElements, Comm, scale);
 
     // Get the vector from the Problem
-    Epetra_Vector& soln = Problem.getSolution();
+    tvector_t& soln = Problem.getSolution();
 
     // Initialize Solution
-    soln.PutScalar(1.0);
+    soln.putScalar(1.0);
 
     // Begin LOCA Solver ************************************
 
@@ -157,15 +158,15 @@ int main(int argc, char *argv[])
     // Create the stepper sublist and set the stepper parameters
     Teuchos::ParameterList& locaStepperList =
       locaParamsList.sublist("Stepper");
-    locaStepperList.set("Continuation Method", "Natural");
-    locaStepperList.set("Skip Parameter Derivative", false);
-    locaStepperList.set("Continuation Parameter", "Right BC");
-    locaStepperList.set("Initial Value", 0.1);
-    locaStepperList.set("Max Value", 0.3);
-    locaStepperList.set("Min Value", 0.0);
-    locaStepperList.set("Max Steps", 5);
-    locaStepperList.set("Max Nonlinear Iterations", 15);
-    locaStepperList.set("Skip df/dp", false);
+      locaStepperList.set("Continuation Method", "Natural");
+      locaStepperList.set("Skip Parameter Derivative", false);
+      locaStepperList.set("Continuation Parameter", "Right BC");
+      locaStepperList.set("Initial Value", 0.1);
+      locaStepperList.set("Max Value", 0.3);
+      locaStepperList.set("Min Value", 0.0);
+      locaStepperList.set("Max Steps", 5);
+      locaStepperList.set("Max Nonlinear Iterations", 15);
+      locaStepperList.set("Skip df/dp", false);
 
     // Create predictor sublist
     Teuchos::ParameterList& predictorList =
@@ -225,33 +226,33 @@ int main(int argc, char *argv[])
     // class:
     Teuchos::RCP<Problem_Interface> interface =
       Teuchos::rcp(new Problem_Interface(Problem));
-    Teuchos::RCP<LOCA::Epetra::Interface::Required> iReq = interface;
-    Teuchos::RCP<NOX::Epetra::Interface::Jacobian> iJac = interface;
+    // Teuchos::RCP<LOCA::Epetra::Interface::Required> iReq = interface;
+    // Teuchos::RCP<NOX::Epetra::Interface::Jacobian> iJac = interface;
 
-    // Create the Epetra_RowMatrixfor the Jacobian/Preconditioner
-    Teuchos::RCP<Epetra_RowMatrix> Amat =
+    // Create the Tpetra::RowMatrix for the Jacobian/Preconditioner
+    Teuchos::RCP<trowmatrix_t> Amat =
       Teuchos::rcp(&Problem.getJacobian(),false);
 
     // Create the linear systems
-    Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linsys =
-      Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(nlPrintParams,
-                            lsParams, iReq, iJac,
-                            Amat, soln));
+    // Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linsys =
+    //   Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(nlPrintParams,
+    //                         lsParams, iReq, iJac,
+    //                         Amat, soln));
 
     // Create the loca vector
-    NOX::Epetra::Vector locaSoln(soln);
+    NOX::Thyra::Vector locaSoln(soln);
 
-    // Create Epetra factory
-    Teuchos::RCP<LOCA::Abstract::Factory> epetraFactory =
-      Teuchos::rcp(new LOCA::Epetra::Factory);
+    // Create Tpetra factory
+    Teuchos::RCP<LOCA::Abstract::Factory> tpetraFactory =
+      Teuchos::rcp(new LOCA::Tpetra::Factory);
 
     // Create global data object
     Teuchos::RCP<LOCA::GlobalData> globalData =
-      LOCA::createGlobalData(paramList, epetraFactory);
+      LOCA::createGlobalData(paramList, tpetraFactory);
 
     // Create the Group
-    Teuchos::RCP<LOCA::Epetra::Group> grp =
-      Teuchos::rcp(new LOCA::Epetra::Group(globalData, nlPrintParams,
+    Teuchos::RCP<LOCA::Thyra::Group> grp =
+      Teuchos::rcp(new LOCA::Thyra::Group(globalData, nlPrintParams,
                        iReq, locaSoln,
                        linsys, pVector));
     grp->computeF();
@@ -278,9 +279,9 @@ int main(int argc, char *argv[])
     }
 
     // Get the final solution from the stepper
-    Teuchos::RCP<const LOCA::Epetra::Group> finalGroup =
-      Teuchos::rcp_dynamic_cast<const LOCA::Epetra::Group>(stepper.getSolutionGroup());
-    NOX::Epetra::Vector finalSolution(dynamic_cast<const NOX::Epetra::Vector&>(finalGroup->getX()));
+    Teuchos::RCP<const LOCA::Thyra::Group> finalGroup =
+      Teuchos::rcp_dynamic_cast<const LOCA::Thyra::Group>(stepper.getSolutionGroup());
+    NOX::Thyra::Vector finalSolution(dynamic_cast<const NOX::Thyra::Vector&>(finalGroup->getX()));
 
     // Check some statistics on the solution
     NOX::TestCompare testCompare(globalData->locaUtils->out(),
@@ -314,8 +315,8 @@ int main(int argc, char *argv[])
 
     // Get the final solution from the stepper
     finalGroup =
-      Teuchos::rcp_dynamic_cast<const LOCA::Epetra::Group>(stepper.getSolutionGroup());
-    NOX::Epetra::Vector finalSolutionS(dynamic_cast<const NOX::Epetra::Vector&>(finalGroup->getX()));
+      Teuchos::rcp_dynamic_cast<const LOCA::Thyra::Group>(stepper.getSolutionGroup());
+    NOX::Thyra::Vector finalSolutionS(dynamic_cast<const NOX::Thyra::Vector&>(finalGroup->getX()));
 
     if (globalData->locaUtils->isPrintType(NOX::Utils::TestDetails))
       globalData->locaUtils->out()
@@ -358,11 +359,12 @@ int main(int argc, char *argv[])
       std::cout << ierr << " test(s) failed!" << std::endl;
   }
 
-#ifdef HAVE_MPI
-  MPI_Finalize() ;
-#endif
-
-/* end main
+/* end run
 */
   return ierr ;
+}
+
+int main(int argc, char *argv[]) {
+  return run<double>(argc,argv);
+  // return run<float>(argc,argv);
 }

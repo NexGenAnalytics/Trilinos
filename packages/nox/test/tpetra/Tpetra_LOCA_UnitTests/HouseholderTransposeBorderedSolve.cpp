@@ -49,22 +49,23 @@
 //@HEADER
 
 #include "LOCA.H"
-#include "LOCA_Epetra.H"
+// #include "LOCA_Epetra.H"
 
 #include "LOCA_BorderedSolver_AbstractStrategy.H"
 #include "LOCA_BorderedSolver_JacobianOperator.H"
 #include "LOCA_Parameter_SublistParser.H"
 #include "NOX_TestCompare.H"
 
+#include "NOX_Thyra.H"
+
+#include <LOCA_Tpetra_Factory.hpp>
+
 // Trilinos Objects
-#ifdef HAVE_MPI
-#include "Epetra_MpiComm.h"
-#else
-#include "Epetra_SerialComm.h"
-#endif
-#include "Epetra_Map.h"
-#include "Epetra_RowMatrix.h"
-#include "Epetra_CrsMatrix.h"
+#include <Tpetra_Map.hpp>
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_RowMatrix.hpp>
+#include <Tpetra_CrsMatrix.hpp>
 
 // User's application specific files
 #include "Problem_Interface.H"
@@ -90,9 +91,10 @@ Teuchos::RCP<NOX::Abstract::MultiVector::DenseMatrix> Y_bordering;
 Teuchos::RCP<NOX::Abstract::MultiVector> X_householder;
 Teuchos::RCP<NOX::Abstract::MultiVector::DenseMatrix> Y_householder;
 
+template <typename ST>
 int
 testSolve(bool flagA, bool flagB, bool flagC, bool flagF, bool flagG,
-      double reltol, double abstol,
+      ST reltol, ST abstol,
       const std::string& testName) {
   int ierr = 0;
 
@@ -156,38 +158,40 @@ testSolve(bool flagA, bool flagB, bool flagC, bool flagF, bool flagG,
 }
 
 
-int main(int argc, char *argv[])
-{
+template <typename ScalarType>
+int run(int argc, char *argv[]) {
+
+  using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
+  using LO = typename Tpetra::Vector<>::local_ordinal_type;
+  using GO = typename Tpetra::Vector<>::global_ordinal_type;
+  using NO = typename Tpetra::Map<>::node_type;
+
+  using tmap_t       = typename Tpetra::Map<ST,LO,GO>;
+  using tvector_t    = typename Tpetra::Vector<ST,LO,GO,NT>
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO>;
+  using tcrsgraph_t  = typename Tpetra::CrsGraph<LO,GO,NO>;
+
   int nConstraints = 10;
   int nRHS = 7;
 
-  double left_bc = 0.0;
-  double right_bc = 1.0;
-  double nonlinear_factor = 1.0;
+  ST left_bc = 0.0;
+  ST right_bc = 1.0;
+  ST nonlinear_factor = 1.0;
   int ierr = 0;
-  double reltol = 1.0e-8;
-  double abstol = 1.0e-8;
-  double lstol = 1.0e-11;
+  ST reltol = 1.0e-8;
+  ST abstol = 1.0e-8;
+  ST lstol = 1.0e-11;
 
   int MyPID = 0;
 
   try {
 
-    // Initialize MPI
-#ifdef HAVE_MPI
-    MPI_Init(&argc,&argv);
-#endif
+    // Create a communicator for Tpetra objects
+    Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
+    const auto Comm = Tpetra::getDefaultComm();
 
-    // Create a communicator for Epetra objects
-#ifdef HAVE_MPI
-    Epetra_MpiComm Comm( MPI_COMM_WORLD );
-#else
-    Epetra_SerialComm Comm;
-#endif
-
-    // Get the total number of processors
-    MyPID = Comm.MyPID();
-    int NumProc = Comm.NumProc();
+    MyPID = Comm->getRank();
+    int NumProc = Comm->getSize();
 
     bool verbose = false;
     // Check for verbose output
@@ -215,7 +219,7 @@ int main(int argc, char *argv[])
     // Seed the random number generator in Teuchos.  We create random
     // bordering matrices and it is possible different processors might generate
     // different matrices.  By setting the seed, this shouldn't happen.
-    Teuchos::ScalarTraits<double>::seedrandom(12345);
+    Teuchos::ScalarTraits<ST>::seedrandom(12345);
 
     // Create parameter list
     Teuchos::RCP<Teuchos::ParameterList> paramList =
@@ -292,28 +296,28 @@ int main(int argc, char *argv[])
     // class:
     Teuchos::RCP<Problem_Interface> interface =
       Teuchos::rcp(new Problem_Interface(Problem));
-    Teuchos::RCP<LOCA::Epetra::Interface::Required> iReq = interface;
-    Teuchos::RCP<NOX::Epetra::Interface::Jacobian> iJac = interface;
+    // Teuchos::RCP<LOCA::Epetra::Interface::Required> iReq = interface;
+    // Teuchos::RCP<NOX::Epetra::Interface::Jacobian> iJac = interface;
 
-    // Create the Epetra_RowMatrixfor the Jacobian/Preconditioner
-    Teuchos::RCP<Epetra_RowMatrix> Amat =
+    // Create the Tpetra::RowMatrix the Jacobian/Preconditioner
+    Teuchos::RCP<trowmatrix_t> Amat =
       Teuchos::rcp(&Problem.getJacobian(),false);
 
     // Create the linear systems
-    Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linsys =
-      Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(nlPrintParams,
-                            lsParams, iReq, iJac,
-                            Amat, soln));
+    // Teuchos::RCP<NOX::Epetra::LinearSystemAztecOO> linsys =
+    //   Teuchos::rcp(new NOX::Epetra::LinearSystemAztecOO(nlPrintParams,
+    //                         lsParams, iReq, iJac,
+    //                         Amat, soln));
 
     // Create the loca vector
-    NOX::Epetra::Vector locaSoln(soln);
+    NOX::Thyra::Vector locaSoln(soln);
 
     // Create Epetra factory
-    Teuchos::RCP<LOCA::Abstract::Factory> epetraFactory =
-      Teuchos::rcp(new LOCA::Epetra::Factory);
+    Teuchos::RCP<LOCA::Abstract::Factory> tpetraFactory =
+      Teuchos::rcp(new LOCA::Tpetra::Factory);
 
      // Create global data object
-    globalData = LOCA::createGlobalData(paramList, epetraFactory);
+    globalData = LOCA::createGlobalData(paramList, tpetraFactory);
 
     // Create parsed parameter list
     parsedParams =
@@ -321,7 +325,7 @@ int main(int argc, char *argv[])
     parsedParams->parseSublists(paramList);
 
     // Create the Group
-    grp = Teuchos::rcp(new LOCA::Epetra::Group(globalData, nlPrintParams,
+    grp = Teuchos::rcp(new LOCA::Thyra::Group(globalData, nlPrintParams,
                            iReq, locaSoln,
                            linsys, pVector));
 
@@ -400,102 +404,102 @@ int main(int argc, char *argv[])
 
     // Test all nonzero
     testName = "Testing all nonzero";
-    ierr += testSolve(false, false, false, false, false,
+    ierr += testSolve<ST>(false, false, false, false, false,
               reltol, abstol, testName);
 
     // Test A = 0
     testName = "Testing A=0";
-    ierr += testSolve(true, false, false, false, false,
+    ierr += testSolve<ST>(true, false, false, false, false,
               reltol, abstol, testName);
 
     // Test B = 0
     testName = "Testing B=0";
-    ierr += testSolve(false, true, false, false, false,
+    ierr += testSolve<ST>(false, true, false, false, false,
               reltol, abstol, testName);
 
     // Test C = 0
     testName = "Testing C=0";
-    ierr += testSolve(false, false, true, false, false,
+    ierr += testSolve<ST>(false, false, true, false, false,
               reltol, abstol, testName);
 
     // Test F = 0
     testName = "Testing F=0";
-    ierr += testSolve(false, false, false, true, false,
+    ierr += testSolve<ST>(false, false, false, true, false,
               reltol, abstol, testName);
 
     // Test G = 0
     testName = "Testing G=0";
-    ierr += testSolve(false, false, false, false, true,
+    ierr += testSolve<ST>(false, false, false, false, true,
               reltol, abstol, testName);
 
     // Test A,B = 0
     testName = "Testing A,B=0";
-    ierr += testSolve(true, true, false, false, false,
+    ierr += testSolve<ST>(true, true, false, false, false,
               reltol, abstol, testName);
 
     // Test A,F = 0
     testName = "Testing A,F=0";
-    ierr += testSolve(true, false, false, true, false,
+    ierr += testSolve<ST>(true, false, false, true, false,
               reltol, abstol, testName);
 
     // Test A,G = 0
     testName = "Testing A,G=0";
-    ierr += testSolve(true, false, false, false, true,
+    ierr += testSolve<ST>(true, false, false, false, true,
               reltol, abstol, testName);
 
     // Test B,F = 0
     testName = "Testing B,F=0";
-    ierr += testSolve(false, true, false, true, false,
+    ierr += testSolve<ST>(false, true, false, true, false,
               reltol, abstol, testName);
 
     // Test B,G = 0
     testName = "Testing B,G=0";
-    ierr += testSolve(false, true, false, false, true,
+    ierr += testSolve<ST>(false, true, false, false, true,
               reltol, abstol, testName);
 
     // Test C,F = 0
     testName = "Testing C,F=0";
-    ierr += testSolve(false, false, true, true, false,
+    ierr += testSolve<ST>(false, false, true, true, false,
               reltol, abstol, testName);
 
     // Test C,G = 0
     testName = "Testing C,G=0";
-    ierr += testSolve(false, false, true, false, true,
+    ierr += testSolve<ST>(false, false, true, false, true,
               reltol, abstol, testName);
 
     // Test F,G = 0
     testName = "Testing F,G=0";
-    ierr += testSolve(false, false, false, true, true,
+    ierr += testSolve<ST>(false, false, false, true, true,
               reltol, abstol, testName);
 
     // Test A,B,F = 0
     testName = "Testing A,B,F=0";
-    ierr += testSolve(true, true, false, true, false,
+    ierr += testSolve<ST>(true, true, false, true, false,
               reltol, abstol, testName);
 
     // Test A,B,G = 0
     testName = "Testing A,B,G=0";
-    ierr += testSolve(true, true, false, false, true,
+    ierr += testSolve<ST>(true, true, false, false, true,
               reltol, abstol, testName);
 
     // Test A,F,G = 0
     testName = "Testing A,F,G=0";
-    ierr += testSolve(true, false, false, true, true,
+    ierr += testSolve<ST>(true, false, false, true, true,
               reltol, abstol, testName);
 
     // Test B,F,G = 0
     testName = "Testing B,F,G=0";
-    ierr += testSolve(false, true, false, true, true,
+    ierr += testSolve<ST>(false, true, false, true, true,
               reltol, abstol, testName);
 
     // Test C,F,G = 0
     testName = "Testing C,F,G=0";
-    ierr += testSolve(false, false, true, true, true,
+    ierr += testSolve<ST>(false, false, true, true, true,
               reltol, abstol, testName);
 
     // Test A,B,F,G = 0
     testName = "Testing A,B,F,G=0";
-    ierr += testSolve(true, true, false, true, true,
+    ierr += testSolve<ST>(true, true, false, true, true,
               reltol, abstol, testName);
 
     LOCA::destroyGlobalData(globalData);
@@ -522,9 +526,10 @@ int main(int argc, char *argv[])
       std::cout << ierr << " test(s) failed!" << std::endl;
   }
 
-#ifdef HAVE_MPI
-  MPI_Finalize() ;
-#endif
-
   return ierr;
+}
+
+int main(int argc, char *argv[]) {
+  return run<double>(argc,argv);
+  // return run<float>(argc,argv);
 }
