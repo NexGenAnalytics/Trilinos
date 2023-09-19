@@ -11,57 +11,125 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Get list of changed files
       run: |
-        echo "CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD | xargs)" >> $GITHUB_ENV
+        declare -A dir_to_cmake
 
-    # - name: Run static analysis
-    #   uses: JacobDomagala/StaticAnalysis@master
-    #   with:
-    #     comment_title: "Code quality check"
-    #     verbose: true
-    #     use_cmake: true
-    #     cmake_args: >
-    #       -D CMAKE_BUILD_TYPE="DEBUG"
-    #       -D Trilinos_ENABLE_ALL_PACKAGES=ON
-    #       -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=ON
-    #       -D Trilinos_ALLOW_NO_PACKAGES=ON
-    #       -D Trilinos_DISABLE_ENABLED_FORWARD_DEP_PACKAGES=ON
-    #       -D Trilinos_IGNORE_MISSING_EXTRA_REPOSITORIES=ON
-    #       -D Trilinos_ENABLE_TESTS=ON
-    #       -D Trilinos_TEST_CATEGORIES=BASIC
-    #       -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON
-    #       -D Trilinos_VERBOSE_CONFIGURE=OFF
-    #       -D BUILD_SHARED_LIBS:BOOL=ON
-    #       -D Trilinos_WARNINGS_AS_ERRORS_FLAGS="-Wno-error"
-    #       -D Trilinos_ENABLE_SEACAS=OFF
-    #       -D Trilinos_ENABLE_Sacado=OFF
-    #       -D TPL_ENABLE_BLAS=ON
-    #       -D TPL_ENABLE_LAPACK=ON
-    #       -D TPL_ENABLE_CUDA=OFF
-    #       -D TPL_ENABLE_Matio=OFF
-    #       -D TPL_ENABLE_X11=OFF
-    #       -D TPL_ENABLE_Pthread=OFF
-    #       -D TPL_ENABLE_Boost=OFF
-    #       -D TPL_ENABLE_BoostLib=OFF
-    #       -D TPL_ENABLE_ParMETIS=OFF
-    #       -D TPL_ENABLE_Zlib=OFF
-    #       -D TPL_ENABLE_HDF5=OFF
-    #       -D TPL_ENABLE_Netcdf=OFF
-    #       -D TPL_ENABLE_SuperLU=OFF
-    #       -D TPL_ENABLE_Scotch=OFF
-    #       -D TPL_ENABLE_MPI=ON
-    #       -D Trilinos_ENABLE_Rythmos=OFF
-    #       -D Trilinos_ENABLE_Pike=OFF
-    #       -D Trilinos_ENABLE_Komplex=OFF
-    #       -D Trilinos_ENABLE_TriKota=OFF
-    #       -D Trilinos_ENABLE_Moertel=OFF
-    #       -D Trilinos_ENABLE_Domi=OFF
-    #       -D Trilinos_ENABLE_FEI=OFF
-    #       -D Trilinos_ENABLE_PyTrilinos=OFF
-    #       -D Trilinos_ENABLE_Fortran=OFF
-    #       -D TeuchosCore_ENABLE_TESTS=OFF
-    #     report_pr_changes_only: true
-    #     apt_pckgs: libblas-dev liblapack-dev mpich
-    #     cppcheck_args: --enable=all --suppress=missingIncludeSystem -DMPI_VERSION=3 -D__GNUC__=10
-    #     clang_tidy_args: -checks='*,fuchsia-*,google-*,zircon-*,abseil-*,modernize-use-trailing-return-type,llvm*,hicpp-uppercase-literal-suffix,readability-uppercase-literal-suffix'
+        # Initialize the mapping for directories to their CMake suffix/prefix
+        dir_to_cmake["adelus"]="Adelus"
+        dir_to_cmake["isorropia"]="Isorropia"
+        dir_to_cmake["ml"]="ML"
+        dir_to_cmake["panzer"]="Panzer"
+        dir_to_cmake["tempus"]="Tempus"
+        dir_to_cmake["trilinoscouplings"]="TrilinosCouplings"
+        dir_to_cmake["amesos"]="Amesos"
+        dir_to_cmake["compadre"]="Compadre"
+        dir_to_cmake["galeri"]="Galeri"
+        dir_to_cmake["kokkos"]="Kokkos"
+        dir_to_cmake["moertel"]="Moertel"
+        dir_to_cmake["percept"]="Percept"
+        dir_to_cmake["rol"]="ROL"
+        dir_to_cmake["shylu"]="ShyLU"
+        dir_to_cmake["teuchos"]="Teuchos"
+        dir_to_cmake["amesos2"]="Amesos2"
+        dir_to_cmake["domi"]="Domi"
+        dir_to_cmake["ifpack"]="Ifpack"
+        dir_to_cmake["kokkos-kernels"]="KokkosKernels"
+        dir_to_cmake["muelu"]="MueLu"
+        dir_to_cmake["phalanx"]="Phalanx"
+        dir_to_cmake["rtop"]="RTOp"
+        dir_to_cmake["stk"]="STK"
+        dir_to_cmake["thyra"]="Thyra"
+        dir_to_cmake["triutils"]="Triutils"
+        dir_to_cmake["anasazi"]="Anasazi"
+        dir_to_cmake["epetra"]="Epetra"
+        dir_to_cmake["ifpack2"]="Ifpack2"
+        dir_to_cmake["komplex"]="Komplex"
+        dir_to_cmake["pike"]="Pike"
+        dir_to_cmake["rythmos"]="Rythmos"
+        dir_to_cmake["stokhos"]="Stokhos"
+        dir_to_cmake["tpetra"]="Tpetra"
+        dir_to_cmake["xpetra"]="Xpetra"
+        dir_to_cmake["aztecoo"]="AztecOO"
+        dir_to_cmake["epetraext"]="EpetraExt"
+        dir_to_cmake["intrepid"]="Interpid"
+        dir_to_cmake["krino"]="Krino"
+        dir_to_cmake["nox"]="NOX"
+        dir_to_cmake["piro"]="Piro"
+        dir_to_cmake["sacado"]="Sacado"
+        dir_to_cmake["stratimikos"]="Stratimikos"
+        dir_to_cmake["TriKota"]="TriKota"
+        dir_to_cmake["zoltan"]="Zoltan"
+        dir_to_cmake["belos"]="Belos"
+        dir_to_cmake["fei"]="FEI"
+        dir_to_cmake["intrepid2"]="Intrepid2"
+        dir_to_cmake["minitensor"]="Minitensor"
+        dir_to_cmake["pamgen"]="Pamgen"
+        dir_to_cmake["pliris"]="Pliris"
+        dir_to_cmake["seacas"]="Seacas"
+        dir_to_cmake["teko"]="Teko"
+        dir_to_cmake["zoltan2"]="Zoltan2"
+
+        changed_files=$(git diff --name-only origin/${{ github.base_ref }} HEAD)
+        unique_dirs=$(echo "$changed_files" | grep ^packages/ | cut -d'/' -f2 | sort | uniq)
+
+        # Generate CMake variables based on the mapping
+        cmake_vars=""
+        for dir in $unique_dirs; do
+          cmake_prefix=${dir_to_cmake[$dir]}
+          if [ ! -z "$cmake_prefix" ]; then
+            cmake_vars+=" -DTrilinos_ENABLE_${cmake_prefix}=ON"
+            cmake_vars+=" -D${cmake_prefix}_ENABLE_TESTS=ON"
+            cmake_vars+=" -D${cmake_prefix}_ENABLE_EXAMPLES=ON"
+          fi
+        done
+
+        # Save the CMake variables to GitHub's env variable
+        echo "CMAKE_VARS=${cmake_vars}" >> $GITHUB_ENV
+
+        # Print the CMake variables
+        echo "Generated CMake Variables: $cmake_vars"
+
+    - name: Run static analysis
+      uses: JacobDomagala/StaticAnalysis@99-filter-out-files-when-using-report_pr_changes-input
+      with:
+        comment_title: "Code quality check"
+        verbose: true
+        use_cmake: true
+        cmake_args: >
+          -D CMAKE_BUILD_TYPE="DEBUG"
+          -D BUILD_SHARED_LIBS:BOOL=ON
+          -D Trilinos_ENABLE_SEACAS=OFF
+          -D Trilinos_ENABLE_Sacado=OFF
+          -D TPL_ENABLE_BLAS=ON
+          -D TPL_ENABLE_LAPACK=ON
+          -D TPL_ENABLE_CUDA=OFF
+          -D TPL_ENABLE_Matio=OFF
+          -D TPL_ENABLE_X11=OFF
+          -D TPL_ENABLE_Pthread=OFF
+          -D TPL_ENABLE_Boost=OFF
+          -D TPL_ENABLE_BoostLib=OFF
+          -D TPL_ENABLE_ParMETIS=OFF
+          -D TPL_ENABLE_Zlib=OFF
+          -D TPL_ENABLE_HDF5=OFF
+          -D TPL_ENABLE_Netcdf=OFF
+          -D TPL_ENABLE_SuperLU=OFF
+          -D TPL_ENABLE_Scotch=OFF
+          -D TPL_ENABLE_MPI=ON
+          -D Trilinos_ENABLE_Rythmos=OFF
+          -D Trilinos_ENABLE_Pike=OFF
+          -D Trilinos_ENABLE_Komplex=OFF
+          -D Trilinos_ENABLE_TriKota=OFF
+          -D Trilinos_ENABLE_Moertel=OFF
+          -D Trilinos_ENABLE_Domi=OFF
+          -D Trilinos_ENABLE_FEI=OFF
+          -D Trilinos_ENABLE_PyTrilinos=OFF
+          -D Trilinos_ENABLE_Fortran=OFF
+          -D TeuchosCore_ENABLE_TESTS=OFF
+          ${{ env.CMAKE_VARS }}
+        report_pr_changes_only: true
+        apt_pckgs: libblas-dev liblapack-dev mpich
+        cppcheck_args: --enable=all --suppress=missingIncludeSystem
+        clang_tidy_args: -checks='*,fuchsia-*,google-*,zircon-*,abseil-*,modernize-use-trailing-return-type,llvm*,hicpp-uppercase-literal-suffix,readability-uppercase-literal-suffix'
