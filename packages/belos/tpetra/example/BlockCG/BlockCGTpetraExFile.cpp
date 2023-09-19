@@ -128,26 +128,9 @@ int run(int argc, char *argv[]) {
     procVerbose = verbose && (MyPID==0);  /* Only print on the zero processor */
 
     // Get the problem
-    // With the following Belos HarwellBoeingReader it fails
-    // Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( Comm );
-    // RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
-    // RCP<const tmap_t> Map = A->getDomainMap();
     RCP<tcrsmatrix_t> A;
     Tpetra::Utils::readHBMatrix(filename,Comm,A);
     RCP<const tmap_t> Map = A->getDomainMap();
-
-    // // For debugging
-    // Teuchos::RCP<Teuchos::FancyOStream> outStream =
-    //     Teuchos::VerboseObjectBase::getDefaultOStream();
-    // Teuchos::EVerbosityLevel v=Teuchos::VERB_EXTREME;
-
-    // // print map
-    // std::cout << "================== PRINTING MAP ==================" << std::endl;
-    // Map->describe(*outStream,v);
-    // std::cout << "====================== DONE ======================" << std::endl;
-
-    // // print A
-    // // A->describe(*outStream,v);
 
     // Create initial vectors
     RCP<MV> B, X;
@@ -161,8 +144,6 @@ int run(int argc, char *argv[]) {
     // *****************(can be user specified)******************
 
     const int numGlobalElements = B->getGlobalLength();
-    std::cout << "numGlobalElements: " << numGlobalElements << std::endl;
-
     if (maxIters == -1)
       maxIters = numGlobalElements/blockSize - 1; // maximum number of iterations to run
     //
