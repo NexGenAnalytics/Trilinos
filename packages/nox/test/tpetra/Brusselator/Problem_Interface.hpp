@@ -53,7 +53,6 @@
 // residual and matrix fill routines.
 
 // ---------- Standard Includes ----------
-#include <iostream>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_Operator.hpp>
 #include <Tpetra_RowMatrix.hpp>

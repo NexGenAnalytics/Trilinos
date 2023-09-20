@@ -50,8 +50,6 @@
 #ifndef _NOX_EXAMPLE_TPETRA_LINEAR_BASIS_HPP
 #define _NOX_EXAMPLE_TPETRA_LINEAR_BASIS_HPP
 
-#include <vector>
-
 template<typename ScalarType>
 class Basis
 {
