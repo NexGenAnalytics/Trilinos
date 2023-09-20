@@ -237,3 +237,4 @@ int main(int argc, char *argv[]) {
   // wrapped with a check: CMake option Trilinos_ENABLE_FLOAT=ON
   // return run<float>(argc,argv);
 }
+

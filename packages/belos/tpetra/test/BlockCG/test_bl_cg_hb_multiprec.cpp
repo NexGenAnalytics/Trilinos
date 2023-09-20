@@ -62,13 +62,6 @@
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_TypeNameTraits.hpp>
 
-// No LAPACK support for Cholesky
-// #ifdef HAVE_TEUCHOS_QD
-// #include <qd/dd_real.h>
-// #include <qd/qd_real.h>
-// #include <qd/fpu.h>
-// #endif
-
 using namespace Teuchos;
 using namespace Belos;
 

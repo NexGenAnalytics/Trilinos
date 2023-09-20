@@ -6,7 +6,6 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   COMM serial mpi
   ARGS
     "--verbose"
-#   "--verbose --filename=bcsstk14.hb --use-single-red"
   STANDARD_PASS_OUTPUT
 )
 
