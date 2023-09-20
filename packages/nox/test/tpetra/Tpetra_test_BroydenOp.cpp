@@ -53,6 +53,7 @@
 // Trilinos headers
 #include <Tpetra_Map.hpp>
 #include <Tpetra_Core.hpp>
+#include <Tpetra_CrsGraph.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_RowMatrix.hpp>
 
@@ -65,12 +66,12 @@ int run(int argc, char *argv[]) {
   using ST = typename Tpetra::Vector<ScalarType>::scalar_type;
   using LO = typename Tpetra::Vector<>::local_ordinal_type;
   using GO = typename Tpetra::Vector<>::global_ordinal_type;
-  using NT = typename Tpetra::Map<>::node_type;
+  using NT = typename Tpetra::Vector<>::node_type;
 
-  using tmap_t       = typename Tpetra::Map<ST,LO,GO>;
+  using tmap_t       = typename Tpetra::Map<LO,GO,NT>;
   using tvector_t    = typename Tpetra::Vector<ST,LO,GO,NT>;
-  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO>;
   using tcrsgraph_t  = typename Tpetra::CrsGraph<LO,GO,NT>;
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -164,15 +165,15 @@ int run(int argc, char *argv[]) {
     // Row 1 structure
     myGlobalIndices[0] = globalIndices[0];
     myGlobalIndices[1] = globalIndices[2];
-    broydenWorkGraph->insertGlobalIndices( globalIndices[0], 2, myGlobalIndices[0] );
+    broydenWorkGraph->insertGlobalIndices( globalIndices[0], 2, myGlobalIndices.data() );
     // Row 2 structure
     myGlobalIndices[0] = globalIndices[0];
     myGlobalIndices[1] = globalIndices[1];
-    broydenWorkGraph->insertGlobalIndices( globalIndices[1], 2, myGlobalIndices[0] );
+    broydenWorkGraph->insertGlobalIndices( globalIndices[1], 2, myGlobalIndices.data() );
     // Row 3 structure
     myGlobalIndices[0] = globalIndices[1];
     myGlobalIndices[1] = globalIndices[2];
-    broydenWorkGraph->insertGlobalIndices( globalIndices[2], 2, myGlobalIndices[0] );
+    broydenWorkGraph->insertGlobalIndices( globalIndices[2], 2, myGlobalIndices.data() );
 
     broydenWorkGraph->fillComplete();
 
@@ -204,15 +205,15 @@ int run(int argc, char *argv[]) {
     ST * values  ;
 
     // Row 1 answers
-    goldMatrix->ExtractMyRowView( 0, numCols, values );
+    goldMatrix->getLocalRowView( 0, numCols, values );
     values[0] =  6.0 ;
     values[1] =  2.0 ;
     // Row 2 answers
-    goldMatrix->ExtractMyRowView( 1, numCols, values );
+    goldMatrix->getLocalRowView( 1, numCols, values );
     values[0] =  5.0 ;
     values[1] =  0.0 ;
     // Row 3 structure
-    goldMatrix->ExtractMyRowView( 2, numCols, values );
+    goldMatrix->getLocalRowView( 2, numCols, values );
     values[0] = -1.0 ;
     values[1] =  7.0 ;
 
@@ -223,7 +224,7 @@ int run(int argc, char *argv[]) {
 
 
     // Now try a dense Broyden Update
-    tcrsgraph_t broydenWorkGraph2( Teuchos::Copy, broydenRowMap, 0 );
+    RCP<tcrsgraph_t> broydenWorkGraph2 = rcp ( new tcrsgraph_t(broydenRowMap, 0) );
 
     myGlobalIndices.resize(3);
 
@@ -231,13 +232,13 @@ int run(int argc, char *argv[]) {
     myGlobalIndices[0] = globalIndices[0];
     myGlobalIndices[1] = globalIndices[1];
     myGlobalIndices[2] = globalIndices[2];
-    broydenWorkGraph2.InsertGlobalIndices( globalIndices[0], 3, myGlobalIndices[0] );
-    broydenWorkGraph2.InsertGlobalIndices( globalIndices[1], 3, myGlobalIndices[0] );
-    broydenWorkGraph2.InsertGlobalIndices( globalIndices[2], 3, myGlobalIndices[0] );
+    broydenWorkGraph2->insertGlobalIndices( globalIndices[0], 3, myGlobalIndices.data() );
+    broydenWorkGraph2->insertGlobalIndices( globalIndices[1], 3, myGlobalIndices.data() );
+    broydenWorkGraph2->insertGlobalIndices( globalIndices[2], 3, myGlobalIndices.data() );
 
-    broydenWorkGraph2.FillComplete();
+    broydenWorkGraph2->fillComplete();
 
-    Teuchos::RCP<tcrsmatrix_t> broydenWorkMatrix2 = Teuchos::rcp( new tcrsmatrix_t( Teuchos::Copy, broydenWorkGraph2 ) );
+    Teuchos::RCP<tcrsmatrix_t> broydenWorkMatrix2 = Teuchos::rcp( new tcrsmatrix_t(broydenWorkGraph2) );
 
     // Create an identity matrix
     broydenWorkVec.putScalar(1.0);
@@ -261,17 +262,17 @@ int run(int argc, char *argv[]) {
     Teuchos::RCP<tcrsmatrix_t> goldMatrix2 = Teuchos::rcp( new tcrsmatrix_t( Teuchos::Copy, broydenWorkGraph2 ) );
 
     // Row 1 answers
-    goldMatrix2->ExtractMyRowView( 0, numCols, values );
+    goldMatrix2->getLocalRowView( 0, numCols, values );
     values[0] =  7.0 ;
     values[1] = -1.0 ;
     values[2] =  2.0 ;
     // Row 2 answers
-    goldMatrix2->ExtractMyRowView( 1, numCols, values );
+    goldMatrix2->getLocalRowView( 1, numCols, values );
     values[0] =  2.0 ;
     values[1] =  4.0 ;
     values[2] =  4.0 ;
     // Row 3 structure
-    goldMatrix2->ExtractMyRowView( 2, numCols, values );
+    goldMatrix2->getLocalRowView( 2, numCols, values );
     values[0] =  1.0 ;
     values[1] = -1.0 ;
     values[2] =  8.0 ;
@@ -283,16 +284,16 @@ int run(int argc, char *argv[]) {
         "Broyden Sparse Operator Update Test (Dense)" );
 
     // Now test the ability to remove active entries in the Broyden update
-    tcrsgraph_t inactiveGraph( Teuchos::Copy, broydenRowMap, 0 );
+    RCP<tcrsgraph_t> inactiveGraph = rcp ( new tcrsgraph_t(broydenRowMap, 0) );
 
     // Row 1 structure
-    inactiveGraph.insertGlobalIndices( globalIndices[0], 1, myGlobalIndices[1] );
+    inactiveGraph->insertGlobalIndices( globalIndices[0], 1, myGlobalIndices.data() );
     // Row 2 structure
-    inactiveGraph.insertGlobalIndices( globalIndices[1], 1, myGlobalIndices[2] );
+    inactiveGraph->insertGlobalIndices( globalIndices[1], 1, myGlobalIndices.data() );
     // Row 3 structure
-    inactiveGraph.insertGlobalIndices( globalIndices[2], 1, myGlobalIndices[0] );
+    inactiveGraph->insertGlobalIndices( globalIndices[2], 1, myGlobalIndices.data() );
 
-    inactiveGraph.FillComplete();
+    inactiveGraph->fillComplete();
 
     // Inactivate entries in dense matrix to arrive again at the original sparse structure
     broydenOp2.removeEntriesFromBroydenUpdate( inactiveGraph );
