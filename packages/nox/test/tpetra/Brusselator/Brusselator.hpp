@@ -87,7 +87,7 @@ class Brusselator
 
   using tvector_t     = typename Tpetra::Vector<ST, LO, GO>;
   using tmap_t        = typename Tpetra::Map<LO, GO, NO>;
-  using tcrsmatrix_t  = typename Tpetra::CrsMatrix<ST, LO, GO>;
+  using tcrsmatrix_t  = typename Tpetra::CrsMatrix<ST, LO, GO, NO>;
   using tcrsgraph_t   = typename Tpetra::CrsGraph<LO, GO, NO>;
   using timport_t     = typename Tpetra::Import<LO, GO, NO>;
 
@@ -233,11 +233,11 @@ public:
   #endif
 
     // Construct Linear Objects
-    Importer = Teuchos::rcp(new timport_t(*OverlapMap, *StandardMap));
-    nodeImporter = Teuchos::rcp(new timport_t(*OverlapNodeMap, *StandardNodeMap));
-    initialSolution = Teuchos::rcp(new tvector_t(*StandardMap));
-    oldSolution = new tvector_t(*StandardMap);
-    AA = Teuchos::rcp(new tcrsgraph_t(Teuchos::Copy, *StandardMap, 0));
+    Importer = Teuchos::rcp(new timport_t(OverlapMap, StandardMap));
+    nodeImporter = Teuchos::rcp(new timport_t(OverlapNodeMap, StandardNodeMap));
+    initialSolution = Teuchos::rcp(new tvector_t(StandardMap));
+    oldSolution = new tvector_t(StandardMap);
+    AA = Teuchos::rcp(new tcrsgraph_t(StandardMap, 0/*, Teuchos::rcp(Teuchos::Copy)*/));    // AM: TO FIX
 
     // Allocate the memory for a matrix dynamically (i.e. the graph is dynamic).
     if( overlapType == NODES )
@@ -256,21 +256,22 @@ public:
     // as well as the problem Jacobian matrix which may or may not be used
     // depending on the choice of Jacobian operator
     if( overlapType == ELEMENTS ) {
-      ColumnToOverlapImporter = new timport_t(AA->getColMap(),*OverlapMap);
-      A = Teuchos::rcp(new tcrsmatrix_t(Teuchos::Copy, *AA));
-      A->FillComplete();
+      ColumnToOverlapImporter = Teuchos::rcp(new timport_t(AA->getColMap(), OverlapMap));
+      A = Teuchos::rcp(new tcrsmatrix_t(AA /*, Teuchos::Copy*/));                          // AM: TO FIX
+      A->fillComplete();
     }
 
     // Create the nodal coordinates
-    xptr = Teuchos::rcp(new tvector_t(*StandardNodeMap));
+    x = Teuchos::rcp(new tvector_t(StandardNodeMap));
+    auto x_2d = x->getLocalViewHost(Tpetra::Access::ReadWrite);
+    auto x_1d = Kokkos::subview (x_2d, Kokkos::ALL (), 0);
     ST Length= xmax - xmin;
     dx=Length/((ST) NumGlobalNodes-1);
     for (i=0; i < NumMyNodes; i++) {
-      (*xptr)[i]=xmin + dx*((ST) StandardNodeMap->getMinGlobalIndex()+i);
+      x_1d(i) = xmin + dx*((ST) StandardNodeMap->getMinGlobalIndex()+i);
     }
 
     initializeSoln();
-    
   }
 
   // Reset problem for next parameter (time) step.
@@ -283,17 +284,23 @@ public:
   // Set initial condition for solution vector
   void initializeSoln()
   {
-    tvector_t& soln = *initialSolution;
-    tvector_t& x = *xptr;
+    tvector_t soln = *initialSolution;
+    tvector_t x_ = *x;
 
     // Here we do a sinusoidal perturbation of the unstable
     // steady state.
 
     ST pi = 4.*atan(1.0);
 
-    for (int i=0; i<x.MyLength(); i++) {
-      soln[2*i] = 0.6 + 1.e-1*sin(1.0*pi*x[i]);
-      soln[2*i+1] = 10.0/3.0 + 1.e-1*sin(1.0*pi*x[i]);
+    auto x_2d_ = x_.getLocalViewHost(Tpetra::Access::ReadOnly);
+    auto x_1d_ = Kokkos::subview (x_2d_, Kokkos::ALL (), 0);
+
+    auto soln_2d = soln.getLocalViewHost(Tpetra::Access::ReadWrite);
+    auto soln_1d = Kokkos::subview (soln_2d, Kokkos::ALL (), 0);
+
+    for (int i=0; i<x_.getLocalLength(); i++) {
+      soln_1d(2*i) = 0.6 + 1.e-1*sin(1.0*pi*x_1d_(i));
+      soln_1d(2*i+1) = 10.0/3.0 + 1.e-1*sin(1.0*pi*x_1d_(i));
     }
     *oldSolution = soln;
   }
@@ -335,7 +342,7 @@ public:
     // treatment for the current soution vector arises from use of
     // FD coloring in parallel.
     uold.doImport(*oldSolution, Importer, Tpetra::INSERT);
-    xvec.doImport(*xptr, *nodeImporter, Tpetra::INSERT);
+    xvec.doImport(*x, *nodeImporter, Tpetra::INSERT);
     if( (overlapType == ELEMENTS) /*&& (fType == Tpetra::FD_Res)*/)               // AM: TOFIX
       // Overlap vector for solution received from FD coloring, so simply reorder
       // on processor
@@ -531,10 +538,10 @@ public:
     }
   }
   
-  // Return a reference to the Epetra_Vector with the mesh positions
+  // Return a reference to the Tpetra_Vector with the mesh positions
   Teuchos::RCP<tvector_t> getMesh()
   {
-    return xptr;
+    return x;
   }
 
   // Accesor function for time step
@@ -652,13 +659,13 @@ private:
   Teuchos::RCP<timport_t> Importer;
   Teuchos::RCP<timport_t> nodeImporter;
   Teuchos::RCP<timport_t> ColumnToOverlapImporter;
-  Teuchos::RCP<tvector_t> xptr;
+  Teuchos::RCP<tvector_t> x;
   Teuchos::RCP<tvector_t> initialSolution;
   tvector_t *oldSolution;
   tvector_t *rhs;
   Teuchos::RCP<tcrsgraph_t> AA;
   Teuchos::RCP<tcrsmatrix_t> A;
-  Teuchos::RCP< const Teuchos::Comm<int> > Comm;
+  const Teuchos::RCP< const Teuchos::Comm<int> > Comm;
 
   int MyPID;              // Process number
 
