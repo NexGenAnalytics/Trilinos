@@ -23,7 +23,7 @@ int run(int argc, char *argv[])
   using tvector_t = typename Tpetra::Vector<ST, LO, GO>;
 
   Teuchos::GlobalMPISession mpiSession(&argc, &argv, &std::cout);
-  auto Comm = Tpetra::getDefaultComm();
+  RCP< const Teuchos::Comm<int> > Comm = Tpetra::getDefaultComm();
   const int MyPID = Comm->getRank();
   const int NumProc = Comm->getSize();
 
@@ -53,8 +53,9 @@ int run(int argc, char *argv[])
     // Create the Brusselator problem class. This creates all required
     // Tpetra objects for the problem and allows calls to the
     // function (F) and Jacobian evaluation routines.
-    Brusselator<ScalarType>::OverlapType OType = Brusselator<ScalarType>::NODES;                            // AM: TOFIX
-    RCP<Brusselator<ScalarType>> Problem = rcp(new Brusselator<ScalarType>(NumGlobalNodes, Comm, OType));   // AM: TOFIX
+    //Brusselator<int>::OverlapType OType = Brusselator<int>::OverlapType::NODES;
+    OverlapType OType = NODES;
+    RCP<Brusselator<ST>> Problem = rcp(new Brusselator<ST>(NumGlobalNodes, Comm, OType));
 
     // Get the vector from the Problem
     RCP<tvector_t> soln = Problem->getSolution();

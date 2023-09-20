@@ -73,6 +73,9 @@
 // Flag to tell the evaluate routine what objects to fill
 enum FillType { F_ONLY, MATRIX_ONLY, ALL };
 
+// Flag to tell the evaluate routine how to ghost shared information
+enum OverlapType { NODES, ELEMENTS };
+
 // Finite Element Problem Class
 template<typename ScalarType>
 class Brusselator
@@ -83,18 +86,15 @@ class Brusselator
   using NO = typename Tpetra::Map<>::node_type;
 
   using tvector_t     = typename Tpetra::Vector<ST, LO, GO>;
-  using tmap_t        = typename Tpetra::Map<ST, LO, GO>;
+  using tmap_t        = typename Tpetra::Map<LO, GO, NO>;
   using tcrsmatrix_t  = typename Tpetra::CrsMatrix<ST, LO, GO>;
   using tcrsgraph_t   = typename Tpetra::CrsGraph<LO, GO, NO>;
   using timport_t     = typename Tpetra::Import<LO, GO, NO>;
 
 public:
-  // Flag to tell the evaluate routine how to ghost shared information
-  enum OverlapType { NODES, ELEMENTS };
-
   // Constructor
   Brusselator(int NumGlobalUnknowns_,
-              Teuchos::RCP<const Teuchos::Comm<int>> &comm_,
+              Teuchos::RCP< const Teuchos::Comm<int> > comm,
               OverlapType OType_ = ELEMENTS) :
     xmin(0.0),
     xmax(1.0),
@@ -103,7 +103,7 @@ public:
     overlapType(OType_),
     ColumnToOverlapImporter(0),
     rhs(NULL),
-    Comm(&comm_),
+    Comm(comm),
     NumGlobalNodes(NumGlobalUnknowns_)
   {
     // Commonly used variables
@@ -120,15 +120,15 @@ public:
     // number of equations on each processor
 
     // Begin by distributing nodes fairly equally
-    StandardNodeMap = new tmap_t(NumGlobalNodes, 0, *Comm);
+    StandardNodeMap = Teuchos::rcp(new tmap_t(NumGlobalNodes, 0, Comm));
 
     // Get the number of nodes owned by this processor
-    NumMyNodes = StandardNodeMap->NumMyElements();
+    NumMyNodes = StandardNodeMap->getLocalNumElements();
 
     // Construct an overlap node map for the finite element fill
     // For single processor jobs, the overlap and standard maps are the same
     if (NumProc == 1)
-      OverlapNodeMap = new tmap_t(*StandardNodeMap);
+      OverlapNodeMap = Teuchos::rcp(new tmap_t(*StandardNodeMap));
     else {
 
       if( overlapType == ELEMENTS ) {
@@ -141,16 +141,16 @@ public:
           OverlapNumMyNodes --;
 
         if (MyPID==0)
-          OverlapMinMyNodeGID = StandardNodeMap->MinMyGID();
+          OverlapMinMyNodeGID = StandardNodeMap->getMinGlobalIndex();
         else
-          OverlapMinMyNodeGID = StandardNodeMap->MinMyGID() - 1;
+          OverlapMinMyNodeGID = StandardNodeMap->getMinGlobalIndex() - 1;
 
         int* OverlapMyGlobalNodes = new int[OverlapNumMyNodes];
 
         for (i = 0; i < OverlapNumMyNodes; i ++)
           OverlapMyGlobalNodes[i] = OverlapMinMyNodeGID + i;
 
-        OverlapNodeMap = new tmap_t(-1, OverlapNumMyNodes, OverlapMyGlobalNodes, 0, *Comm);
+        OverlapNodeMap = Teuchos::rcp(new tmap_t(-1, &OverlapNumMyNodes, *OverlapMyGlobalNodes, 0, Comm));
       }
 
       else { // overlapType == NODES
@@ -164,14 +164,14 @@ public:
         if ( MyPID == NumProc - 1 )
           OverlapNumMyNodes --;
 
-        OverlapMinMyNodeGID = StandardNodeMap->MinMyGID();
+        OverlapMinMyNodeGID = StandardNodeMap->getMinGlobalIndex();
 
         int* OverlapMyGlobalNodes = new int[OverlapNumMyNodes];
 
           for (i = 0; i < OverlapNumMyNodes; i ++)
           OverlapMyGlobalNodes[i] = OverlapMinMyNodeGID + i;
 
-        OverlapNodeMap = new tmap_t(-1, OverlapNumMyNodes, OverlapMyGlobalNodes, 0, *Comm);
+        OverlapNodeMap = Teuchos::rcp(new tmap_t(-1, &OverlapNumMyNodes, *OverlapMyGlobalNodes, 0, Comm));
       }
     } // End Overlap node map construction ********************************
 
@@ -184,26 +184,25 @@ public:
         // For now, we employ an interleave of unknowns
 
         StandardMyGlobalUnknowns[ NumSpecies * i + k ] =
-                NumSpecies * StandardNodeMap->GID(i) + k;
+                NumSpecies * StandardNodeMap->getGlobalElement(i) + k;
 
-    StandardMap = new tmap_t(-1, NumMyUnknowns, StandardMyGlobalUnknowns,
-                                  0, *Comm);
+    StandardMap = Teuchos::rcp(new tmap_t(-1, &NumMyUnknowns, *StandardMyGlobalUnknowns, 0, Comm));
 
-    assert(StandardMap->NumGlobalElements() == NumGlobalUnknowns);
+    assert(StandardMap->getGlobalNumElements() == NumGlobalUnknowns);
 
     if (NumProc == 1) {
-      OverlapMap = new tmap_t(*StandardMap);
+      OverlapMap = Teuchos::rcp(new tmap_t(*StandardMap));
     }
     else {
-      int OverlapNumMyNodes = OverlapNodeMap->NumMyElements();
+      int OverlapNumMyNodes = OverlapNodeMap->getLocalNumElements ();
       int OverlapNumMyUnknowns = NumSpecies * OverlapNumMyNodes;
       int* OverlapMyGlobalUnknowns = new int[OverlapNumMyUnknowns];
       for (int k=0; k<NumSpecies; k++)
         for (i=0; i<OverlapNumMyNodes; i++)
           OverlapMyGlobalUnknowns[ NumSpecies * i + k ] =
-                  NumSpecies * OverlapNodeMap->GID(i) + k;
+                  NumSpecies * OverlapNodeMap->getGlobalElement(i) + k;
 
-      OverlapMap = new tmap_t(-1, OverlapNumMyUnknowns, OverlapMyGlobalUnknowns, 0, *Comm);
+      OverlapMap = Teuchos::rcp(new tmap_t(-1, &OverlapNumMyUnknowns, *OverlapMyGlobalUnknowns, 0, Comm));
     } // End Overlap unknowns map construction ***************************
 
 
@@ -234,8 +233,8 @@ public:
   #endif
 
     // Construct Linear Objects
-    Importer = new timport_t(*OverlapMap, *StandardMap);
-    nodeImporter = new timport_t(*OverlapNodeMap, *StandardNodeMap);
+    Importer = Teuchos::rcp(new timport_t(*OverlapMap, *StandardMap));
+    nodeImporter = Teuchos::rcp(new timport_t(*OverlapNodeMap, *StandardNodeMap));
     initialSolution = Teuchos::rcp(new tvector_t(*StandardMap));
     oldSolution = new tvector_t(*StandardMap);
     AA = Teuchos::rcp(new tcrsgraph_t(Teuchos::Copy, *StandardMap, 0));
@@ -267,7 +266,7 @@ public:
     ST Length= xmax - xmin;
     dx=Length/((ST) NumGlobalNodes-1);
     for (i=0; i < NumMyNodes; i++) {
-      (*xptr)[i]=xmin + dx*((ST) StandardNodeMap->MinMyGID()+i);
+      (*xptr)[i]=xmin + dx*((ST) StandardNodeMap->getMinGlobalIndex()+i);
     }
 
     initializeSoln();
@@ -346,7 +345,7 @@ public:
 
     // Declare required variables
     int i,j;
-    int OverlapNumMyNodes = OverlapNodeMap->NumMyElements();
+    int OverlapNumMyNodes = OverlapNodeMap->getLocalNumElements();
 
     int row1, row2, column1, column2;
     ST term1, term2;
@@ -383,8 +382,8 @@ public:
 
         // Loop over Nodes in Element
         for (i=0; i< 2; i++) {
-          row1=OverlapMap->GID(NumSpecies * (ne+i));
-          row2=OverlapMap->GID(NumSpecies * (ne+i) + 1);
+          row1=OverlapMap->getGlobalElement(NumSpecies * (ne+i));
+          row2=OverlapMap->getGlobalElement(NumSpecies * (ne+i) + 1);
           term1 = basis.wt*basis.dx
               *((basis.uu[0] - basis.uuold[0])/dt * basis.phi[i]
                 +(1.0/(basis.dx*basis.dx))*Dcoeff1*basis.duu[0]*basis.dphide[i]
@@ -403,19 +402,19 @@ public:
           (*rhs)[NumSpecies*(ne+i)+1] += term2;
             }
         else
-          if (StandardMap->MyGID(row1)) {
-                (*rhs)[StandardMap->LID(OverlapMap->GID(NumSpecies*(ne+i)))]+=
+          if (StandardMap->isNodeLocalElement(row1)) {
+                (*rhs)[StandardMap->getLocalElement (OverlapMap->getGlobalElement(NumSpecies*(ne+i)))]+=
                   term1;
-                (*rhs)[StandardMap->LID(OverlapMap->GID(NumSpecies*(ne+i)+1))]+=
+                (*rhs)[StandardMap->getLocalElement (OverlapMap->getGlobalElement(NumSpecies*(ne+i)+1))]+=
                   term2;
         }
       }
           // Loop over Trial Functions
           if ((flag == MATRIX_ONLY) || (flag == ALL)) {
             for(j=0;j < 2; j++) {
-              if (StandardMap->MyGID(row1)) {
-                column1=OverlapMap->GID(NumSpecies * (ne+j));
-                column2=OverlapMap->GID(NumSpecies * (ne+j) + 1);
+              if (StandardMap->isNodeLocalElement(row1)) {
+                column1=OverlapMap->getGlobalElement(NumSpecies * (ne+j));
+                column2=OverlapMap->getGlobalElement(NumSpecies * (ne+j) + 1);
                 jac11=basis.wt*basis.dx*(
                         basis.phi[j]/dt*basis.phi[i]
                         +(1.0/(basis.dx*basis.dx))*Dcoeff1*basis.dphide[j]*
@@ -472,14 +471,14 @@ public:
       }
     }
     // U(1)=1
-    if ( StandardMap->LID(StandardMap->MaxAllGID()) >= 0 ) {
-      int lastDof = StandardMap->LID(StandardMap->MaxAllGID());
+    if ( StandardMap->getLocalElement (StandardMap->getMaxAllGlobalIndex()) >= 0 ) {
+      int lastDof = StandardMap->getLocalElement (StandardMap->getMaxAllGlobalIndex());
       if ((flag == F_ONLY)    || (flag == ALL)) {
         (*rhs)[lastDof - 1] = (*soln)[lastDof - 1] - 0.6;
         (*rhs)[lastDof] = (*soln)[lastDof] - 10.0/3.0;
       }
       if ((flag == MATRIX_ONLY) || (flag == ALL)) {
-        int row=StandardMap->MaxAllGID() - 1;
+        int row=StandardMap->getMaxAllGlobalIndex() - 1;
         int column = row;
         ST jac = 1.0;
         A->ReplaceGlobalValues(row++, 1, &jac, &column);
@@ -564,8 +563,8 @@ private:
   {
     int row, column;
 
-    int myMinNodeGID = StandardNodeMap->MinMyGID();
-    int myMaxNodeGID = StandardNodeMap->MaxMyGID();
+    int myMinNodeGID = StandardNodeMap->getMinLocalIndex();
+    int myMaxNodeGID = StandardNodeMap->getMaxLocalIndex();
 
     int leftNodeGID, rightNodeGID;
     for( int myNode = myMinNodeGID; myNode <= myMaxNodeGID; myNode++ ) {
@@ -573,11 +572,11 @@ private:
       leftNodeGID  = myNode - 1;
       rightNodeGID = myNode + 1;
 
-      if( leftNodeGID < StandardNodeMap->MinAllGID() )
-        leftNodeGID = StandardNodeMap->MinAllGID();
+      if( leftNodeGID < StandardNodeMap->getMinAllGlobalIndex() )
+        leftNodeGID = StandardNodeMap->getMinAllGlobalIndex();
 
-      if( rightNodeGID > StandardNodeMap->MaxAllGID() )
-        rightNodeGID = StandardNodeMap->MaxAllGID();
+      if( rightNodeGID > StandardNodeMap->getMaxAllGlobalIndex() )
+        rightNodeGID = StandardNodeMap->getMaxAllGlobalIndex();
 
       for( int dependNode = leftNodeGID; dependNode <= rightNodeGID; dependNode++ ) {
 
@@ -604,7 +603,7 @@ private:
     // Declare required variables
     int i,j;
     int row, column;
-    int OverlapNumMyNodes = OverlapNodeMap->NumMyElements();
+    int OverlapNumMyNodes = OverlapNodeMap->getLocalNumElements();
 
     // Loop Over # of Finite Elements on Processor
     for (int ne=0; ne < OverlapNumMyNodes-1; ne++) {
@@ -613,18 +612,18 @@ private:
       for (i=0; i<2; i++) {
 
         // If this node is owned by current processor, add indices
-        if (StandardNodeMap->MyGID(OverlapNodeMap->GID(ne+i))) {
+        if (StandardNodeMap->isNodeLocalElement (OverlapNodeMap->getGlobalElement(ne+i))) {
 
           // Loop over unknowns in Node
           for (int k=0; k<NumSpecies; k++) {
-            row=OverlapMap->GID( NumSpecies*(ne+i) + k); // Interleave scheme
+            row=OverlapMap->getGlobalElement( NumSpecies*(ne+i) + k); // Interleave scheme
 
             // Loop over supporting nodes
             for(j=0; j<2; j++) {
 
               // Loop over unknowns at supporting nodes
               for (int m=0; m<NumSpecies; m++) {
-                column=OverlapMap->GID( NumSpecies*(ne+j) + m);
+                column=OverlapMap->getGlobalElement( NumSpecies*(ne+j) + m);
                 //printf("\t\tWould like to insert -> (%d, %d)\n",row,column);
                 AA.insertGlobalIndices(row, 1, &column);
               }
@@ -646,20 +645,20 @@ private:
   FillType flag;
   OverlapType overlapType;
   
-  tmap_t *StandardNodeMap;
-  tmap_t *OverlapNodeMap;
-  tmap_t *StandardMap;
-  tmap_t *OverlapMap;
-  timport_t *Importer;
-  timport_t *nodeImporter;
-  timport_t *ColumnToOverlapImporter;
+  Teuchos::RCP<tmap_t> StandardNodeMap;
+  Teuchos::RCP<tmap_t> OverlapNodeMap;
+  Teuchos::RCP<tmap_t> StandardMap;
+  Teuchos::RCP<tmap_t> OverlapMap;
+  Teuchos::RCP<timport_t> Importer;
+  Teuchos::RCP<timport_t> nodeImporter;
+  Teuchos::RCP<timport_t> ColumnToOverlapImporter;
   Teuchos::RCP<tvector_t> xptr;
   Teuchos::RCP<tvector_t> initialSolution;
   tvector_t *oldSolution;
   tvector_t *rhs;
   Teuchos::RCP<tcrsgraph_t> AA;
   Teuchos::RCP<tcrsmatrix_t> A;
-  Teuchos::RCP<const Teuchos::Comm<int>> Comm;
+  Teuchos::RCP< const Teuchos::Comm<int> > Comm;
 
   int MyPID;              // Process number
 
