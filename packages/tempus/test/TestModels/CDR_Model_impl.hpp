@@ -355,7 +355,6 @@ void CDR_Model<Scalar>::evalModelImpl(
     if (nonnull(W_prec_out)) {
       RCP<Epetra_Operator> M_epetra = Thyra::get_Epetra_Operator(*(W_prec_out->getNonconstRightPrecOp()));
       M_inv = rcp_dynamic_cast<Epetra_CrsMatrix>(M_epetra);
-      M_inv->Print(std::cout);
       TEUCHOS_ASSERT(nonnull(M_inv));
       J_diagonal_ = Teuchos::rcp(new Epetra_Vector(*x_owned_map_));
     }
@@ -498,12 +497,10 @@ void CDR_Model<Scalar>::evalModelImpl(
       if (nonnull(M_inv)) {
         int column=0;
         double jac=1.0;
-        M_inv->Print(std::cout);
         ierr = M_inv->ReplaceGlobalValues(0, 1, &jac, &column);
         column=1;
         jac=0.0;
         ierr = M_inv->ReplaceGlobalValues(0, 1, &jac, &column);
-        M_inv->Print(std::cout);
       }
     }
 
@@ -512,8 +509,6 @@ void CDR_Model<Scalar>::evalModelImpl(
 
     if (nonnull(M_inv)) {
       // invert the Jacobian diagonal for the preconditioner
-
-    //   M_inv->Print(std::cout);
       M_inv->ExtractDiagonalCopy(*J_diagonal_);
 
       for (int i=0; i < J_diagonal_->MyLength(); ++i)

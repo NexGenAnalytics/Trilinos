@@ -344,7 +344,7 @@ TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
   std::vector<double> StepSize;
   std::vector<double> xErrorNorm;
   std::vector<double> xDotErrorNorm;
-  const int nTimeStepSizes = 1;
+  const int nTimeStepSizes = 5;
   double dt = 0.2;
   for (int n=0; n<nTimeStepSizes; n++) {
 
