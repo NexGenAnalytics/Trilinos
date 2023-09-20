@@ -232,10 +232,11 @@ int run(int argc, char *argv[])
     std::cout << "\nEnd Result: TEST PASSED" << std::endl;
   }
   return 0;
-  //
+
 } // end test_gcrodr_complex_hb.cpp
 
 int main(int argc, char *argv[]) {
   return run<double>(argc, argv);
   // return run<float>(argc, argv);
 }
+

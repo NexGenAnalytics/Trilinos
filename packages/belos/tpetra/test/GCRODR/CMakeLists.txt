@@ -39,15 +39,15 @@ IF(${PACKAGE_NAME}_ENABLE_Experimental)
   # At the moment, all the tests in this subdirectory depend on
   # experimental code.
 
-   TRIBITS_ADD_EXECUTABLE_AND_TEST(
-     Tpetra_BlockGCRODR
-     SOURCES test_block_gcrodr.cpp 
-     ARGS 
-     COMM serial mpi
-     )
+  # Didn't work / failed, because issue in the experimental code.
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+    Tpetra_BlockGCRODR
+    SOURCES test_block_gcrodr.cpp 
+    ARGS 
+    COMM serial mpi
+  )
 
 ENDIF() # ${PACKAGE_NAME}_ENABLE_Experimental
 
 ENDIF()
 
-# TODO add `test_prec_gcrodr_hb.cpp` when Ifpack2 issue is fixed
