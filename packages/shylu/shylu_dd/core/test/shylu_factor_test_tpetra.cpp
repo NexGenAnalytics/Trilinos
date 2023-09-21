@@ -10,8 +10,6 @@
 */
 // Will be used to test gFACT as we morph into templated
 
-// #ifdef HAVE_SHYLU_DDCORE_TPETRA
-
 #include <assert.h>
 #include <iostream>
 #include <sstream>
@@ -124,5 +122,3 @@ int main(int argc, char *argv[]) {
   // allow for running multiple ST
   run<double>(argc,argv);
 }
-
-// #endif // HAVE_SHYLU_DDCORE_TPETRA
