@@ -71,9 +71,8 @@ int run(int argc, char *argv[])
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
  
-  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
-  using tmap_t = Tpetra::Map<LO,GO,NT>;
-  using tmultivector_t = Tpetra::MultiVector<ST,LO,GO,NT>;
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  using tmap_t = typename Tpetra::Map<LO,GO,NT>;
 
   using Teuchos::CommandLineProcessor;
   using Teuchos::ParameterList;
@@ -144,15 +143,15 @@ int run(int argc, char *argv[])
     //
 
     // Make a random exact solution.
-    RCP<tmultivector_t> X_exact (new tmultivector_t (map, numrhs));
+    RCP<MV> X_exact (new MV(map, numrhs));
     MVT::MvRandom (*X_exact);
 
     // Compute the right-hand side as B = A*X.
-    RCP<tmultivector_t> B = MVT::Clone (*X_exact, numrhs);
+    RCP<MV> B = MVT::Clone (*X_exact, numrhs);
     OPT::Apply (*A, *X_exact, *B);
 
     // Choose an initial guess of all zeros.
-    RCP<tmultivector_t> X = MVT::Clone (*X_exact, numrhs);
+    RCP<MV> X = MVT::Clone (*X_exact, numrhs);
     MVT::MvInit (*X, ST(0.0));
 
     // **********************************************************************
@@ -255,17 +254,17 @@ int run(int argc, char *argv[])
     // Compute actual residuals.
     //
     bool badRes = false;
-    std::vector<ST> actual_resids( numrhs );
-    std::vector<ST> rhs_norm( numrhs );
-    tmultivector_t resid(A->getMap(), numrhs);
+    std::vector<ST> actualResids( numrhs );
+    std::vector<ST> rhsNorm( numrhs );
+    MV resid(A->getMap(), numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
-    MVT::MvNorm( resid, actual_resids );
-    MVT::MvNorm( *B, rhs_norm );
+    MVT::MvNorm( resid, actualResids );
+    MVT::MvNorm( *B, rhsNorm );
     if (proc_verbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
-        double actRes = actual_resids[i]/rhs_norm[i];
+        double actRes = actualResids[i]/rhsNorm[i];
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > tol) badRes = true;
       }

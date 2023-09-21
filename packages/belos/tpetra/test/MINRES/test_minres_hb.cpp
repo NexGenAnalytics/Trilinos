@@ -72,8 +72,7 @@ int run(int argc, char *argv[]) {
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
 
-  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
-  using tmultivector_t = Tpetra::MultiVector<ST,LO,GO,NT>;
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
   using Teuchos::inOutArg;
   using Teuchos::ParameterList;
@@ -130,7 +129,7 @@ int run(int argc, char *argv[]) {
     //
     // *****Construct initial guess and random right-hand-sides *****
     //
-    RCP<tmultivector_t> B, X;    
+    RCP<MV> B, X;    
     X = rcp( new MV(rowMap, numRHS) );
     MVT::MvRandom( *X );
     B = rcp( new MV(rowMap, numRHS ) );

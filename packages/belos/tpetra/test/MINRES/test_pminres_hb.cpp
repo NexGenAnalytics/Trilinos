@@ -74,8 +74,7 @@ int run(int argc, char *argv[]){
   using MVT = typename Belos::MultiVecTraits<ST,MV>;
   using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
 
-  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
-  using tmultivector_t = Tpetra::MultiVector<ST,LO,GO,NT>;
+  using tcrsmatrix_t = typename Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
   using Teuchos::ParameterList;
   using Teuchos::RCP;
@@ -128,7 +127,7 @@ int run(int argc, char *argv[]){
     RCP<const Tpetra::Map<> > map = A->getDomainMap();
 
     // Create initial vectors
-    RCP<tmultivector_t> X, B;
+    RCP<MV> X, B;
     X = rcp(new MV(map, numrhs));
     MVT::MvRandom( *X );
     B = rcp(new MV(map, numrhs));
@@ -214,17 +213,17 @@ int run(int argc, char *argv[]){
     // Compute actual residuals.
     //
     bool badRes = false;
-    std::vector<MT> actual_resids( numrhs );
-    std::vector<MT> rhs_norm( numrhs );
+    std::vector<MT> actualResids( numrhs );
+    std::vector<MT> rhsNorm( numrhs );
     MV resid(map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
-    MVT::MvNorm( resid, actual_resids );
-    MVT::MvNorm( *B, rhs_norm );
+    MVT::MvNorm( resid, actualResids );
+    MVT::MvNorm( *B, rhsNorm );
     if (proc_verbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
       for ( int i=0; i<numrhs; i++) {
-        double actRes = actual_resids[i]/rhs_norm[i];
+        double actRes = actualResids[i]/rhsNorm[i];
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > tol) badRes = true;
       }
