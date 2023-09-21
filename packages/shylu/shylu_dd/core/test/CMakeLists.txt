@@ -46,11 +46,19 @@ IF(${PACKAGE_NAME}_ENABLE_Tpetra AND HAVE_SHYLU_DDCORE_AMESOS2 AND TPL_ENABLE_Su
 ENDIF()
 
 IF(${PACKAGE_NAME}_ENABLE_Tpetra AND HAVE_TPETRA_INST_INT_INT)
- TRIBITS_ADD_EXECUTABLE(
+
+  TRIBITS_ADD_EXECUTABLE(
         iterative_interface
         SOURCES iterative_solver_interface_test.cpp
         COMM serial mpi
         )
+
+  TRIBITS_ADD_EXECUTABLE_AND_TEST(
+        shylu_factor_tpetra
+        SOURCES shylu_factor_test_tpetra.cpp
+        COMM serial mpi
+        )
+
 ENDIF()
 
 
