@@ -108,7 +108,7 @@ int run(int argc, char *argv[]) {
   std::string MMFileName = Teuchos::getParameter<std::string>(*pLUList, "mm_file");
   std::string prec_type = Teuchos::getParameter<std::string>(*pLUList, "preconditioner");
   int maxiters = Teuchos::getParameter<int>(*pLUList, "Outer Solver MaxIters");
-  MT tol = Teuchos::getParameter<double>(*pLUList, "Outer Solver Tolerance");
+  MT tol = Teuchos::getParameter<ST>(*pLUList, "Outer Solver Tolerance");
   std::string rhsFileName = pLUList->get<std::string>("rhs_file", "");
 
 
@@ -149,7 +149,7 @@ int run(int argc, char *argv[]) {
   tmap_t vecMap(n, 0, Comm);
   bool allOneRHS = false;
   if (rhsFileName != "") {
-    b1 = Tpetra::MatrixMarket::Reader<tcrsmatrix_t>::readSparseFile(file_name, vecMap);
+    b1 = Tpetra::MatrixMarket::Reader<MV>::readSparseFile(file_name, vecMap);
   } else {
     b1 = new rcp<MV>(vecMap, 1, false);
     b1->random();
@@ -276,8 +276,8 @@ int run(int argc, char *argv[]) {
 
       rcpx->putScalar(0.0);
 
-      RCP<Belos::LinearProblem<double,MV,OP> > problem
-          = rcp( new Belos::LinearProblem<double,MV,OP>( rcpA, rcpx, rcpb ) );
+      RCP<Belos::LinearProblem<ST,MV,OP> > problem
+          = rcp( new Belos::LinearProblem<ST,MV,OP>( rcpA, rcpx, rcpb ) );
 
       if (leftprec) {
           problem->setLeftPrec( Prec );
@@ -298,8 +298,8 @@ int run(int argc, char *argv[]) {
       }
 
       // Create an iterative solver manager.
-      RCP< Belos::SolverManager<double,MV,OP> > solver
-        = rcp( new Belos::BlockGmresSolMgr<double,MV,OP>(
+      RCP< Belos::SolverManager<ST,MV,OP> > solver
+        = rcp( new Belos::BlockGmresSolMgr<ST,MV,OP>(
               problem,
               rcp(&belosList,false)
             )
@@ -336,144 +336,91 @@ int run(int argc, char *argv[]) {
       //
       Teuchos::Time stime("Solve      time");
       stime.start();
-      solver->solve ();
+      solver->solve();
       stime.stop();
-      if (myPID == 0)
-      {
-          std::cout << "Time to solve       : " << stime.totalElapsedTime() << std::endl << std::endl;
+
+      if (myPID == 0) {
+        std::cout << "Time to solve       : " << stime.totalElapsedTime() << std::endl << std::endl;
       }
 
       //
       // Get the number of iterations for this solve.
       //
       int numIters = solver->getNumIters();
-      if (proc_verbose && myPID == 0)
-      {
-          std::cout << "Number of iterations performed for this solve: " <<
-                    numIters << std::endl;
+
+      if (proc_verbose && myPID == 0) {
+        std::cout << "Number of iterations performed for this solve: " <<
+                  numIters << std::endl;
       }
+
       //
       // Compute actual residuals.
       //
-      //bool badRes = false; // unused
-      std::vector<double> actual_resids( numrhs );
-      std::vector<double> rhs_norm( numrhs );
-      MV resid((*rcpA).RowMap(), numrhs);
+      std::vector<ST> actual_resids( numrhs );
+      std::vector<ST> rhs_norm( numrhs );
+      MV resid(rcpA->getRowMap(), numrhs);
       OPT::Apply( *rcpA, *rcpx, resid );
       MVT::MvAddMv( -1.0, resid, 1.0, *rcpb, resid );
       MVT::MvNorm( resid, actual_resids );
       MVT::MvNorm( *rcpb, rhs_norm );
-      if (proc_verbose && myPID == 0)
-      {
-          std::cout<< "------ Actual Residuals (normalized) -------"<<std::endl;
-          for ( int i=0; i<numrhs; i++)
-          {
-              double actRes = actual_resids[i]/rhs_norm[i];
-              std::cout<<"Problem "<<i<<" : \t"<< actRes;
-              if (actRes > tol) {
-                //badRes = true; // unused
-                std::cout<<" (NOT CONVERGED)"<< std::endl;
-                success = false;
-              } else {
-                std::cout<<" (CONVERGED)"<< std::endl;
-              }
+
+      if (proc_verbose && myPID == 0) {
+
+        std::cout<< "------ Actual Residuals (normalized) -------"<<std::endl;
+
+        for ( int i=0; i<numrhs; i++) {
+
+          ST actRes = actual_resids[i]/rhs_norm[i];
+          std::cout<<"Problem "<<i<<" : \t"<< actRes;
+
+          if (actRes > tol) {
+            std::cout<<" (NOT CONVERGED)"<< std::endl;
+            success = false;
+          } else {
+            std::cout<<" (CONVERGED)"<< std::endl;
           }
+        }
       }
 
       file_number++;
-      if (file_number >= maxFiles+startFile)
-      {
+      if (file_number >= maxFiles+startFile) {
         break;
-      }
-      else
-      {
-          sprintf(file_name, MMFileName.c_str(), file_number);
+      } else {
 
-          if (redistA != NULL) delete redistA;
-          // Load the new matrix
-          iterA = EpetraExt::MatrixMarketFileToCrsMatrix(file_name,
-                          Comm);
-          if (err != 0)
-          {
-              if (myPID == 0)
-                {
-                  std::cout << "Could not open file: "<< file_name << std::endl;
+        sprintf(file_name, MMFileName.c_str(), file_number);
 
-                }
-              success = false;
-          }
-          else
-          {
-              rd.redistribute(*iterA, redistA);
-              delete iterA;
-              InitMatValues(*redistA, A);
-          }
+        // Load the new matrix
+        iterA = Tpetra::MatrixMarket::Reader<tcrsmatrix_t>::readSparseFile(file_name, Comm);
 
-          // Load the new rhs
-          if (!allOneRHS)
-          {
-              sprintf(file_name, rhsFileName.c_str(), file_number);
+        // Load the new rhs
+        if (!allOneRHS) {
+          sprintf(file_name, rhsFileName.c_str(), file_number);
 
-              if (iterb1 != NULL) delete iterb1;
-              err = EpetraExt::MatrixMarketFileToMultiVector(file_name,
-                      vecMap, b1);
-              if (err != 0)
-              {
-                  if (myPID==0)
-                    {
-                      std::cout << "Could not open file: "<< file_name << std::endl;
-                      success = false;
-                    }
-              }
-              else
-              {
-                  rd.redistribute(*b1, iterb1);
-                  delete b1;
-                  InitMVValues( *iterb1, newB );
-              }
-          }
+          b1 = Tpetra::MatrixMarket::Reader<MV>::readSparseFile(file_name, vecMap);
+        }
       }
   }
-  if (myPID == 0)
-  {
-      if(success)
-        {
-          std::cout << pass << std::endl;
-        }
-      else
-        {
-          std::cout << fail << std::endl;
-        }
+
+  if (myPID == 0) {
+    if(success) {
+      std::cout << pass << std::endl;
+    } else {
+      std::cout << fail << std::endl;
+    }
   }
+} // run
 
-  if (redistA != NULL) delete redistA;
-  if (iterb1 != NULL) delete iterb1;
-
-
-  if (prec_type.compare("ML") == 0)
-  {
-      delete MLprec;
-  }
-  else
-  {
-      delete prec;
-  }
-  delete newX;
-  delete newB;
-  delete A;
-  delete partitioner;
-}
-
-int InitMatValues( const tcrsmatrix_t& newA, tcrsmatrix_t* A )
+template <class ST>
+int InitMatValues( const tcrsmatrix_t& newA, tcrsmatrix_t* A ) // will need to define/change
 {
   int numMyRows = newA.NumMyRows();
   int maxNum = newA.MaxNumEntries();
   int numIn;
   int *idx = 0;
-  double *vals = 0;
+  ST *vals = 0;
 
   idx = new int[maxNum];
-  vals = new double[maxNum];
+  vals = new ST[maxNum];
 
   // For each row get the values and indices, and replace the values in A.
   for (int i=0; i<numMyRows; ++i) {
@@ -486,14 +433,11 @@ int InitMatValues( const tcrsmatrix_t& newA, tcrsmatrix_t* A )
 
   }
 
-  // Clean up.
-  delete [] idx;
-  delete [] vals;
-
   return 0;
-}
+} // InitMatValues
 
-int InitMVValues( const MV& newb, MV* b )
+template <class ST>
+int InitMVValues( const MV& newb, MV* b ) // CWS: will need to define/change
 {
   int length = newb.MyLength();
   int numVecs = newb.NumVectors();
@@ -508,4 +452,8 @@ int InitMVValues( const MV& newb, MV* b )
   }
 
   return 0;
+} // InitMVValues
+
+int main(int argc, char *argv[]) {
+  run<double>(argc,argv);
 }
