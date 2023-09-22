@@ -53,20 +53,18 @@
 // Tpetra
 #include <Tpetra_Map.hpp>
 #include <Tpetra_Core.hpp>
-#include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_MultiVector.hpp>
+#include <Tpetra_CrsMatrix.hpp>
 
 // Teuchos
-#include <Teuchos_ParameterList.hpp>
-#include <Teuchos_StandardCatchMacros.hpp>
-#include <Teuchos_CommandLineProcessor.hpp>
+#include <Teuchos_Time.hpp>
+#include "Teuchos_StandardCatchMacros.hpp"
 
 // Belos
 #include "BelosConfigDefs.hpp"
-#include "BelosLinearProblem.hpp"
 #include "BelosTpetraTestFramework.hpp"
 #include "BelosPseudoBlockGmresSolMgr.hpp"
-
+#include "BelosLinearMultiShiftProblem.hpp"
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
@@ -78,13 +76,11 @@ int run(int argc, char *argv[]) {
 
   using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
-  using MT = typename Teuchos::ScalarTraits<ST>::magnitudeType;
+  using MT  = typename Teuchos::ScalarTraits<ST>::magnitudeType;
+  using MVT = typename Belos::MultiVecTraits<ST,MV>;
 
   using tmap_t       = Tpetra::Map<LO,GO,NT>;
   using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
-
-  using MVT = typename Belos::MultiVecTraits<ST,MV>;
-  using OPT = typename Belos::OperatorTraits<ST,MV,OP>;
 
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -101,13 +97,14 @@ int run(int argc, char *argv[]) {
     const int myPID = comm->getRank();
 
     bool procVerbose = false;
+    bool useShift = true;
     int frequency = -1;    // how often residuals are printed by solver
-    int initNumRHS = 5;   // how many right-hand sides get solved first
-    int augNumRHS = 10;   // how many right-hand sides are augmented to the first group
+    int initNumRHS = 3;   // how many right-hand sides get solved first
+    int augNumRHS = 2;   // how many right-hand sides are augmented to the first group
     int maxRestarts = 15;  // number of restarts allowed
     int length = 100;
-    int initBlockSize = 5;// blocksize used for the initial pseudo-block GMRES solve
-    int augBlockSize = 3; // blocksize used for the augmented pseudo-block GMRES solve
+    int initBlockSize = 2;// blocksize used for the initial pseudo-block GMRES solve
+    int augBlockSize = 1; // blocksize used for the augmented pseudo-block GMRES solve
     int maxIters = -1;     // maximum iterations allowed
     std::string filename("orsirr1.hb");
     MT tol = 1.0e-5;       // relative residual tolerance
@@ -115,6 +112,7 @@ int run(int argc, char *argv[]) {
 
     Teuchos::CommandLineProcessor cmdp(false,true);
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
+    cmdp.setOption("use-shift", "no-shift", &useShift, "Whether shift should be used.");
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
     cmdp.setOption("filename",&filename,"Filename for Harwell-Boeing test matrix.");
     cmdp.setOption("tol",&tol,"Relative residual tolerance used by GMRES solver.");
@@ -129,9 +127,9 @@ int run(int argc, char *argv[]) {
     if (cmdp.parse(argc,argv) != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
       return -1;
     }
-    if (!verbose)
+    if (!verbose) {
       frequency = -1;  // reset frequency if test is not verbose
-
+    }
     procVerbose = verbose && (myPID==0); /* Only print on zero processor */
 
     // Get the problem
@@ -164,20 +162,22 @@ int run(int argc, char *argv[]) {
       belosList.set( "Verbosity", Belos::Errors + Belos::Warnings );
 
     // *****Construct solution std::vector and random right-hand-sides *****
-
     RCP<MV> initX = rcp( new MV(Map, initNumRHS) );
     RCP<MV> initB = rcp( new MV(Map, initNumRHS) );
-    MVT::MvRandom( *initX );
-    OPT::Apply( *A, *initX, *initB );
-    initX->putScalar( 0.0 );
-    Belos::LinearProblem<ST,MV,OP> initProblem( A, initX, initB );
-    initProblem.setLabel("Belos Init");
 
+    Belos::LinearMultiShiftProblem<ST,MV,OP> initProblem( A, initX, initB );
+    initProblem.setLabel("Belos Init");
+    initProblem.setShift( useShift );
     bool set = initProblem.setProblem();
+
+    MVT::MvRandom( *initX );
+    initProblem.applyOp( *initX, *initB );
+    initX->putScalar( 0.0 );
+    set = initProblem.setProblem( initX, initB );
 
     if (set == false) {
       if (procVerbose)
-        std::cout << std::endl << "ERROR:  Initial Belos::LinearProblem failed to set up correctly!" << std::endl;
+        std::cout << std::endl << "ERROR:  Initial Belos::LinearMultiShiftProblem failed to set up correctly!" << std::endl;
       return -1;
     }
 
@@ -191,12 +191,17 @@ int run(int argc, char *argv[]) {
     // Perform solve
     Belos::ReturnType ret = initSolver->solve();
 
-    // Compute actual residuals
+    // Compute actual residuals.
+    std::vector<int> initIndex( initNumRHS );
+    for (int i=0; i<initNumRHS; ++i)
+      initIndex[i] = i;
+    initProblem.setLSIndex( initIndex );
+
     bool badRes = false;
     std::vector<ST> actualResids( initNumRHS );
     std::vector<ST> rhsNorm( initNumRHS );
     MV initR( Map, initNumRHS );
-    OPT::Apply( *A, *initX, initR );
+    initProblem.applyOp( *initX, initR );
     MVT::MvAddMv( -1.0, initR, 1.0, *initB, initR );
     MVT::MvNorm( initR, actualResids );
     MVT::MvNorm( *initB, rhsNorm );
@@ -219,9 +224,14 @@ int run(int argc, char *argv[]) {
 
     RCP<MV> augX = rcp( new MV(Map, initNumRHS+augNumRHS) );
     RCP<MV> augB = rcp( new MV(Map, initNumRHS+augNumRHS) );
+    Belos::LinearMultiShiftProblem<ST,MV,OP> augProblem( A, augX, augB );
+    augProblem.setLabel("Belos Aug");
+    augProblem.setShift( useShift );
+    set = augProblem.setProblem();
+
     if (augNumRHS) {
       MVT::MvRandom( *augX );
-      OPT::Apply( *A, *augX, *augB );
+      augProblem.applyOp( *augX, *augB );
       augX->putScalar( 0.0 );
     }
 
@@ -231,13 +241,10 @@ int run(int argc, char *argv[]) {
     tmpX->scale( 1.0, *augX );
     tmpB->scale( 1.0, *augB );
 
-    Belos::LinearProblem<ST,MV,OP> augProblem( A, augX, augB );
-    augProblem.setLabel("Belos Aug");
-
-    set = augProblem.setProblem();
+    set = augProblem.setProblem( augX, augB );
     if (set == false) {
       if (procVerbose)
-        std::cout << std::endl << "ERROR:  Augmented Belos::LinearProblem failed to set up correctly!" << std::endl;
+        std::cout << std::endl << "ERROR:  Augmented Belos::LinearMultiShiftProblem failed to set up correctly!" << std::endl;
       return -1;
     }
 
@@ -271,27 +278,33 @@ int run(int argc, char *argv[]) {
       std::cout << "Number of initial right-hand sides: " << initNumRHS << std::endl;
       std::cout << "Number of augmented right-hand sides: " << augNumRHS << std::endl;
       std::cout << "Number of restarts allowed: " << maxRestarts << std::endl;
-      std::cout << "Length of block Arnoldi factorization: " << length <<std::endl;
+      std::cout << "Length of Krylov subspace: " << length <<std::endl;
       std::cout << "Max number of Gmres iterations: " << maxIters << std::endl;
       std::cout << "Relative residual tolerance: " << tol << std::endl;
-      if (aug_tol != tol)
+      if (aug_tol != tol) {
         std::cout << "Relative residual tolerance for augmented systems: " << aug_tol << std::endl;
+      }
       std::cout << std::endl;
     }
 
     // Compute actual residuals.
+    int totalNumRHS = initNumRHS + augNumRHS;
+    std::vector<int> totalIndex( totalNumRHS );
+    for (int i=0; i<totalNumRHS; ++i)
+      totalIndex[i] = i;
+    augProblem.setLSIndex( totalIndex );
+
     badRes = false;
-    int total_numrhs = initNumRHS + augNumRHS;
-    actualResids.resize( total_numrhs );
-    rhsNorm.resize( total_numrhs );
-    MV augR( Map, total_numrhs );
-    OPT::Apply( *A, *augX, augR );
+    actualResids.resize( totalNumRHS );
+    rhsNorm.resize( totalNumRHS );
+    MV augR( Map, totalNumRHS );
+    augProblem.apply( *augX, augR );
     MVT::MvAddMv( -1.0, augR, 1.0, *augB, augR );
     MVT::MvNorm( augR, actualResids );
     MVT::MvNorm( *augB, rhsNorm );
     if (procVerbose) {
       std::cout<< "---------- Actual Residuals (normalized) ----------"<<std::endl<<std::endl;
-      for ( int i=0; i<total_numrhs; i++) {
+      for ( int i=0; i<totalNumRHS; i++) {
         ST actRes = actualResids[i]/rhsNorm[i];
         std::cout<<"Problem "<<i<<" : \t"<< actRes <<std::endl;
         if (actRes > tol ) badRes = true;
