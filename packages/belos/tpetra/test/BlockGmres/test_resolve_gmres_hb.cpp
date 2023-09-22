@@ -49,18 +49,11 @@
 // Tpetra
 #include <Tpetra_Map.hpp>
 #include <Tpetra_Core.hpp>
-#include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-
-// Teuchos
-#include <Teuchos_ParameterList.hpp>
-#include <Teuchos_StandardCatchMacros.hpp>
-#include <Teuchos_CommandLineProcessor.hpp>
 
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
-#include "BelosEpetraAdapter.hpp"
 #include "BelosBlockGmresSolMgr.hpp"
 #include "BelosTpetraTestFramework.hpp"
 #include "BelosPseudoBlockGmresSolMgr.hpp"
@@ -92,6 +85,7 @@ int run(int argc, char *argv[]) {
 
   bool success = false;
   bool verbose = false;
+
   try {
 
     const auto comm = Tpetra::getDefaultComm();
@@ -176,11 +170,11 @@ int run(int argc, char *argv[]) {
     // *************Start the block Gmres iteration*************************
     // *******************************************************************
 
-    Teuchos::RCP< Belos::SolverManager<ST,MV,OP> > solver;
+    RCP< Belos::SolverManager<ST,MV,OP> > solver;
     if (pseudo)
-      solver = Teuchos::rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>( rcp(&problem,false), rcp(&belosList,false) ) );
+      solver = rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>( rcp(&problem,false), rcp(&belosList,false) ) );
     else
-      solver = Teuchos::rcp( new Belos::BlockGmresSolMgr<ST,MV,OP>( rcp(&problem,false), rcp(&belosList,false) ) );
+      solver = rcp( new Belos::BlockGmresSolMgr<ST,MV,OP>( rcp(&problem,false), rcp(&belosList,false) ) );
 
     // Perform solve
     Belos::ReturnType ret = solver->solve();
@@ -300,7 +294,7 @@ int run(int argc, char *argv[]) {
 
     ParameterList belosList2;
     belosList2.set( "Timer Label", "Belos Resolve w/ New Label" );   // Change timer labels.
-    solver->setParameters( Teuchos::rcp( &belosList2, false ) );
+    solver->setParameters( rcp( &belosList2, false ) );
 
     problem.setLabel( "Belos Resolve w/ New Label" );
     X->putScalar( 0.0 );
@@ -358,15 +352,15 @@ int run(int argc, char *argv[]) {
 
     // Create the solver without either the problem or parameter list.
     if (pseudo)
-      solver = Teuchos::rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>() );
+      solver = rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>() );
     else
-      solver = Teuchos::rcp( new Belos::BlockGmresSolMgr<ST,MV,OP>() );
+      solver = rcp( new Belos::BlockGmresSolMgr<ST,MV,OP>() );
 
     // Set the problem after the solver construction.
     solver->setProblem( rcp( &problem2, false ) );
 
     // Get the valid list of parameters from the solver and print it.
-    RCP<const Teuchos::ParameterList> validList = solver->getValidParameters();
+    RCP<const ParameterList> validList = solver->getValidParameters();
     if (procVerbose) {
       if (pseudo)
         std::cout << std::endl << "Valid parameters from the pseudo-block Gmres solver manager:" << std::endl;

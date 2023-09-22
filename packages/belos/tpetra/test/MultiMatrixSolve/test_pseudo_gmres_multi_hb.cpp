@@ -56,10 +56,6 @@
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 
-// Teuchos
-#include <Teuchos_Time.hpp>
-#include "Teuchos_StandardCatchMacros.hpp"
-
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosTpetraTestFramework.hpp"
@@ -185,8 +181,8 @@ int run(int argc, char *argv[]) {
     // *********************Perform initial solve*************************
     // *******************************************************************
 
-    Teuchos::RCP< Belos::SolverManager<ST,MV,OP> > initSolver
-      = Teuchos::rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>( rcp(&initProblem,false), rcp(&belosList,false) ) );
+    RCP< Belos::SolverManager<ST,MV,OP> > initSolver
+      = rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>( rcp(&initProblem,false), rcp(&belosList,false) ) );
 
     // Perform solve
     Belos::ReturnType ret = initSolver->solve();
@@ -258,8 +254,8 @@ int run(int argc, char *argv[]) {
     belosList.set( "Timer Label", "Belos Aug" );          // Label used by the timers in this solver
     belosList.set( "Implicit Residual Scaling", "Norm of RHS" ); // Implicit residual scaling for convergence
     belosList.set( "Explicit Residual Scaling", "Norm of RHS" ); // Explicit residual scaling for convergence
-    Teuchos::RCP< Belos::SolverManager<ST,MV,OP> > augSolver
-      = Teuchos::rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>( rcp(&augProblem,false), rcp(&belosList,false) ) );
+    RCP< Belos::SolverManager<ST,MV,OP> > augSolver
+      = rcp( new Belos::PseudoBlockGmresSolMgr<ST,MV,OP>( rcp(&augProblem,false), rcp(&belosList,false) ) );
 
     // Perform solve
     ret = augSolver->solve();
