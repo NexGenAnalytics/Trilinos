@@ -142,9 +142,9 @@ int run(int argc, char *argv[]) {
 
     // Create initial vectors
     RCP<MV> B, X;
-    X = rcp( new MV(Map,numrhs) );
+    X = rcp( new MV(map,numrhs) );
     MVT::MvRandom( *X );
-    B = rcp( new MV(Map,numrhs) );
+    B = rcp( new MV(map,numrhs) );
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
 
@@ -207,7 +207,7 @@ int run(int argc, char *argv[]) {
     bool badRes = false;
     std::vector<ST> actualResids( numrhs );
     std::vector<ST> rhsNorm( numrhs );
-    MV resid(Map, numrhs);
+    MV resid(map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
     MVT::MvNorm( resid, actualResids );
