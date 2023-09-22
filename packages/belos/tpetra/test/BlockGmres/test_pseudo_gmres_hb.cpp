@@ -94,7 +94,13 @@ int run(int argc, char *argv[]) {
   bool verbose = false;
   bool success = true;
 
+  Teuchos::GlobalMPISession session(&argc, &argv, nullptr);
+
   try {
+
+    const auto comm = Tpetra::getDefaultComm();
+    const int myPID = comm->getRank();
+
     bool procVerbose = false;
     int frequency = -1;    // how often residuals are printed by solver
     int initNumRHS = 5;   // how many right-hand sides get solved first
@@ -128,17 +134,14 @@ int run(int argc, char *argv[]) {
       frequency = -1;  // reset frequency if test is not verbose
 
     // Get the problem
-    int MyPID;
-    RCP<tcrsmatrix_t> A;
-    int returnVal =Belos::Util::createEpetraProblem(filename,NULL,&A,NULL,NULL,&MyPID);
-    const tmap_t &Map = A->RowMap();
-    if(returnVal != 0) return returnVal;
-    procVerbose = verbose && (MyPID==0); /* Only print on zero processor */
+    Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
+    RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
+    RCP<const tmap_t> Map = A->getDomainMap();
 
     // ********Other information used by block solver***********
     // *****************(can be user specified)******************
 
-    const int NumGlobalElements = Map->getNumGlobalElements();
+    const int NumGlobalElements = Map->getGlobalNumElements();
     if (maxIters == -1)
       maxIters = NumGlobalElements - 1; // maximum number of iterations to run
 
@@ -163,7 +166,7 @@ int run(int argc, char *argv[]) {
 
     RCP<MV> initX = rcp( new MV(Map, initNumRHS) );
     RCP<MV> initB = rcp( new MV(Map, initNumRHS) );
-    initX->random();
+    MVT::MvRandom( *initX );
     OPT::Apply( *A, *initX, *initB );
     initX->putScalar( 0.0 );
     Belos::LinearProblem<ST,MV,OP> initProblem( A, initX, initB );
@@ -216,16 +219,16 @@ int run(int argc, char *argv[]) {
     RCP<MV> augX = rcp( new MV(Map, initNumRHS+augNumRHS) );
     RCP<MV> augB = rcp( new MV(Map, initNumRHS+augNumRHS) );
     if (augNumRHS) {
-      augX->random();
+      MVT::MvRandom( *augX );
       OPT::Apply( *A, *augX, *augB );
       augX->putScalar( 0.0 );
     }
 
     // Copy previous linear system into
-    RCP<MV> tmpX = rcp( new MV( Epetra_DataAccess::View, *augX, 0, initNumRHS ) );
-    RCP<MV> tmpB = rcp( new MV( Epetra_DataAccess::View, *augB, 0, initNumRHS ) );
-    tmpX->scale( 1.0, *initX );
-    tmpB->scale( 1.0, *initB );
+    RCP<MV> tmpX = rcp( new MV( *augX,Teuchos::Copy ) );
+    RCP<MV> tmpB = rcp( new MV( *augB,Teuchos::Copy ) );
+    tmpX->scale( 1.0, *augX );
+    tmpB->scale( 1.0, *augB );
 
     Belos::LinearProblem<ST,MV,OP> augProblem( A, augX, augB );
     augProblem.setLabel("Belos Aug");

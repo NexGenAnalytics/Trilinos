@@ -81,3 +81,9 @@ TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_BlockGMRES_hb_CopyFiles
   EXEDEPS Tpetra_BlockGMRES_hb_test
   )
 
+TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_BlockGMRES_pseudo_CopyFiles
+  SOURCE_DIR ${Belos_SOURCE_DIR}/tpetra/example/BlockGmres
+  SOURCE_FILES orsirr1.hb
+  EXEDEPS Tpetra_BlockGMRES_hb_test
+)
+

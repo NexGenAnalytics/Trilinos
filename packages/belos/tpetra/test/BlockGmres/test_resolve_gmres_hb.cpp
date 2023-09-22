@@ -77,7 +77,8 @@ int run(int argc, char *argv[]) {
 
   using OP  = typename Tpetra::Operator<ST,LO,GO,NT>;
   using MV  = typename Tpetra::MultiVector<ST,LO,GO,NT>;
-  using MT = typename Teuchos::ScalarTraits<ST>::magnitudeType;
+  using SCT = typename Teuchos::ScalarTraits<ST>;
+  using MT  = typename SCT::magnitudeType;
 
   using tmap_t       = Tpetra::Map<LO,GO,NT>;
   using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
@@ -142,7 +143,7 @@ int run(int argc, char *argv[]) {
     // ********Other information used by block solver***********
     // *****************(can be user specified)******************
 
-    const int NumGlobalElements = B->GlobalLength();
+    const int NumGlobalElements = B->getGlobalLength();
     if (maxIters == -1)
       maxIters = NumGlobalElements/blockSize - 1; // maximum number of iterations to run
 
@@ -213,7 +214,7 @@ int run(int argc, char *argv[]) {
     // Resolve the first problem by just resetting the solver manager.
     // -----------------------------------------------------------------
 
-    X->PutScalar( 0.0 );
+    X->putScalar( 0.0 );
     solver->reset( Belos::Problem );
 
     // Perform solve (again)
@@ -253,7 +254,7 @@ int run(int argc, char *argv[]) {
     // Resolve the first problem by resetting the linear problem.
     // -----------------------------------------------------------------
 
-    X->PutScalar( 0.0 );
+    X->putScalar( 0.0 );
     set = problem.setProblem();
     if (set == false) {
       if (procVerbose)
@@ -302,7 +303,7 @@ int run(int argc, char *argv[]) {
     solver->setParameters( Teuchos::rcp( &belosList2, false ) );
 
     problem.setLabel( "Belos Resolve w/ New Label" );
-    X->PutScalar( 0.0 );
+    X->putScalar( 0.0 );
     solver->reset( Belos::Problem );
 
     // Perform solve (again)
