@@ -46,11 +46,15 @@
 /// Tpetra::MultiVector as the multivector implementation, and
 /// Tpetra::Operator as the operator implementation.
 ///
-#include "belos_orthomanager_tpetra_util.hpp"
-#include "Tpetra_Core.hpp"
-#include "Teuchos_CommandLineProcessor.hpp"
-#include "Teuchos_oblackholestream.hpp"
 #include <algorithm>
+
+#include <Teuchos_CommandLineProcessor.hpp>
+#include <Teuchos_oblackholestream.hpp>
+
+#include <Tpetra_Core.hpp>
+
+#include "belos_orthomanager_tpetra_util.hpp"
+
 
 using std::endl;
 

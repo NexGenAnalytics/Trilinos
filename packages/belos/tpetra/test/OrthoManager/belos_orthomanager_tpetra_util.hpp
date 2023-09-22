@@ -114,7 +114,7 @@ loadSparseMatrix(const Teuchos::RCP<const Teuchos::Comm<int>> pComm, const std::
   using Teuchos::rcp;
 
   //      const int myRank = Teuchos::rank (*pComm);
-  RCP<map_type> pMap;
+  RCP<const map_type> pMap;
   RCP<sparse_matrix_type> pMatrix;
 
   if (filename != "") {

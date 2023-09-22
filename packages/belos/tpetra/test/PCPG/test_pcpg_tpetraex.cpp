@@ -114,7 +114,7 @@ int run(int argc, char *argv[]) {
     using tvector_t      = Tpetra::Vector<ST,LO,GO,NT>;
     using tmultivector_t = Tpetra::MultiVector<ST,LO,GO,NT>;
 
-    using toperator_t  = Tpetra::Operator<ST,LO,GO,NT>;
+    // using toperator_t  = Tpetra::Operator<ST,LO,GO,NT>;
     // using mtoperator_t = MueLu::TpetraOperator<ST,LO,GO,NT>;
 
     using starray_t = Teuchos::Array<ST>;
@@ -128,7 +128,7 @@ int run(int argc, char *argv[]) {
 
     Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
     const auto comm = Tpetra::getDefaultComm();
-    const int MyPID = comm->getRank();
+    const int myPID = comm->getRank();
     const int numProc = comm->getSize();
 
     // Laplace's equation, homogenous Dirichlet boundary counditions, [0,1]^2
@@ -279,7 +279,7 @@ int run(int argc, char *argv[]) {
 
         B->apply(*vecLHS, *vecRHS); // rhs_new := B*lhs_old,
 
-        proc_verbose = verbose && (MyPID==0);  /* Only print on the zero processor */
+        proc_verbose = verbose && (myPID==0);  /* Only print on the zero processor */
 
         LHS = Teuchos::rcp_implicit_cast<tmultivector_t>(vecLHS);
         RHS = Teuchos::rcp_implicit_cast<tmultivector_t>(vecRHS);
