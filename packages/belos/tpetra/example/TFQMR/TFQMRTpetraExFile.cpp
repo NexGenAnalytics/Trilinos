@@ -227,11 +227,13 @@ int run(int argc, char *argv[]) {
     }
 
     // Perform solve
-    if (procVerbose)
+    if (procVerbose) {
       std::cout << "Solving..." << std::endl;
+    }
     Belos::ReturnType ret = solver->solve();
-    if (procVerbose)
+    if (procVerbose) {
       std::cout << "Solve end" << std::endl;
+    }
 
     // Compute actual residuals.
     bool badRes = false;
