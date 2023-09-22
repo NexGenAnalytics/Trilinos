@@ -45,18 +45,23 @@
 //
 // NOTE: No preconditioner is used in this case.
 
-#include "BelosConfigDefs.hpp"
-#include "BelosLinearProblem.hpp"
-#include "BelosTpetraAdapter.hpp"
-#include "BelosBlockCGSolMgr.hpp"
-#include "BelosTpetraTestFramework.hpp"
-
+// Teuchos
 #include <Teuchos_CommandLineProcessor.hpp>
 #include <Teuchos_ParameterList.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 
+// Tpetra
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+// I/O for Harwell-Boeing files
+#define HIDE_TPETRA_INOUT_IMPLEMENTATIONS
+#include <Tpetra_MatrixIO.hpp>
+
+// Belos
+#include "BelosConfigDefs.hpp"
+#include "BelosLinearProblem.hpp"
+#include "BelosTpetraAdapter.hpp"
+#include "BelosBlockCGSolMgr.hpp"
 
 // I/O for Harwell-Boeing files
 #include <Trilinos_Util_iohb.h>
@@ -126,9 +131,9 @@ int run(int argc, char *argv[])
     std::cout << Belos::Belos_Version() << std::endl << std::endl;
   }
 
-  Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
-  RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
-  RCP<const Tpetra::Map<> > map = A->getMap();
+  RCP<tcrsmatrix_t> A;
+  Tpetra::Utils::readHBMatrix(filename, comm, A);
+  RCP<const Tpetra::Map<>> map = A->getMap();
 
   // Create initial vectors
   RCP<MV> B, X;

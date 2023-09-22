@@ -59,7 +59,7 @@ IF (${PACKAGE_NAME}_ENABLE_Triutils)
   #ENDIF(${PACKAGE_NAME}_ENABLE_Ifpack2)
 
   TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyTestTFQMRFiles
-    SOURCE_DIR ${Belos_SOURCE_DIR}/epetra/example/BlockGmres
+    SOURCE_DIR ${Belos_SOURCE_DIR}/tpetra/testmatrices
     SOURCE_FILES orsirr1.hb orsirr1_scaled.hb
     EXEDEPS Tpetra_tfqmr_hb
     )

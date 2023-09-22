@@ -1,29 +1,25 @@
 
 ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Galeri)
-ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Triutils)
 
-IF (${PACKAGE_NAME}_ENABLE_Triutils)
+TRIBITS_ADD_EXECUTABLE(
+  BlockGmres_Tpetra_File_Ex
+  SOURCES BlockGmresTpetraExFile.cpp
+  COMM serial mpi
+  )
 
-  TRIBITS_ADD_EXECUTABLE(
-    BlockGmres_Tpetra_File_Ex
-    SOURCES BlockGmresTpetraExFile.cpp
-    COMM serial mpi
-    )
+TRIBITS_ADD_EXECUTABLE(
+  PseudoBlockGmres_Tpetra_File_Ex
+  SOURCES PseudoBlockGmresTpetraExFile.cpp
+  COMM serial mpi
+  )
 
-  TRIBITS_ADD_EXECUTABLE(
-    PseudoBlockGmres_Tpetra_File_Ex
-    SOURCES PseudoBlockGmresTpetraExFile.cpp
-    COMM serial mpi
-    )
+TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyExampleBlockGmresFiles
+  SOURCE_DIR ${Belos_SOURCE_DIR}/tpetra/testmatrices
+  SOURCE_FILES orsirr1.hb identity.mtx
+  EXEDEPS BlockGmres_Tpetra_File_Ex
+  )
 
-  TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyExampleBlockGmresFiles
-    SOURCE_DIR ${Belos_SOURCE_DIR}/tpetra/example/BlockGmres
-    SOURCE_FILES orsirr1.hb identity.mtx
-    EXEDEPS BlockGmres_Tpetra_File_Ex
-    )
-
-ENDIF(${PACKAGE_NAME}_ENABLE_Triutils)
-
+ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Galeri)
 IF (${PACKAGE_NAME}_ENABLE_Galeri AND ${PACKAGE_NAME}_ENABLE_Xpetra)
 
   TRIBITS_ADD_EXECUTABLE_AND_TEST(
@@ -31,9 +27,9 @@ IF (${PACKAGE_NAME}_ENABLE_Galeri AND ${PACKAGE_NAME}_ENABLE_Xpetra)
     SOURCES BlockGmresTpetraGaleriEx.cpp
     COMM serial mpi
     ARGS "--verbose --nx=10 --ortho=DGKS"
-         "--verbose --nx=10 --ortho=ICGS"
-         "--verbose --nx=10 --ortho=IMGS"
+        "--verbose --nx=10 --ortho=ICGS"
+        "--verbose --nx=10 --ortho=IMGS"
     STANDARD_PASS_OUTPUT
     )
 
-ENDIF (${PACKAGE_NAME}_ENABLE_Galeri AND ${PACKAGE_NAME}_ENABLE_Xpetra)
+ENDIF ()
