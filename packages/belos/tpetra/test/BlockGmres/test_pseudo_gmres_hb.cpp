@@ -133,6 +133,8 @@ int run(int argc, char *argv[]) {
     if (!verbose)
       frequency = -1;  // reset frequency if test is not verbose
 
+    procVerbose = verbose && (myPID==0); /* Only print on zero processor */
+
     // Get the problem
     Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
     RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
