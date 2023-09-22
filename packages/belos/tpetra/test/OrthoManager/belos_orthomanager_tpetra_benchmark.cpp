@@ -230,14 +230,14 @@ main (int argc, char *argv[])
     // operator (the Euclidean inner product), and leave M as
     // Teuchos::null.  Also return an appropriate Map (which will
     // always be initialized; it should never be Teuchos::null).
-    RCP<map_type> map;
+    RCP<const map_type> map;
     RCP<sparse_matrix_type> M;
     {
       using Belos::Test::loadSparseMatrix;
       // If the sparse matrix is loaded successfully, this call will
       // modify numRows to be the total number of rows in the sparse
       // matrix.  Otherwise, it will leave numRows alone.
-      std::pair<RCP<map_type>, RCP<sparse_matrix_type> > results =
+      std::pair<RCP<const map_type>, RCP<sparse_matrix_type> > results =
         loadSparseMatrix<scalar_type, local_ordinal_type, global_ordinal_type, node_type> (pComm, filename, numRows, debugOut);
       map = results.first;
       M = results.second;
