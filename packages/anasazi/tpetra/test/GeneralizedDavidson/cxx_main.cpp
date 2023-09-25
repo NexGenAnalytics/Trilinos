@@ -44,6 +44,9 @@
 // A few steps of BlockPCG is used as a preconditioner.
 //
 
+// This code does not compile due to the use of ModeLaplace1DQ1,
+// which depends on Epetra. It is commented out in CMakeLists.
+
 // Tpetra
 #include <Tpetra_Map.hpp>
 #include <Tpetra_Core.hpp>

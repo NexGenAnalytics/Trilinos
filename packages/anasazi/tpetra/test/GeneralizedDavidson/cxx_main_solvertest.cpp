@@ -41,6 +41,8 @@
 //
 //  This test is for the generalized Davidsoneigensolver
 //
+//  This code does not compile due to the use of ModeLaplace1DQ1,
+//  which depends on Epetra. It is commented out in CMakeLists.
 
 // Tpetra
 #include <Tpetra_Core.hpp>
