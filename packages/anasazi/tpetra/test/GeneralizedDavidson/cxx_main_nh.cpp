@@ -170,7 +170,7 @@ int run (int argc, char *argv[]) {
     }
 
     // Create an Tpetra::CrsMatrix
-    RCP<tcrsmatrix_t> A = rcp( new tcrsmatrix_t(Map, NumNz[0]) );
+    RCP<tcrsmatrix_t> A = rcp( new tcrsmatrix_t(Map, NumGlobalElements / 2) );
 
     if (MyPID == 0) {
       std::cout << "Filling matrix" << std::endl;
@@ -192,9 +192,9 @@ int run (int argc, char *argv[]) {
     ST val2 = -one/h2;
     ST val3 = -one/h2;
     starray_t Values0(4,val0), Values1(4,val1), Values2(4,val2), Values3(4,val3);
-    ST diag_val = 4.0 / h2;
-    starray_t diag(NumMyElements, diag_val);
-    int NumEntries;
+    ST diag = 4.0 / h2;
+    // starray_t diag(NumMyElements, diag_val);
+    LO NumEntries;
 
     for (GO i=0; i<NumMyElements; i++)
     {
@@ -272,7 +272,8 @@ int run (int argc, char *argv[]) {
         A->insertGlobalValues(MyGlobalElements[i], Indices.view(0,NumEntries), Values0.view(0,NumEntries));
       }
       // Put in the diagonal entry
-      A->insertGlobalValues(MyGlobalElements[i], getArrayView(MyGlobalElements)(i,1), diag.view(i,1));
+      NumEntries = 1;
+      A->insertGlobalValues(MyGlobalElements[i], 1, &diag, &MyGlobalElements[i]);
     }
 
     if (MyPID == 0) {
@@ -297,7 +298,7 @@ int run (int argc, char *argv[]) {
     int maxDim = 50;
     int restartDim = 10;
     int maxRestarts = 500;
-    ST tol = 1e-10;
+    MT tol = 1e-08;
 
     // Set verbosity level
     int verbosity = Anasazi::Errors + Anasazi::Warnings;
