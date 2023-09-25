@@ -51,7 +51,6 @@
 
 // Teuchos
 #include "Teuchos_LAPACK.hpp"
-#include "KokkosCompat_View.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_CommandLineProcessor.hpp"
 
@@ -83,8 +82,6 @@ int run (int argc, char *argv[]) {
 
   using starray_t = Teuchos::Array<ST>;
   using goarray_t = Teuchos::Array<GO>;
-
-  using Kokkos::Compat::getArrayView;
 
   using Teuchos::RCP;
   using Teuchos::rcp;
