@@ -43,44 +43,55 @@
 // eigenvalue problem, using the GeneralizedDavidsonSolMgr solver manager.
 // A few steps of BlockPCG is used as a preconditioner.
 //
-#include "AnasaziConfigDefs.hpp"
+
+// Tpetra
+#include <Tpetra_Map.hpp>
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_Operator.hpp>
+#include <Tpetra_CrsMatrix.hpp>
+
+// Teuchos
+#include "Teuchos_CommandLineProcessor.hpp"
+
+// Anasazi
 #include "AnasaziTypes.hpp"
-
-#include "AnasaziEpetraAdapter.hpp"
-#include "Epetra_CrsMatrix.h"
-#include "Epetra_Vector.h"
-#include "Epetra_InvOperator.h"
-
 #include "AnasaziBasicSort.hpp"
+#include "AnasaziConfigDefs.hpp"
+#include "AnasaziTpetraAdapter.hpp"
 #include "AnasaziBasicEigenproblem.hpp"
 #include "AnasaziGeneralizedDavidsonSolMgr.hpp"
-#include "Teuchos_CommandLineProcessor.hpp"
-#ifdef HAVE_MPI
-#include "Epetra_MpiComm.h"
-#include <mpi.h>
-#else
-#include "Epetra_SerialComm.h"
-#endif
 
 #include "ModeLaplace1DQ1.h"
 #include "BlockPCGSolver.h"
 
 using namespace Teuchos;
 
-int main(int argc, char *argv[])
-{
+template <typename ScalarType>
+int run (int argc, char *argv[]) {
+
+  using ST  = typename Tpetra::MultiVector<ScalarType>::scalar_type;
+  using LO  = typename Tpetra::MultiVector<>::local_ordinal_type;
+  using GO  = typename Tpetra::MultiVector<>::global_ordinal_type;
+  using NT  = typename Tpetra::MultiVector<>::node_type;
+
+  using MT = typename Teuchos::ScalarTraits<ST>::MT;
+
+  using OP  = Tpetra::Operator<ST,LO,GO,NT>;
+  using MV  = Tpetra::MultiVector<ST,LO,GO,NT>;
+  using OPT = Anasazi::OperatorTraits<ST,MV,OP>;
+  using MVT = Anasazi::MultiVecTraits<ST,MV>;
+  using SCT = Teuchos::ScalarTraits<ST>;
+
+  using tmap_t = Tpetra::Map<LO,GO,NT>;
+  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
+
   bool boolret;
-  int MyPID;
 
-#ifdef HAVE_MPI
-  // Initialize MPI
-  MPI_Init(&argc,&argv);
-  Epetra_MpiComm Comm(MPI_COMM_WORLD);
-#else
-  Epetra_SerialComm Comm;
+  Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
+  const auto comm = Tpetra::getDefaultComm();
 
-#endif
-  MyPID = Comm.MyPID();
+  int MyPID = comm->getRank();
 
   bool testFailed;
   bool verbose = false;
@@ -92,21 +103,12 @@ int main(int argc, char *argv[])
   cmdp.setOption("debug","nodebug",&debug,"Print debugging information.");
   cmdp.setOption("sort",&which,"Targetted eigenvalues (SM or LM).");
   if (cmdp.parse(argc,argv) != CommandLineProcessor::PARSE_SUCCESSFUL) {
-#ifdef HAVE_MPI
-    MPI_Finalize();
-#endif
+
     return -1;
   }
   if (debug) verbose = true;
 
-  typedef double ScalarType;
-  typedef ScalarTraits<ScalarType>                   SCT;
-  typedef SCT::magnitudeType               MagnitudeType;
-  typedef Epetra_MultiVector                          MV;
-  typedef Epetra_Operator                             OP;
-  typedef Anasazi::MultiVecTraits<ScalarType,MV>     MVT;
-  typedef Anasazi::OperatorTraits<ScalarType,MV,OP>  OPT;
-  const ScalarType ONE  = SCT::one();
+  const ST ONE  = SCT::one();
 
   if (verbose && MyPID == 0) {
     std::cout << Anasazi::Anasazi_Version() << std::endl << std::endl;
@@ -120,30 +122,30 @@ int main(int argc, char *argv[])
   elements[0] = 100;
 
   // Create problem
-  RCP<ModalProblem> testCase = rcp( new ModeLaplace1DQ1(Comm, brick_dim[0], elements[0]) );
+  RCP<ModalProblem> testCase = rcp( new ModeLaplace1DQ1(comm, brick_dim[0], elements[0]) );
   //
   // Get the stiffness and mass matrices
-  RCP<Epetra_CrsMatrix> K = rcp( const_cast<Epetra_CrsMatrix *>(testCase->getStiffness()), false );
-  RCP<Epetra_CrsMatrix> M = rcp( const_cast<Epetra_CrsMatrix *>(testCase->getMass()), false );
+  RCP<tcrsmatrix_t> K = rcp( const_cast<tcrsmatrix_t *>(testCase->getStiffness()), false );
+  RCP<tcrsmatrix_t> M = rcp( const_cast<tcrsmatrix_t *>(testCase->getMass()), false );
   //
   // Create solver for mass matrix
   // Note that accuracy of Davidson solution does NOT depend on how accurately the BlockPCG is solved
   const int maxIterCG = 10;
   const double tolCG = 1e-2;
 
-  RCP<BlockPCGSolver> opStiffness = rcp( new BlockPCGSolver(Comm, M.get(), tolCG, maxIterCG, 0) );
+  RCP<BlockPCGSolver> opStiffness = rcp( new BlockPCGSolver(comm, M.get(), tolCG, maxIterCG, 0) );
   opStiffness->setPreconditioner( 0 );
-  RCP<Epetra_Operator> invStiffness = rcp( new Epetra_InvOperator(opStiffness.get()) );
+  RCP<OP> invStiffness = rcp( new OP(opStiffness.get()) );
 
   // Create the initial vectors
   int blockSize = 3;
-  RCP<Epetra_MultiVector> ivec = rcp( new Epetra_MultiVector(K->OperatorDomainMap(), blockSize) );
-  ivec->Random();
+  RCP<MV> ivec = rcp( new MV(K->OperatorDomainMap(), blockSize) );
+  MVT::MvRandom( *ivec );
 
   // Create eigenproblem
   const int nev = 5;
-  RCP<Anasazi::BasicEigenproblem<ScalarType,MV,OP> > problem =
-    rcp( new Anasazi::BasicEigenproblem<ScalarType,MV,OP>() );
+  RCP<Anasazi::BasicEigenproblem<ST,MV,OP> > problem =
+    rcp( new Anasazi::BasicEigenproblem<ST,MV,OP>() );
   problem->setA(K);
   problem->setM(M);
   problem->setPrec(invStiffness);
@@ -159,12 +161,8 @@ int main(int argc, char *argv[])
       std::cout << "Anasazi::BasicEigenproblem::SetProblem() returned with error." << std::endl
            << "End Result: TEST FAILED" << std::endl;
     }
-#ifdef HAVE_MPI
-    MPI_Finalize() ;
-#endif
     return -1;
   }
-
 
   // Set verbosity level
   int verbosity = Anasazi::Errors + Anasazi::Warnings;
@@ -179,7 +177,7 @@ int main(int argc, char *argv[])
   // Eigensolver parameters
   int maxRestarts = 25;
   int maxDim = 50;
-  MagnitudeType tol = 1e-6;
+  MT tol = 1e-6;
   //
   // Create parameter list to pass into the solver manager
   ParameterList MyPL;
@@ -191,7 +189,7 @@ int main(int argc, char *argv[])
   MyPL.set( "Convergence Tolerance", tol );
   //
   // Create the solver manager
-  Anasazi::GeneralizedDavidsonSolMgr<ScalarType,MV,OP> MySolverMgr(problem, MyPL);
+  Anasazi::GeneralizedDavidsonSolMgr<ST,MV,OP> MySolverMgr(problem, MyPL);
   //
   // Check that the parameters were all consumed
   if (MyPL.getEntryPtr("Verbosity")->isUsed() == false ||
@@ -215,8 +213,8 @@ int main(int argc, char *argv[])
   }
 
   // Get the eigenvalues and eigenvectors from the eigenproblem
-  Anasazi::Eigensolution<ScalarType,MV> sol = problem->getSolution();
-  std::vector<Anasazi::Value<ScalarType> > evals = sol.Evals;
+  Anasazi::Eigensolution<ST,MV> sol = problem->getSolution();
+  std::vector<Anasazi::Value<ST> > evals = sol.Evals;
   RCP<MV> evecs = sol.Evecs;
   int numev = sol.numVecs;
 
@@ -227,8 +225,8 @@ int main(int argc, char *argv[])
     os.precision(6);
 
     // Compute the direct residual
-    std::vector<ScalarType> normV( numev );
-    SerialDenseMatrix<int,ScalarType> T(numev,numev);
+    std::vector<ST> normV( numev );
+    SerialDenseMatrix<int,ST> T(numev,numev);
     for (int i=0; i<numev; i++) {
       T(i,i) = evals[i].realpart;
     }
@@ -238,7 +236,7 @@ int main(int argc, char *argv[])
     OPT::Apply( *M, *evecs, *Mvecs );
     MVT::MvTimesMatAddMv( -ONE, *Mvecs, T, ONE, *Kvecs );
     // compute 2-norm of residuals
-    std::vector<MagnitudeType> resnorm(numev);
+    std::vector<MT> resnorm(numev);
     MVT::MvNorm( *Kvecs, resnorm );
 
     os << "Number of iterations performed in GeneralizedDavidson_test.exe: " << MySolverMgr.getNumIters() << std::endl
@@ -256,10 +254,6 @@ int main(int argc, char *argv[])
     }
   }
 
-#ifdef HAVE_MPI
-  MPI_Finalize() ;
-#endif
-
   if (testFailed) {
     if (verbose && MyPID==0) {
       std::cout << "End Result: TEST FAILED" << std::endl;
@@ -273,5 +267,9 @@ int main(int argc, char *argv[])
     std::cout << "End Result: TEST PASSED" << std::endl;
   }
   return 0;
+}
 
+int main(int argc, char *argv[]) {
+  return run<double>(argc,argv);
+  // run<float>(argc,argv);
 }
