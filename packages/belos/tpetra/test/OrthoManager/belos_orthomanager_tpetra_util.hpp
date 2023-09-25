@@ -114,14 +114,13 @@ loadSparseMatrix(const Teuchos::RCP<const Teuchos::Comm<int>> pComm, const std::
   using Teuchos::rcp;
 
   //      const int myRank = Teuchos::rank (*pComm);
-  RCP<const map_type> pMap;
+  RCP<map_type> pMap;
   RCP<sparse_matrix_type> pMatrix;
 
   if (filename != "") {
     debugOut << "Loading sparse matrix file \"" << filename << "\"" << endl;
     Tpetra::Utils::readHBMatrix(filename, pComm, pMatrix);
     pMap = pMatrix->getRowMap();
-    //pMap = Teuchos::rcp_const_cast<map_type>(pMatrix->getRowMap());
     debugOut << "Completed loading and distributing sparse matrix" << endl;
   }  // else M == null
   else {
@@ -129,7 +128,7 @@ loadSparseMatrix(const Teuchos::RCP<const Teuchos::Comm<int>> pComm, const std::
 
     // Let M remain null, and allocate map using the number of rows
     // (numRows) specified on the command line.
-    pMap = rcp(new map_type(numRows, 0, pComm, ::Tpetra::GloballyDistributed));
+    pMap = rcp(new map_type(numRows, 0, pComm, Tpetra::GloballyDistributed));
   }
   return std::make_pair(pMap, pMatrix);
 }
