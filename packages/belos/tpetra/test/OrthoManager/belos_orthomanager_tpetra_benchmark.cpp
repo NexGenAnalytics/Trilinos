@@ -230,7 +230,7 @@ main (int argc, char *argv[])
     // operator (the Euclidean inner product), and leave M as
     // Teuchos::null.  Also return an appropriate Map (which will
     // always be initialized; it should never be Teuchos::null).
-    RCP<map_type> map;
+    RCP<const map_type> map;
     RCP<sparse_matrix_type> M;
     {
       using Belos::Test::loadSparseMatrix;
