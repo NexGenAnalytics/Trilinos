@@ -237,7 +237,7 @@ main (int argc, char *argv[])
       // If the sparse matrix is loaded successfully, this call will
       // modify numRows to be the total number of rows in the sparse
       // matrix.  Otherwise, it will leave numRows alone.
-      std::pair<RCP<const map_type>, RCP<sparse_matrix_type> > results =
+      std::pair<const RCP<map_type>, RCP<sparse_matrix_type> > results =
         loadSparseMatrix<scalar_type, local_ordinal_type, global_ordinal_type, node_type> (pComm, filename, numRows, debugOut);
       map = results.first;
       M = results.second;

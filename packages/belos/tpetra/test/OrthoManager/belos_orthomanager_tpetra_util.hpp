@@ -98,7 +98,7 @@ Teuchos::RCP<Belos::OutputManager<Scalar>> makeOutputManager(const bool verbose,
 /// that the domain, range, and row maps are the same) and a
 /// sparse_matrix_type (the sparse matrix itself).
 template <class SC, class LO, class GO, class NodeType>
-std::pair<Teuchos::RCP<const ::Tpetra::Map<LO, GO, NodeType>>, Teuchos::RCP<::Tpetra::CrsMatrix<SC, LO, GO, NodeType>>>
+std::pair<Teuchos::RCP<::Tpetra::Map<LO, GO, NodeType>>, Teuchos::RCP<::Tpetra::CrsMatrix<SC, LO, GO, NodeType>>>
 loadSparseMatrix(const Teuchos::RCP<const Teuchos::Comm<int>> pComm, const std::string& filename, int& numRows,
                  std::ostream& debugOut) {
   typedef SC scalar_type;
@@ -121,6 +121,7 @@ loadSparseMatrix(const Teuchos::RCP<const Teuchos::Comm<int>> pComm, const std::
     debugOut << "Loading sparse matrix file \"" << filename << "\"" << endl;
     Tpetra::Utils::readHBMatrix(filename, pComm, pMatrix);
     pMap = pMatrix->getRowMap();
+    //pMap = Teuchos::rcp_const_cast<map_type>(pMatrix->getRowMap());
     debugOut << "Completed loading and distributing sparse matrix" << endl;
   }  // else M == null
   else {

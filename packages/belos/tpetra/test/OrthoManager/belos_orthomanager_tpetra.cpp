@@ -205,7 +205,7 @@ class SparseMatrixLoader {
   typedef Tpetra::Map<LocalOrdinalType, GlobalOrdinalType, NodeType> map_type;
   typedef Tpetra::CrsMatrix<ScalarType, LocalOrdinalType, GlobalOrdinalType, NodeType> matrix_type;
 
-  static void load(const Teuchos::RCP<const map_type>& map, Teuchos::RCP<matrix_type>& M,
+  static void load(Teuchos::RCP<const map_type>& map, Teuchos::RCP<matrix_type>& M,
                    const Teuchos::RCP<const Teuchos::Comm<int> >& comm, std::ostream& debugOut) {
     TEUCHOS_TEST_FOR_EXCEPTION(filename != "", std::logic_error,
                                "Sorry, reading in a Harwell-Boeing "
@@ -226,7 +226,7 @@ class SparseMatrixLoader<double, LocalOrdinalType, GlobalOrdinalType, NodeType> 
   typedef Tpetra::Map<LocalOrdinalType, GlobalOrdinalType, NodeType> map_type;
   typedef Tpetra::CrsMatrix<double, LocalOrdinalType, GlobalOrdinalType, NodeType> matrix_type;
 
-  static void load(const Teuchos::RCP<const map_type>& map, Teuchos::RCP<matrix_type>& M,
+  static void load(Teuchos::RCP<const map_type>& map, Teuchos::RCP<matrix_type>& M,
                    const Teuchos::RCP<const Teuchos::Comm<int> >& comm, std::ostream& debugOut) {
     // If the sparse matrix is loaded successfully, this call will
     // modify numRows to be the number of rows in the sparse matrix.
