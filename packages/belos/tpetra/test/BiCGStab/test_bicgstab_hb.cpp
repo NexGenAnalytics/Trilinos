@@ -122,7 +122,7 @@ int main (int argc, char *argv[])
     // Get the problem
     RCP<Tpetra::CrsMatrix<ST>> A;
     Tpetra::Utils::readHBMatrix(filename, comm, A);
-    RCP<const Tpetra::Map<>> map = A->getDomainMap();
+    RCP<const Tpetra::Map<> > map = A->getDomainMap();
 
     // Create initial vectors
     RCP<MV> B, X;
