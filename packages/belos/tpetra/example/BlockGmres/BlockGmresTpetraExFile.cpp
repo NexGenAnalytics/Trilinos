@@ -71,7 +71,6 @@
 #include "BelosBlockGmresSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
 
-
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
 
