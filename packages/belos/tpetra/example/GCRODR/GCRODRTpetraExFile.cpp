@@ -69,7 +69,7 @@
 #include "BelosConfigDefs.hpp"
 #include "BelosGCRODRSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
-
+#include "BelosTpetraAdapter.hpp"
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {

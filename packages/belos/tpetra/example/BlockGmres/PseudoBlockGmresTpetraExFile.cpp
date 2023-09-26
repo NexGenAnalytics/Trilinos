@@ -70,6 +70,7 @@
 #include "BelosConfigDefs.hpp"
 #include "BelosPseudoBlockGmresSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
+#include "BelosTpetraAdapter.hpp"
 
 
 template <typename ScalarType>

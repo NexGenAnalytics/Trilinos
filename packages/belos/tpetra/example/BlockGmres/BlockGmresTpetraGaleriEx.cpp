@@ -54,11 +54,11 @@
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
-#include "Teuchos_ParameterList.hpp"
+#include <Teuchos_ParameterList.hpp>
 #include <Teuchos_TypeNameTraits.hpp>
 #include <Teuchos_oblackholestream.hpp>
-#include "Teuchos_StandardCatchMacros.hpp"
-#include "Teuchos_CommandLineProcessor.hpp"
+#include <Teuchos_StandardCatchMacros.hpp>
+#include <Teuchos_CommandLineProcessor.hpp>
 
 // Belos
 #include "BelosTpetraAdapter.hpp"

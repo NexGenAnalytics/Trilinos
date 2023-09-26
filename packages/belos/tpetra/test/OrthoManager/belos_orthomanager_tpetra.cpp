@@ -205,7 +205,7 @@ class SparseMatrixLoader {
   typedef Tpetra::Map<LocalOrdinalType, GlobalOrdinalType, NodeType> map_type;
   typedef Tpetra::CrsMatrix<ScalarType, LocalOrdinalType, GlobalOrdinalType, NodeType> matrix_type;
 
-  static void load(Teuchos::RCP<map_type>& map, Teuchos::RCP<matrix_type>& M,
+  static void load(Teuchos::RCP<const map_type>& map, Teuchos::RCP<matrix_type>& M,
                    const Teuchos::RCP<const Teuchos::Comm<int> >& comm, std::ostream& debugOut) {
     TEUCHOS_TEST_FOR_EXCEPTION(filename != "", std::logic_error,
                                "Sorry, reading in a Harwell-Boeing "
@@ -226,12 +226,12 @@ class SparseMatrixLoader<double, LocalOrdinalType, GlobalOrdinalType, NodeType> 
   typedef Tpetra::Map<LocalOrdinalType, GlobalOrdinalType, NodeType> map_type;
   typedef Tpetra::CrsMatrix<double, LocalOrdinalType, GlobalOrdinalType, NodeType> matrix_type;
 
-  static void load(Teuchos::RCP<map_type>& map, Teuchos::RCP<matrix_type>& M,
+  static void load(Teuchos::RCP<const map_type>& map, Teuchos::RCP<matrix_type>& M,
                    const Teuchos::RCP<const Teuchos::Comm<int> >& comm, std::ostream& debugOut) {
     // If the sparse matrix is loaded successfully, this call will
     // modify numRows to be the number of rows in the sparse matrix.
     // Otherwise, it will leave numRows alone.
-    std::pair<Teuchos::RCP<map_type>, Teuchos::RCP<matrix_type> > results =
+    std::pair<Teuchos::RCP<const map_type>, Teuchos::RCP<matrix_type> > results =
         Belos::Test::loadSparseMatrix<typename matrix_type::scalar_type, LocalOrdinalType, GlobalOrdinalType, NodeType>(
             comm, filename, numRows, debugOut);
     map = results.first;
@@ -281,7 +281,7 @@ bool runTest(const Teuchos::RCP<const Teuchos::Comm<int> >& comm) {
   // Teuchos::null.  Also return an appropriate Map (which will always
   // be initialized, even if filename == ""; it should never be
   // Teuchos::null).
-  RCP<map_type> map;
+  RCP<const map_type> map;
   RCP<crs_matrix_type> M;
   {
     typedef SparseMatrixLoader<scalar_type, local_ordinal_type, global_ordinal_type, node_type> loader_type;
