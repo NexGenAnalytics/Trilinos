@@ -123,8 +123,54 @@ namespace
 // #endif
 }
 
-int InitMatValues( const CrsMatrix& newA, CrsMatrix* A );
-int InitMVValues( const MultiVector& newb, MultiVector* b );
+// int InitMatValues( const CrsMatrix& newA, CrsMatrix* A );
+// int InitMVValues( const MultiVector& newb, MultiVector* b );
+
+int InitMatValues( const Tpetra::CrsMatrix<>& newA, const Tpetra::CrsMatrix<>* A )
+{
+  int numMyRows = newA.NumMyRows();
+  int maxNum = newA.MaxNumEntries();
+  int numIn;
+  int *idx = 0;
+  double *vals = 0;
+
+  idx = new int[maxNum];
+  vals = new double[maxNum];
+
+  // For each row get the values and indices, and replace the values in A.
+  for (int i=0; i<numMyRows; ++i) {
+
+    // Get the values and indices from newA.
+    EPETRA_CHK_ERR( newA.ExtractMyRowCopy(i, maxNum, numIn, vals, idx) );
+
+    // Replace the values in A
+    EPETRA_CHK_ERR( A->ReplaceMyValues(i, numIn, vals, idx) );
+
+  }
+
+  // Clean up.
+  delete [] idx;
+  delete [] vals;
+
+  return 0;
+}
+
+int InitMVValues( const Tpetra::MultiVector<>& newb, Tpetra::MultiVector<>* b )
+{
+  int length = newb.MyLength();
+  int numVecs = newb.NumVectors();
+  const Vector *tempnewvec;
+  Vector *tempvec = 0;
+
+  for (int i=0; i<numVecs; ++i) {
+    tempnewvec = newb(i);
+    tempvec = (*b)(i);
+    for (int j=0; j<length; ++j)
+      (*tempvec)[j] = (*tempnewvec)[j];
+  }
+
+  return 0;
+}
 
 int main(int argc, char** argv)
 {
@@ -613,51 +659,4 @@ int main(int argc, char** argv)
     MPI_Finalize();
 #endif
     return 0;
-}
-
-
-int InitMatValues( const Epetra_CrsMatrix& newA, Epetra_CrsMatrix* A )
-{
-  int numMyRows = newA.NumMyRows();
-  int maxNum = newA.MaxNumEntries();
-  int numIn;
-  int *idx = 0;
-  double *vals = 0;
-
-  idx = new int[maxNum];
-  vals = new double[maxNum];
-
-  // For each row get the values and indices, and replace the values in A.
-  for (int i=0; i<numMyRows; ++i) {
-
-    // Get the values and indices from newA.
-    EPETRA_CHK_ERR( newA.ExtractMyRowCopy(i, maxNum, numIn, vals, idx) );
-
-    // Replace the values in A
-    EPETRA_CHK_ERR( A->ReplaceMyValues(i, numIn, vals, idx) );
-
-  }
-
-  // Clean up.
-  delete [] idx;
-  delete [] vals;
-
-  return 0;
-}
-
-int InitMVValues( const Epetra_MultiVector& newb, Epetra_MultiVector* b )
-{
-  int length = newb.MyLength();
-  int numVecs = newb.NumVectors();
-  const Epetra_Vector *tempnewvec;
-  Epetra_Vector *tempvec = 0;
-
-  for (int i=0; i<numVecs; ++i) {
-    tempnewvec = newb(i);
-    tempvec = (*b)(i);
-    for (int j=0; j<length; ++j)
-      (*tempvec)[j] = (*tempnewvec)[j];
-  }
-
-  return 0;
 }
