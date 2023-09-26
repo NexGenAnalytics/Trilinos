@@ -141,13 +141,13 @@ int run(int argc, char *argv[]) {
     // Get the problem
     RCP<tcrsmatrix_t> A;
     Tpetra::Utils::readHBMatrix(filename, Comm, A);
-    RCP<const tmap_t> map = A->getDomainMap();
+    RCP<const tmap_t> Map = A->getDomainMap();
 
     // Create initial vectors
     RCP<MV> B, X;
-    X = rcp( new MV(map,numrhs) );
+    X = rcp( new MV(Map,numrhs) );
     MVT::MvRandom( *X );
-    B = rcp( new MV(map,numrhs) );
+    B = rcp( new MV(Map,numrhs) );
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
 
