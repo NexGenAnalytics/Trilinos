@@ -1,13 +1,4 @@
 
-# TRIBITS_ADD_EXECUTABLE_AND_TEST(
-#  Tpetra_GeneralizedDavidson_solvertest
-#   SOURCES cxx_main_solvertest.cpp
-#   ARGS
-#     "--verbose"
-#     "--debug"
-#   COMM serial mpi
-#   )
-
 ASSERT_DEFINED(${PACKAGE_NAME}_ENABLE_Triutils)
 IF (${PACKAGE_NAME}_ENABLE_Triutils)
   TRIBITS_ADD_EXECUTABLE_AND_TEST(

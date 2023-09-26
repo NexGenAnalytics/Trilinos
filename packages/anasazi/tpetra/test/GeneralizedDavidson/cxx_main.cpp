@@ -60,46 +60,49 @@
 #include "AnasaziTpetraAdapter.hpp"
 #include "AnasaziBasicEigenproblem.hpp"
 #include "AnasaziGeneralizedDavidsonSolMgr.hpp"
+
 #include <Teuchos_CommandLineProcessor.hpp>
 
+#include <Tpetra_Map.hpp>
 #include <Tpetra_Core.hpp>
+#include <Tpetra_Operator.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+#include <Tpetra_MultiVector.hpp>
 
 // I/O for Harwell-Boeing files
 #include <Trilinos_Util_iohb.h>
 
-int main(int argc, char *argv[])
-{
-// #ifndef HAVE_TPETRA_COMPLEX_DOUBLE
-// #  error "Anasazi: This test requires Scalar = std::complex<double> to be enabled in Tpetra."
-// #else
+template <typename ScalarType>
+int run(int argc, char *argv[]) {
+
+  using ST  = typename Tpetra::MultiVector<ScalarType>::scalar_type;
+  using LO  = typename Tpetra::MultiVector<>::local_ordinal_type;
+  using GO  = typename Tpetra::MultiVector<>::global_ordinal_type;
+  using NT  = typename Tpetra::MultiVector<>::node_type;
+
+  using SCT = typename Teuchos::ScalarTraits<ScalarType>;
+  using MT  = typename SCT::magnitudeType;
+
+  using OP  = Tpetra::Operator<ST,LO,GO,NT>;
+  using MV  = Tpetra::MultiVector<ST,LO,GO,NT>;
+  using OPT = Anasazi::OperatorTraits<ST,MV,OP>;
+  using MVT = Anasazi::MultiVecTraits<ST,MV>;
+
+  using tmap_t = Tpetra::Map<LO,GO,NT>;
+  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
+
   using namespace Teuchos;
-  using Tpetra::CrsMatrix;
-  using Tpetra::Map;
-  using Tpetra::MultiVector;
-  using Tpetra::Operator;
   using std::vector;
   using std::cout;
   using std::endl;
-
-  typedef double                               ST;
-  typedef ScalarTraits<ST>                    SCT;
-  typedef SCT::magnitudeType                   MT;
-  typedef MultiVector<ST>                      MV;
-  typedef MultiVector<ST>::global_ordinal_type GO;
-  typedef Operator<ST>                         OP;
-  typedef Anasazi::MultiVecTraits<ST,MV>      MVT;
-  typedef Anasazi::OperatorTraits<ST,MV,OP>   OPT;
 
   Tpetra::ScopeGuard tpetraScope (&argc, &argv);
 
   const ST ONE  = SCT::one();
   int info = 0;
-  int MyPID = 0;
 
-  RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm ();
-
-  MyPID = rank(*comm);
+  const auto comm = Tpetra::getDefaultComm ();
+  const int MyPID = comm->getRank();
 
   bool testFailed;
   bool verbose = false;
@@ -156,20 +159,20 @@ int main(int argc, char *argv[])
     return -1;
   }
   // create map
-  RCP<const Map<> > map = rcp (new Map<> (dim, 0, comm));
-  RCP<CrsMatrix<ST> > K = rcp(new CrsMatrix<ST> (map, rnnzmax));
+  RCP<const tmap_t> map = rcp (new tmap_t (dim, 0, comm));
+  RCP<tcrsmatrix_t> K = rcp(new tcrsmatrix_t (map, rnnzmax));
   if (MyPID == 0) {
-    // Convert interleaved doubles to complex values
-    // HB format is compressed column. CrsMatrix is compressed row.
-    const double *dptr = dvals;
+    const ST *dptr = dvals;
     const int *rptr = rowind;
-    for (int c=0; c<dim; ++c) {
-      for (int colnnz=0; colnnz < colptr[c+1]-colptr[c]; ++colnnz) {
-        K->insertGlobalValues (*rptr++ - 1, tuple<GO> (c), tuple (ST (dptr[0], dptr[1])));
-        dptr += 2;
+    for (int c = 0; c < dim; ++c) {
+      for (int colnnz = 0; colnnz < colptr[c + 1] - colptr[c]; ++colnnz) {
+        ST value = dptr[0];
+        K->insertGlobalValues(*rptr++ - 1, tuple<GO>(c), tuple(value));
+        dptr++;
       }
     }
   }
+
   if (MyPID == 0) {
     // Clean up.
     free( dvals );
@@ -184,9 +187,7 @@ int main(int argc, char *argv[])
 
   // Create eigenproblem
   RCP<Anasazi::BasicEigenproblem<ST,MV,OP> > problem =
-    rcp( new Anasazi::BasicEigenproblem<ST,MV,OP>() );
-  problem->setA(K);
-  problem->setInitVec(ivec);
+    rcp( new Anasazi::BasicEigenproblem<ST,MV,OP>(K,ivec) );
   //
   // Inform the eigenproblem that the operator K is symmetric
   problem->setHermitian(true);
@@ -302,6 +303,9 @@ int main(int argc, char *argv[])
     cout << "End Result: TEST PASSED" << endl;
   }
   return 0;
+}
 
-// #endif // HAVE_TPETRA_COMPLEX_DOUBLE
+int main(int argc, char *argv[]) {
+  return run<double>(argc,argv);
+  // run<float>(argc,argv);
 }
