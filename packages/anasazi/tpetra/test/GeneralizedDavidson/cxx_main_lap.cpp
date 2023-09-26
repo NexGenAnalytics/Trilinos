@@ -39,38 +39,21 @@
 // ***********************************************************************
 // @HEADER
 //
-// This test is for GeneralizedDavidsonSolMgr solving a standard (Ax=xl) complex Hermitian
-// eigenvalue problem.
-//
-// The matrix used is from MatrixMarket:
-// Name: MHD1280B: Alfven Spectra in Magnetohydrodynamics
-// Source: Source: A. Booten, M.N. Kooper, H.A. van der Vorst, S. Poedts and J.P. Goedbloed University of Utrecht, the Netherlands
-// Discipline: Plasma physics
-// URL: http://math.nist.gov/MatrixMarket/data/NEP/mhd/mhd1280b.html
-// Size: 1280 x 1280
-// NNZ: 22778 entries
-//
-// NOTE: No preconditioner is used in this case.
-//
+// This test is for GeneralizedDavidson solving a standard (Ax=xl) Hermitian
+// eigenvalue problem where the operator (A) is the 1D finite-differenced Laplacian
+// operator.
 
 #include "AnasaziConfigDefs.hpp"
 #include "AnasaziTypes.hpp"
 
-#include "AnasaziBasicSort.hpp"
 #include "AnasaziTpetraAdapter.hpp"
 #include "AnasaziBasicEigenproblem.hpp"
 #include "AnasaziGeneralizedDavidsonSolMgr.hpp"
-
 #include <Teuchos_CommandLineProcessor.hpp>
 
-#include <Tpetra_Map.hpp>
 #include <Tpetra_Core.hpp>
-#include <Tpetra_Operator.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-#include <Tpetra_MultiVector.hpp>
 
-// I/O for Harwell-Boeing files
-#include <Trilinos_Util_iohb.h>
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
@@ -91,33 +74,39 @@ int run(int argc, char *argv[]) {
   using tmap_t = Tpetra::Map<LO,GO,NT>;
   using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
 
-  using namespace Teuchos;
-  using std::vector;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
+  using Teuchos::tuple;
   using std::cout;
   using std::endl;
 
-  Tpetra::ScopeGuard tpetraScope (&argc, &argv);
-
   const ST ONE  = SCT::one();
-  int info = 0;
 
+  Tpetra::ScopeGuard tpetraScope (&argc,&argv);
   RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm ();
-  const int MyPID = comm->getRank();
+
+  const int MyPID = comm->getRank ();
+  const int NumImages = comm->getSize ();
 
   bool testFailed;
   bool verbose = false;
   bool debug = false;
-  std::string filename("mhd1280b.cua");
   std::string which("LM");
   int nev = 5;
   int blockSize = 3;
   MT tol = 1.0e-6;
+  int maxRestarts = 25;
+  int maxDim = 50;
 
-  CommandLineProcessor cmdp(false,true);
+  Teuchos::CommandLineProcessor cmdp(false,true);
   cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
   cmdp.setOption("debug","nodebug",&debug,"Print debugging information.");
   cmdp.setOption("sort",&which,"Targetted eigenvalues (SM or LM).");
-  if (cmdp.parse(argc,argv) != CommandLineProcessor::PARSE_SUCCESSFUL) {
+  cmdp.setOption("nev",&nev,"Number of eigenvalues to compute.");
+  cmdp.setOption("blockSize",&blockSize,"Block size for the algorithm.");
+  cmdp.setOption("maxRestarts",&maxRestarts,"Number of restarts allowed.");
+
+  if (cmdp.parse(argc,argv) != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL) {
     return -1;
   }
   if (debug) verbose = true;
@@ -126,80 +115,49 @@ int run(int argc, char *argv[]) {
     cout << Anasazi::Anasazi_Version() << endl << endl;
   }
 
-  // Get the data from the HB file
-  int dim,dim2,nnz;
-  int rnnzmax;
-  double *dvals;
-  int *colptr,*rowind;
-  nnz = -1;
-  if (MyPID == 0) {
-    info = readHB_newmat_double(filename.c_str(),&dim,&dim2,&nnz,&colptr,&rowind,&dvals);
-    // find maximum NNZ over all rows
-    vector<int> rnnz(dim,0);
-    for (int *ri=rowind; ri<rowind+nnz; ++ri) {
-      ++rnnz[*ri-1];
+  // -- Set finite difference grid
+  const int nx = 10;
+  int dim = nx * nx;
+
+  // create map
+  RCP<const tmap_t> map = rcp (new tmap_t(dim,0,comm));
+  RCP<tcrsmatrix_t> K = rcp (new tcrsmatrix_t(map, 4));
+  int base = MyPID*nx;
+  if (MyPID != NumImages-1) {
+    for (int i=0; i<nx; ++i) {
+      K->insertGlobalValues(static_cast<GO>(base+i  ), tuple<GO>(base+i  ), tuple<ST>( 2));
+      K->insertGlobalValues(static_cast<GO>(base+i  ), tuple<GO>(base+i+1), tuple<ST>(-1));
+      K->insertGlobalValues(static_cast<GO>(base+i+1), tuple<GO>(base+i  ), tuple<ST>(-1));
+      K->insertGlobalValues(static_cast<GO>(base+i+1), tuple<GO>(base+i+1), tuple<ST>( 2));
     }
-    rnnzmax = *std::max_element(rnnz.begin(),rnnz.end());
   }
   else {
-    // address uninitialized data warnings
-    dvals = nullptr;
-    colptr = nullptr;
-    rowind = nullptr;
-  }
-  Teuchos::broadcast(*comm,0,&info);
-  Teuchos::broadcast(*comm,0,&nnz);
-  Teuchos::broadcast(*comm,0,&dim);
-  Teuchos::broadcast(*comm,0,&rnnzmax);
-  if (info == 0 || nnz < 0) {
-    if (MyPID == 0) {
-      cout << "Error reading '" << filename << "'" << endl
-           << "End Result: TEST FAILED" << endl;
-    }
-    return -1;
-  }
-  // create map
-  RCP<const tmap_t> map = rcp (new tmap_t (dim, 0, comm));
-  RCP<tcrsmatrix_t> K = rcp(new tcrsmatrix_t (map, rnnzmax));
-  if (MyPID == 0) {
-    const ST *dptr = dvals;
-    const int *rptr = rowind;
-    for (int c = 0; c < dim; ++c) {
-      for (int colnnz = 0; colnnz < colptr[c + 1] - colptr[c]; ++colnnz) {
-        ST value = dptr[0];
-        K->insertGlobalValues(*rptr++ - 1, tuple<GO>(c), tuple(value));
-        dptr++;
-      }
+    for (int i=0; i<nx-1; ++i) {
+      K->insertGlobalValues(static_cast<GO>(base+i  ), tuple<GO>(base+i  ), tuple<ST>( 2));
+      K->insertGlobalValues(static_cast<GO>(base+i  ), tuple<GO>(base+i+1), tuple<ST>(-1));
+      K->insertGlobalValues(static_cast<GO>(base+i+1), tuple<GO>(base+i  ), tuple<ST>(-1));
+      K->insertGlobalValues(static_cast<GO>(base+i+1), tuple<GO>(base+i+1), tuple<ST>( 2));
     }
   }
-
-  if (MyPID == 0) {
-    // Clean up.
-    free( dvals );
-    free( colptr );
-    free( rowind );
-  }
-  std::cout << "Rank " << MyPID << " before fillComplete(): " << std::endl;
   K->fillComplete();
-  std::cout << "Rank " << MyPID << " after fillComplete(): " << std::endl;
 
   // Create initial vectors
-  RCP<MV> ivec = rcp( new MV(map,blockSize) );
+  RCP<MV> ivec = rcp (new MV (map,blockSize));
   ivec->randomize ();
 
   // Create eigenproblem
   RCP<Anasazi::BasicEigenproblem<ST,MV,OP> > problem =
-    rcp( new Anasazi::BasicEigenproblem<ST,MV,OP>(K,ivec) );
+    rcp (new Anasazi::BasicEigenproblem<ST,MV,OP> (K, ivec));
   //
   // Inform the eigenproblem that the operator K is symmetric
-  problem->setHermitian(true);
+  problem->setHermitian (true);
   //
   // Set the number of eigenvalues requested
-  problem->setNEV( nev );
+  problem->setNEV (nev);
   //
   // Inform the eigenproblem that you are done passing it information
-  bool boolret = problem->setProblem();
-  if (boolret != true) {
+  bool boolret = problem->setProblem ();
+  if (! boolret) {
     if (MyPID == 0) {
       cout << "Anasazi::BasicEigenproblem::SetProblem() returned with error." << endl
            << "End Result: TEST FAILED" << endl;
@@ -217,11 +175,9 @@ int run(int argc, char *argv[]) {
   }
 
   // Eigensolver parameters
-  int maxRestarts = 25;
-  int maxDim = 50;
   //
   // Create parameter list to pass into the solver manager
-  ParameterList MyPL;
+  Teuchos::ParameterList MyPL;
   MyPL.set( "Verbosity", verbosity );
   MyPL.set( "Which", which );
   MyPL.set( "Maximum Subspace Dimension", maxDim );
@@ -231,19 +187,6 @@ int run(int argc, char *argv[]) {
   //
   // Create the solver manager
   Anasazi::GeneralizedDavidsonSolMgr<ST,MV,OP> MySolverMgr(problem, MyPL);
-  //
-  // Check that the parameters were all consumed
-  if (MyPL.getEntryPtr("Verbosity")->isUsed() == false ||
-      MyPL.getEntryPtr("Which")->isUsed() == false ||
-      MyPL.getEntryPtr("Maximum Subspace Dimension")->isUsed() == false ||
-      MyPL.getEntryPtr("Block Size")->isUsed() == false ||
-      MyPL.getEntryPtr("Maximum Restarts")->isUsed() == false ||
-      MyPL.getEntryPtr("Convergence Tolerance")->isUsed() == false) {
-    if (verbose && MyPID==0) {
-      std::cout << "Failure! Unused parameters: " << std::endl;
-      MyPL.unused(std::cout);
-    }
-  }
 
   // Solve the problem to the specified tolerances or length
   Anasazi::ReturnType returnCode = MySolverMgr.solve();
@@ -264,8 +207,8 @@ int run(int argc, char *argv[]) {
 
     // Compute the direct residual
     std::vector<MT> normV( numev );
-    SerialDenseMatrix<int,ST> T(numev,numev);
-    for (int i=0; i<numev; i++) {
+    Teuchos::SerialDenseMatrix<int,ST> T (numev, numev);
+    for (int i = 0; i < numev; ++i) {
       T(i,i) = sol.Evals[i].realpart;
     }
     RCP<MV> Kvecs = MVT::Clone( *evecs, numev );
@@ -275,7 +218,7 @@ int run(int argc, char *argv[]) {
     MVT::MvTimesMatAddMv( -ONE, *evecs, T, ONE, *Kvecs );
     MVT::MvNorm( *Kvecs, normV );
 
-    os << "Direct residual norms computed in Tpetra_GeneralizedDavidson_complex_test.exe" << endl
+    os << "Direct residual norms computed in Tpetra_GeneralizedDavidson_lap_test.exe" << endl
        << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << endl
        << "----------------------------------------" << endl;
     for (int i=0; i<numev; i++) {
@@ -305,6 +248,7 @@ int run(int argc, char *argv[]) {
     cout << "End Result: TEST PASSED" << endl;
   }
   return 0;
+
 }
 
 int main(int argc, char *argv[]) {
