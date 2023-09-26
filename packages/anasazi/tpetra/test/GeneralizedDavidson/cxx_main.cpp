@@ -39,148 +39,183 @@
 // ***********************************************************************
 // @HEADER
 //
-// This test is for GeneralizedDavidson solving a generalized (Ax=Bxl) real Hermitian
-// eigenvalue problem, using the GeneralizedDavidsonSolMgr solver manager.
-// A few steps of BlockPCG is used as a preconditioner.
+// This test is for GeneralizedDavidsonSolMgr solving a standard (Ax=xl) complex Hermitian
+// eigenvalue problem.
+//
+// The matrix used is from MatrixMarket:
+// Name: MHD1280B: Alfven Spectra in Magnetohydrodynamics
+// Source: Source: A. Booten, M.N. Kooper, H.A. van der Vorst, S. Poedts and J.P. Goedbloed University of Utrecht, the Netherlands
+// Discipline: Plasma physics
+// URL: http://math.nist.gov/MatrixMarket/data/NEP/mhd/mhd1280b.html
+// Size: 1280 x 1280
+// NNZ: 22778 entries
+//
+// NOTE: No preconditioner is used in this case.
 //
 
-// This code does not compile due to the use of ModeLaplace1DQ1,
-// which depends on Epetra. It is commented out in CMakeLists.
-
-// Tpetra
-#include <Tpetra_Map.hpp>
-#include <Tpetra_Core.hpp>
-#include <Tpetra_Vector.hpp>
-#include <Tpetra_Operator.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-
-// Teuchos
-#include "Teuchos_CommandLineProcessor.hpp"
-
-// Anasazi
-#include "AnasaziTypes.hpp"
-#include "AnasaziBasicSort.hpp"
 #include "AnasaziConfigDefs.hpp"
+#include "AnasaziTypes.hpp"
+
+#include "AnasaziBasicSort.hpp"
 #include "AnasaziTpetraAdapter.hpp"
 #include "AnasaziBasicEigenproblem.hpp"
 #include "AnasaziGeneralizedDavidsonSolMgr.hpp"
+#include <Teuchos_CommandLineProcessor.hpp>
 
-#include "ModeLaplace1DQ1.h"
-#include "BlockPCGSolver.h"
+#include <Tpetra_Core.hpp>
+#include <Tpetra_CrsMatrix.hpp>
 
-using namespace Teuchos;
+// I/O for Harwell-Boeing files
+#include <Trilinos_Util_iohb.h>
 
-template <typename ScalarType>
-int run (int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
+// #ifndef HAVE_TPETRA_COMPLEX_DOUBLE
+// #  error "Anasazi: This test requires Scalar = std::complex<double> to be enabled in Tpetra."
+// #else
+  using namespace Teuchos;
+  using Tpetra::CrsMatrix;
+  using Tpetra::Map;
+  using Tpetra::MultiVector;
+  using Tpetra::Operator;
+  using std::vector;
+  using std::cout;
+  using std::endl;
 
-  using ST  = typename Tpetra::MultiVector<ScalarType>::scalar_type;
-  using LO  = typename Tpetra::MultiVector<>::local_ordinal_type;
-  using GO  = typename Tpetra::MultiVector<>::global_ordinal_type;
-  using NT  = typename Tpetra::MultiVector<>::node_type;
+  typedef double                               ST;
+  typedef ScalarTraits<ST>                    SCT;
+  typedef SCT::magnitudeType                   MT;
+  typedef MultiVector<ST>                      MV;
+  typedef MultiVector<ST>::global_ordinal_type GO;
+  typedef Operator<ST>                         OP;
+  typedef Anasazi::MultiVecTraits<ST,MV>      MVT;
+  typedef Anasazi::OperatorTraits<ST,MV,OP>   OPT;
 
-  using MT = typename Teuchos::ScalarTraits<ST>::MT;
+  Tpetra::ScopeGuard tpetraScope (&argc, &argv);
 
-  using OP  = Tpetra::Operator<ST,LO,GO,NT>;
-  using MV  = Tpetra::MultiVector<ST,LO,GO,NT>;
-  using OPT = Anasazi::OperatorTraits<ST,MV,OP>;
-  using MVT = Anasazi::MultiVecTraits<ST,MV>;
-  using SCT = Teuchos::ScalarTraits<ST>;
+  const ST ONE  = SCT::one();
+  int info = 0;
+  int MyPID = 0;
 
-  using tmap_t = Tpetra::Map<LO,GO,NT>;
-  using tcrsmatrix_t = Tpetra::CrsMatrix<ST,LO,GO,NT>;
+  RCP<const Teuchos::Comm<int> > comm = Tpetra::getDefaultComm ();
 
-  bool boolret;
-
-  Teuchos::GlobalMPISession mpiSession (&argc, &argv, &std::cout);
-  const auto comm = Tpetra::getDefaultComm();
-
-  int MyPID = comm->getRank();
+  MyPID = rank(*comm);
 
   bool testFailed;
   bool verbose = false;
   bool debug = false;
+  std::string filename("mhd1280b.cua");
   std::string which("LM");
+  int nev = 5;
+  int blockSize = 3;
+  MT tol = 1.0e-6;
 
   CommandLineProcessor cmdp(false,true);
   cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
   cmdp.setOption("debug","nodebug",&debug,"Print debugging information.");
   cmdp.setOption("sort",&which,"Targetted eigenvalues (SM or LM).");
   if (cmdp.parse(argc,argv) != CommandLineProcessor::PARSE_SUCCESSFUL) {
-
     return -1;
   }
   if (debug) verbose = true;
 
-  const ST ONE  = SCT::one();
-
-  if (verbose && MyPID == 0) {
-    std::cout << Anasazi::Anasazi_Version() << std::endl << std::endl;
+  if (MyPID == 0) {
+    cout << Anasazi::Anasazi_Version() << endl << endl;
   }
 
-  //  Problem information
-  int space_dim = 1;
-  std::vector<double> brick_dim( space_dim );
-  brick_dim[0] = 1.0;
-  std::vector<int> elements( space_dim );
-  elements[0] = 100;
+  // Get the data from the HB file
+  int dim,dim2,nnz;
+  int rnnzmax;
+  double *dvals;
+  int *colptr,*rowind;
+  nnz = -1;
+  if (MyPID == 0) {
+    info = readHB_newmat_double(filename.c_str(),&dim,&dim2,&nnz,&colptr,&rowind,&dvals);
+    // find maximum NNZ over all rows
+    vector<int> rnnz(dim,0);
+    for (int *ri=rowind; ri<rowind+nnz; ++ri) {
+      ++rnnz[*ri-1];
+    }
+    rnnzmax = *std::max_element(rnnz.begin(),rnnz.end());
+  }
+  else {
+    // address uninitialized data warnings
+    dvals = nullptr;
+    colptr = nullptr;
+    rowind = nullptr;
+  }
+  Teuchos::broadcast(*comm,0,&info);
+  Teuchos::broadcast(*comm,0,&nnz);
+  Teuchos::broadcast(*comm,0,&dim);
+  Teuchos::broadcast(*comm,0,&rnnzmax);
+  if (info == 0 || nnz < 0) {
+    if (MyPID == 0) {
+      cout << "Error reading '" << filename << "'" << endl
+           << "End Result: TEST FAILED" << endl;
+    }
+    return -1;
+  }
+  // create map
+  RCP<const Map<> > map = rcp (new Map<> (dim, 0, comm));
+  RCP<CrsMatrix<ST> > K = rcp(new CrsMatrix<ST> (map, rnnzmax));
+  if (MyPID == 0) {
+    // Convert interleaved doubles to complex values
+    // HB format is compressed column. CrsMatrix is compressed row.
+    const double *dptr = dvals;
+    const int *rptr = rowind;
+    for (int c=0; c<dim; ++c) {
+      for (int colnnz=0; colnnz < colptr[c+1]-colptr[c]; ++colnnz) {
+        K->insertGlobalValues (*rptr++ - 1, tuple<GO> (c), tuple (ST (dptr[0], dptr[1])));
+        dptr += 2;
+      }
+    }
+  }
+  if (MyPID == 0) {
+    // Clean up.
+    free( dvals );
+    free( colptr );
+    free( rowind );
+  }
+  K->fillComplete();
 
-  // Create problem
-  RCP<ModalProblem> testCase = rcp( new ModeLaplace1DQ1(comm, brick_dim[0], elements[0]) );
-  //
-  // Get the stiffness and mass matrices
-  RCP<tcrsmatrix_t> K = rcp( const_cast<tcrsmatrix_t *>(testCase->getStiffness()), false );
-  RCP<tcrsmatrix_t> M = rcp( const_cast<tcrsmatrix_t *>(testCase->getMass()), false );
-  //
-  // Create solver for mass matrix
-  // Note that accuracy of Davidson solution does NOT depend on how accurately the BlockPCG is solved
-  const int maxIterCG = 10;
-  const double tolCG = 1e-2;
-
-  RCP<BlockPCGSolver> opStiffness = rcp( new BlockPCGSolver(comm, M.get(), tolCG, maxIterCG, 0) );
-  opStiffness->setPreconditioner( 0 );
-  RCP<OP> invStiffness = rcp( new OP(opStiffness.get()) );
-
-  // Create the initial vectors
-  int blockSize = 3;
-  RCP<MV> ivec = rcp( new MV(K->OperatorDomainMap(), blockSize) );
-  MVT::MvRandom( *ivec );
+  // Create initial vectors
+  RCP<MV> ivec = rcp( new MV(map,blockSize) );
+  ivec->randomize ();
 
   // Create eigenproblem
-  const int nev = 5;
   RCP<Anasazi::BasicEigenproblem<ST,MV,OP> > problem =
     rcp( new Anasazi::BasicEigenproblem<ST,MV,OP>() );
   problem->setA(K);
-  problem->setM(M);
-  problem->setPrec(invStiffness);
   problem->setInitVec(ivec);
+  //
+  // Inform the eigenproblem that the operator K is symmetric
+  problem->setHermitian(true);
   //
   // Set the number of eigenvalues requested
   problem->setNEV( nev );
   //
   // Inform the eigenproblem that you are done passing it information
-  boolret = problem->setProblem();
+  bool boolret = problem->setProblem();
   if (boolret != true) {
-    if (verbose && MyPID == 0) {
-      std::cout << "Anasazi::BasicEigenproblem::SetProblem() returned with error." << std::endl
-           << "End Result: TEST FAILED" << std::endl;
+    if (MyPID == 0) {
+      cout << "Anasazi::BasicEigenproblem::SetProblem() returned with error." << endl
+           << "End Result: TEST FAILED" << endl;
     }
     return -1;
   }
 
   // Set verbosity level
-  int verbosity = Anasazi::Errors + Anasazi::Warnings;
+  int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary + Anasazi::TimingDetails;
   if (verbose) {
-    verbosity += Anasazi::FinalSummary + Anasazi::TimingDetails;
+    verbosity += Anasazi::IterationDetails;
   }
   if (debug) {
     verbosity += Anasazi::Debug;
   }
 
-
   // Eigensolver parameters
   int maxRestarts = 25;
   int maxDim = 50;
-  MT tol = 1e-6;
   //
   // Create parameter list to pass into the solver manager
   ParameterList MyPL;
@@ -207,7 +242,6 @@ int run (int argc, char *argv[]) {
     }
   }
 
-
   // Solve the problem to the specified tolerances or length
   Anasazi::ReturnType returnCode = MySolverMgr.solve();
   testFailed = false;
@@ -217,62 +251,57 @@ int run (int argc, char *argv[]) {
 
   // Get the eigenvalues and eigenvectors from the eigenproblem
   Anasazi::Eigensolution<ST,MV> sol = problem->getSolution();
-  std::vector<Anasazi::Value<ST> > evals = sol.Evals;
   RCP<MV> evecs = sol.Evecs;
   int numev = sol.numVecs;
 
   if (numev > 0) {
-
     std::ostringstream os;
     os.setf(std::ios::scientific, std::ios::floatfield);
     os.precision(6);
 
     // Compute the direct residual
-    std::vector<ST> normV( numev );
+    std::vector<MT> normV( numev );
     SerialDenseMatrix<int,ST> T(numev,numev);
     for (int i=0; i<numev; i++) {
-      T(i,i) = evals[i].realpart;
+      T(i,i) = sol.Evals[i].realpart;
     }
-    RCP<MV> Mvecs = MVT::Clone( *evecs, numev );
     RCP<MV> Kvecs = MVT::Clone( *evecs, numev );
-    OPT::Apply( *K, *evecs, *Kvecs );
-    OPT::Apply( *M, *evecs, *Mvecs );
-    MVT::MvTimesMatAddMv( -ONE, *Mvecs, T, ONE, *Kvecs );
-    // compute 2-norm of residuals
-    std::vector<MT> resnorm(numev);
-    MVT::MvNorm( *Kvecs, resnorm );
 
-    os << "Number of iterations performed in GeneralizedDavidson_test.exe: " << MySolverMgr.getNumIters() << std::endl
-       << "Direct residual norms computed in GeneralizedDavidson_test.exe" << std::endl
-       << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual" << std::endl
-       << "----------------------------------------" << std::endl;
+    OPT::Apply( *K, *evecs, *Kvecs );
+
+    MVT::MvTimesMatAddMv( -ONE, *evecs, T, ONE, *Kvecs );
+    MVT::MvNorm( *Kvecs, normV );
+
+    os << "Direct residual norms computed in Tpetra_GeneralizedDavidson_complex_test.exe" << endl
+       << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << endl
+       << "----------------------------------------" << endl;
     for (int i=0; i<numev; i++) {
-      os << std::setw(20) << evals[i].realpart << std::setw(20) << resnorm[i] << std::endl;
-      if ( resnorm[i] > tol ) {
+      if ( SCT::magnitude(sol.Evals[i].realpart) != SCT::zero() ) {
+        normV[i] = SCT::magnitude(normV[i]/sol.Evals[i].realpart);
+      }
+      os << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << normV[i] << endl;
+      if ( normV[i] > tol ) {
         testFailed = true;
       }
     }
-    if (verbose && MyPID==0) {
-      std::cout << std::endl << os.str() << std::endl;
+    if (MyPID==0) {
+      cout << endl << os.str() << endl;
     }
   }
 
   if (testFailed) {
-    if (verbose && MyPID==0) {
-      std::cout << "End Result: TEST FAILED" << std::endl;
+    if (MyPID==0) {
+      cout << "End Result: TEST FAILED" << endl;
     }
     return -1;
   }
   //
   // Default return value
   //
-  if (verbose && MyPID==0) {
-    std::cout << "End Result: TEST PASSED" << std::endl;
+  if (MyPID==0) {
+    cout << "End Result: TEST PASSED" << endl;
   }
   return 0;
-}
 
-int main(int argc, char *argv[]) {
-  return run<double>(argc,argv);
-  // run<float>(argc,argv);
+// #endif // HAVE_TPETRA_COMPLEX_DOUBLE
 }
