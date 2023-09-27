@@ -71,7 +71,7 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_Vector.h>
 #include <Tpetra_RowMatrix.hpp>
-#include <MatrixMarket_Tpetra.hpp>
+#include <MatrixMarket_Tpetra.hpp> // MatrixMarket File I/O
 
 // #include <EpetraExt_CrsMatrixIn.h>
 // #include "EpetraExt_MultiVectorIn.h"
@@ -97,11 +97,11 @@
 // #include <Isorropia_EpetraPartitioner.hpp>
 // #include <Isorropia_EpetraRedistributor.hpp>
 
+#include <ml_MultiLevelPreconditioner.h>
+
 using Teuchos::RCP;
 using Teuchos::rcp;
 using Teuchos::ParameterList;
-
-#include <ml_MultiLevelPreconditioner.h>
 
 namespace
 {
@@ -124,9 +124,6 @@ namespace
 // #endif
 }
 
-// int InitMatValues( const CrsMatrix& newA, CrsMatrix* A );
-// int InitMVValues( const MultiVector& newb, MultiVector* b );
-
 template<class CrsMatrix>
 int initMatValues( const CrsMatrix& srcMatrix, const CrsMatrix<>* dstMatrix )
 {
@@ -144,19 +141,14 @@ int initMatValues( const CrsMatrix& srcMatrix, const CrsMatrix<>* dstMatrix )
   LO* indices = new LO[maxNum];
   ST* values= new ST[maxNum];
 
-  // idx = new int[maxNum];
-  // vals = new double[maxNum];
-
   // For each row get the values and indices, and replace the values in A.
   for (size_t i = 0; i < numRows; ++i) {
     // Get the values and indices from newA.
-    // TD: Epetra version: EPETRA_CHK_ERR( newA.ExtractMyRowCopy(i, maxNum, numIn, vals, idx) );
     indsView indicesView(indices, maxNumRowEntries);
     valsView valuesView(values, maxNumRowEntries);
     srcMatrix->getLocalRowCopy(i, indicesView, valuesView, numEntries);
 
     // Replace the values in A
-    // TD: Epetra version: EPETRA_CHK_ERR( A->ReplaceMyValues(i, numIn, vals, idx) );
     dstMatrix->replaceLocalValues(i, indices, values, numEntries);
   }
 
@@ -219,36 +211,34 @@ int main(int argc, char** argv)
     }
 
     // Register Ifpack_ShyLU with the Ifpack factory.
-// TD: Ifpack2 alternative not found for HAVE_IFPACK_DYNAMIC_FACTORY and HAVE_IFPACK_PARALLEL_SUBDOMAIN_SOLVERS
-//#if defined(HAVE_IFPACK_DYNAMIC_FACTORY) && defined(HAVE_IFPACK_PARALLEL_SUBDOMAIN_SOLVERS)
-    {
-        int err = Ifpack_DynamicFactory::RegisterPreconditioner("ShyLU",
-                        buildShyLU<RowMatrix>);
-        if (! err) {
-            if (verbose) {
-                std::cout << "--- Ifpack_ShyLU was registered with"
-                <<" Ifpack_DynamicFactory" << std::endl;
-            }
-        } else {
-            if (verbose) {
-                std::cout << "!!! Error registering preconditioner ShyLU with"
-                          << " Ifpack_DynamicFactory. Exiting." << std::endl;
-            }
-            std::cout << fail << std::endl;
-#ifdef HAVE_MPI
-            MPI_Finalize();
-#endif
-            return -1;
-        }
-    }
-#endif
+// TD: No Ifpack2 equivalentconstants found, turning off for the moment (HAVE_IFPACK_DYNAMIC_FACTORY, HAVE_IFPACK_PARALLEL_SUBDOMAIN_SOLVERS)
+// //#if defined(HAVE_IFPACK_DYNAMIC_FACTORY) && defined(HAVE_IFPACK_PARALLEL_SUBDOMAIN_SOLVERS)
+//     {
+//         int err = Ifpack_DynamicFactory::RegisterPreconditioner("ShyLU",
+//                         buildShyLU<RowMatrix>);
+//         if (! err) {
+//             if (verbose) {
+//                 std::cout << "--- Ifpack_ShyLU was registered with"
+//                 <<" Ifpack_DynamicFactory" << std::endl;
+//             }
+//         } else {
+//             if (verbose) {
+//                 std::cout << "!!! Error registering preconditioner ShyLU with"
+//                           << " Ifpack_DynamicFactory. Exiting." << std::endl;
+//             }
+//             std::cout << fail << std::endl;
+//             return -1;
+//         }
+//     }
+// #endif
 
     // Read the file containing the test parameters
-#if defined(HAVE_IFPACK_DYNAMIC_FACTORY) && defined(HAVE_IFPACK_PARALLEL_SUBDOMAIN_SOLVERS)
-    std::string parameterFileName = "shylu_iqr_parameters.xml";
-#else
+// TD: No Ifpack2 equivalents found turning off for the moment (HAVE_IFPACK_DYNAMIC_FACTORY, HAVE_IFPACK_PARALLEL_SUBDOMAIN_SOLVERS)
+// #if defined(HAVE_IFPACK_DYNAMIC_FACTORY) && defined(HAVE_IFPACK_PARALLEL_SUBDOMAIN_SOLVERS)
+//    std::string parameterFileName = "shylu_iqr_parameters.xml";
+// #else
     std::string parameterFileName = "shylu_no_iqr_parameters.xml";
-#endif
+// #endif
 
     // Accept an alternate XML parameter file name, read from the command line
     {
@@ -261,17 +251,11 @@ int main(int argc, char** argv)
                                                      cl.parse (argc, argv);
         if ( parseReturn == Teuchos::CommandLineProcessor::PARSE_HELP_PRINTED) {
           std::cout << fail << std::endl;
-#ifdef HAVE_MPI
-            MPI_Finalize();
-#endif
             return 0;
         }
         if( parseReturn != Teuchos::CommandLineProcessor::PARSE_SUCCESSFUL   ) {
           std::cout << fail << std::endl;
-#ifdef HAVE_MPI
-            MPI_Finalize();
-#endif
-            return -2;
+          return -2;
         }
     }
     if (verbose) {
@@ -285,9 +269,10 @@ int main(int argc, char** argv)
     RCP<ParameterList> globalParams    = rcp(new ParameterList());
     globalParams = Teuchos::getParametersFromXmlFile(parameterFileName);
 
+    // TD: TODO: create parameter file tpetra/ifpack2 version
+
     // Read the matrix
-    std::string matrixFileName
-        = globalParams->get<std::string>("matrix file name", "wathenSmall.mtx");
+    std::string matrixFileName = globalParams->get<std::string>("matrix file name", "wathenSmall.mtx");
     std::string rhsFileName = globalParams->get<std::string>("rhs_file", "");
     std::string mapFileName = globalParams->get<std::string>("map_file", "");
 
@@ -320,9 +305,6 @@ int main(int argc, char** argv)
                      err << std::endl;
             }
             std::cout << fail << std::endl;
-#ifdef HAVE_MPI
-            MPI_Finalize();
-#endif
             return -3;
         }
     }
@@ -344,9 +326,9 @@ int main(int argc, char** argv)
     RCP<const CrsMatrix> *A;
     int err;
     if (mapAvail) {
-      // err = EpetraExt::MatrixMarketFileToCrsMatrix(file_name, *vecMap,  A);
       A = Reader<Matrix_t>::readSparseFile (file_name, vecMap, vecMap, vecMap, vecMap);
-    } else {
+    }
+    else {
       A = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(file_name, comm);
     }
     if (err) {
