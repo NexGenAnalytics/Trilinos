@@ -71,6 +71,7 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_Vector.h>
 #include <Tpetra_RowMatrix.hpp>
+#include <MatrixMarket_Tpetra.hpp>
 
 // #include <EpetraExt_CrsMatrixIn.h>
 // #include "EpetraExt_MultiVectorIn.h"
@@ -126,46 +127,60 @@ namespace
 // int InitMatValues( const CrsMatrix& newA, CrsMatrix* A );
 // int InitMVValues( const MultiVector& newb, MultiVector* b );
 
-int InitMatValues( const Tpetra::CrsMatrix<>& newA, const Tpetra::CrsMatrix<>* A )
+template<class CrsMatrix>
+int initMatValues( const CrsMatrix& srcMatrix, const CrsMatrix<>* dstMatrix )
 {
-  int numMyRows = newA.NumMyRows();
-  int maxNum = newA.MaxNumEntries();
-  int numIn;
-  int *idx = 0;
-  double *vals = 0;
+  using ST = CrsMatrix::scalar_type;
+  using LO = CrsMatrix::local_ordinal_type;
 
-  idx = new int[maxNum];
-  vals = new double[maxNum];
+  using indsView = typename CrsMatrix::local_inds_host_view_type;
+  using valsView = typename CrsMatrix::values_host_view_type;
+  
+
+  int numRows = newA.getLocalNumRows();
+  int maxNumRowEntries = newA.getLocalMaxNumRowEntries();
+  int numEntries = 0;
+
+  LO* indices = new LO[maxNum];
+  ST* values= new ST[maxNum];
+
+  // idx = new int[maxNum];
+  // vals = new double[maxNum];
 
   // For each row get the values and indices, and replace the values in A.
-  for (int i=0; i<numMyRows; ++i) {
-
+  for (size_t i = 0; i < numRows; ++i) {
     // Get the values and indices from newA.
-    EPETRA_CHK_ERR( newA.ExtractMyRowCopy(i, maxNum, numIn, vals, idx) );
+    // TD: Epetra version: EPETRA_CHK_ERR( newA.ExtractMyRowCopy(i, maxNum, numIn, vals, idx) );
+    indsView indicesView(indices, maxNumRowEntries);
+    valsView valuesView(values, maxNumRowEntries);
+    srcMatrix->getLocalRowCopy(i, indicesView, valuesView, numEntries);
 
     // Replace the values in A
-    EPETRA_CHK_ERR( A->ReplaceMyValues(i, numIn, vals, idx) );
-
+    // TD: Epetra version: EPETRA_CHK_ERR( A->ReplaceMyValues(i, numIn, vals, idx) );
+    dstMatrix->replaceLocalValues(i, indices, values, numEntries);
   }
 
   // Clean up.
-  delete [] idx;
-  delete [] vals;
+  delete [] indices;
+  delete [] values;
 
   return 0;
 }
 
-int InitMVValues( const Tpetra::MultiVector<>& newb, Tpetra::MultiVector<>* b )
+template<class MultiVector>
+int initMVValues( const MultiVector& srcVec, MultiVector* dstVec )
 {
-  int length = newb.MyLength();
-  int numVecs = newb.NumVectors();
+  using Vector = Tpetra::Vector<>;
+
+  int length = srcVec.getLocalLength();
+  int numVecs = srcVec.getNumVectors();
   const Vector *tempnewvec;
   Vector *tempvec = 0;
 
-  for (int i=0; i<numVecs; ++i) {
-    tempnewvec = newb(i);
-    tempvec = (*b)(i);
-    for (int j=0; j<length; ++j)
+  for (int i = 0; i < numVecs; ++i) {
+    tempnewvec = srcVec(i);
+    tempvec = (*dstVec)(i);
+    for (int j = 0; j < length; ++j)
       (*tempvec)[j] = (*tempnewvec)[j];
   }
 
@@ -184,6 +199,7 @@ int main(int argc, char** argv)
 
     using RowMatrix = typename Tpetra::RowMatrix<ST,LO,GO,NT>;
     using CrsMatrix = typename Tpetra::RowMatrix<ST,LO,GO,NT>;
+    using Map = typename Tpetra::Map<LO, GO, NT>;
 
     // Initialize MPI environment
     Teuchos::GlobalMPISession mpiSession(&argc,&argv);
@@ -310,7 +326,7 @@ int main(int argc, char** argv)
             return -3;
         }
     }
-    Epetra_Map* vecMap = static_cast<Epetra_Map *>( vecMap2 );
+    Map* vecMap = static_cast<Map*>( vecMap2 );
 
 
     if (maxFiles > 1) {
@@ -325,13 +341,13 @@ int main(int argc, char** argv)
         std::cout << "--- Using matrix file: " << file_name << std::endl;
     }
 
-    Epetra_CrsMatrix *A;
+    RCP<const CrsMatrix> *A;
     int err;
     if (mapAvail) {
-        err = EpetraExt::MatrixMarketFileToCrsMatrix(file_name, *vecMap,  A);
-    }
-    else {
-        err = EpetraExt::MatrixMarketFileToCrsMatrix(file_name, Comm, A);
+      // err = EpetraExt::MatrixMarketFileToCrsMatrix(file_name, *vecMap,  A);
+      A = Reader<Matrix_t>::readSparseFile (file_name, vecMap, vecMap, vecMap, vecMap);
+    } else {
+      A = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(file_name, comm);
     }
     if (err) {
         if (verbose) {
@@ -628,13 +644,13 @@ int main(int argc, char** argv)
             }
             else {
                 if (mapAvail) {
-                    InitMVValues( *iterb1, RHS );
+                    initMVValues( *iterb1, RHS );
                     if (iterb1 != NULL){ delete iterb1; iterb1 = NULL; }
                 }
                 else {
                     rd->redistribute(*RHS, iterb1);
                     if (RHS != NULL){ delete RHS; RHS = NULL; }
-                    InitMVValues( *iterb1, newRHS );
+                    initMVValues( *iterb1, newRHS );
                     // Should we delete iterb1
                 }
             }
