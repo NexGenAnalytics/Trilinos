@@ -48,6 +48,16 @@ COMBINED_OPTION( PIRO_HAVE_EPETRA_STACK
   )
 MESSAGE(STATUS "PIRO_HAVE_EPETRA_STACK: ${PIRO_HAVE_EPETRA_STACK}")
 
+COMBINED_OPTION( PIRO_HAVE_TPETRA_STACK
+  DEP_OPTIONS_NAMES ${PACKAGE_NAME}_ENABLE_Tpetra
+                    ${PACKAGE_NAME}_ENABLE_ThyraTpetraAdapters
+                    ${PACKAGE_NAME}_ENABLE_Stratimikos
+  DOCSTR "Enables support for Tpetra objects. Defaults to ON if Tpetra, "
+         "ThyraTpetraAdapters and Stratimikos are enabled, "
+         "otherwise defaults to OFF."
+  )
+MESSAGE(STATUS "PIRO_HAVE_TPETRA_STACK: ${PIRO_HAVE_TPETRA_STACK}")
+
 #
 # C) Add the libraries, tests, and examples
 #
