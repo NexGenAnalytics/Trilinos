@@ -6,6 +6,7 @@
 // ****************************************************************************
 // @HEADER
 
+#include "CDR_Model_Tpetra_decl.hpp"
 #include "Teuchos_UnitTestHarness.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
 #include "Teuchos_TimeMonitor.hpp"
@@ -17,11 +18,13 @@
 
 #include "../TestModels/SinCosModel.hpp"
 #include "../TestModels/CDR_Model.hpp"
+#include "../TestModels/CDR_Model_Tpetra.hpp"
 #include "../TestModels/VanDerPolModel.hpp"
 #include "../TestUtils/Tempus_ConvergenceTestUtils.hpp"
 
 #include "Stratimikos_DefaultLinearSolverBuilder.hpp"
 #include "Thyra_LinearOpWithSolveFactoryHelpers.hpp"
+#include "Tpetra_Core.hpp"
 
 #ifdef Tempus_ENABLE_MPI
 #include "Epetra_MpiComm.h"
@@ -323,17 +326,9 @@ TEUCHOS_UNIT_TEST(BackwardEuler, SinCos)
 }
 
 
-// ************************************************************
-// ************************************************************
-TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
-{
-  // Create a communicator for Epetra objects
-  RCP<Epetra_Comm> comm;
-#ifdef Tempus_ENABLE_MPI
-  comm = rcp(new Epetra_MpiComm(MPI_COMM_WORLD));
-#else
-  comm = rcp(new Epetra_SerialComm);
-#endif
+
+template <typename SC, typename Model, typename Comm>
+void CDR_Test(const Comm& comm, const int commSize, Teuchos::FancyOStream &out, bool& success){
 
   RCP<Tempus::IntegratorBasic<double> > integrator;
   std::vector<RCP<Thyra::VectorBase<double>>> solutions;
@@ -351,18 +346,13 @@ TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
 
     // Create CDR Model
     RCP<ParameterList> model_pl = sublist(pList, "CDR Model", true);
-    const int num_elements = model_pl->get<int>("num elements");
-    const double left_end = model_pl->get<double>("left end");
-    const double right_end = model_pl->get<double>("right end");
-    const double a_convection = model_pl->get<double>("a (convection)");
-    const double k_source = model_pl->get<double>("k (source)");
+    const auto num_elements = model_pl->get<int>("num elements");
+    const auto left_end = model_pl->get<SC>("left end");
+    const auto right_end = model_pl->get<SC>("right end");
+    const auto a_convection = model_pl->get<SC>("a (convection)");
+    const auto k_source = model_pl->get<SC>("k (source)");
 
-    auto model = rcp(new Tempus_Test::CDR_Model<double>(comm,
-                                                        num_elements,
-                                                        left_end,
-                                                        right_end,
-                                                        a_convection,
-                                                        k_source));
+    auto model = rcp(new Model(comm, num_elements, left_end, right_end, a_convection, k_source));
 
     // Set the factory
     ::Stratimikos::DefaultLinearSolverBuilder builder;
@@ -372,8 +362,7 @@ TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
     p->set("Preconditioner Type", "None");
     builder.setParameterList(p);
 
-    RCP< ::Thyra::LinearOpWithSolveFactoryBase<double> >
-      lowsFactory = builder.createLinearSolveStrategy("");
+    auto lowsFactory = builder.createLinearSolveStrategy("");
 
     model->set_W_factory(lowsFactory);
 
@@ -408,7 +397,7 @@ TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
 
     // Output finest temporal solution for plotting
     // This only works for ONE MPI process
-    if ((n == nTimeStepSizes-1) && (comm->NumProc() == 1)) {
+    if ((n == nTimeStepSizes-1) && (commSize == 1)) {
       std::ofstream ftmp("Tempus_BackwardEuler_CDR.dat");
       ftmp << "TITLE=\"Backward Euler Solution to CDR\"\n"
            << "VARIABLES=\"z\",\"T\"\n";
@@ -455,7 +444,7 @@ TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
 
   // Write fine mesh solution at final time
   // This only works for ONE MPI process
-  if (comm->NumProc() == 1) {
+  if (commSize == 1) {
     RCP<ParameterList> pList =
       getParametersFromXmlFile("Tempus_BackwardEuler_CDR.xml");
     RCP<ParameterList> model_pl = sublist(pList, "CDR Model", true);
@@ -476,6 +465,36 @@ TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
   }
 
   Teuchos::TimeMonitor::summarize();
+}
+
+// ************************************************************
+// ************************************************************
+TEUCHOS_UNIT_TEST(BackwardEuler, CDR)
+{
+  // Create a communicator for Epetra objects
+  RCP<Epetra_Comm> comm;
+#ifdef Tempus_ENABLE_MPI
+  comm = rcp(new Epetra_MpiComm(MPI_COMM_WORLD));
+#else
+  comm = rcp(new Epetra_SerialComm);
+#endif
+
+  CDR_Test<double, Tempus_Test::CDR_Model<double>>(comm, comm->NumProc(), out, success);
+}
+
+// ************************************************************
+// ************************************************************
+TEUCHOS_UNIT_TEST(BackwardEuler, CDR_Tpetra)
+{
+  // Get default Tpetra template types
+  using SC = Tpetra::Vector<>::scalar_type;
+  using LO = Tpetra::Vector<>::local_ordinal_type;
+  using GO = Tpetra::Vector<>::global_ordinal_type;
+  using Node = Tpetra::Vector<>::node_type;
+
+  auto comm = Tpetra::getDefaultComm();
+
+  CDR_Test<SC, Tempus_Test::CDR_Model_Tpetra<SC, LO, GO, Node>>(comm, comm->getSize(), out, success);
 }
 
 
