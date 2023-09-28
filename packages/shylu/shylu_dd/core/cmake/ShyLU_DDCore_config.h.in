@@ -11,3 +11,5 @@
 
 #cmakedefine HAVE_SHYLU_DDCORE_AMESOS2
 
+#cmakedefine HAVE_SHYLU_DDCORE_IFPACK2
+
