@@ -129,7 +129,7 @@ int run(int argc, char *argv[]) {
   // Get the data from the HB file
   int dim,dim2,nnz;
   int rnnzmax;
-  double *dvals;
+  ST *dvals;
   int *colptr,*rowind;
   nnz = -1;
   if (MyPID == 0) {
@@ -159,15 +159,15 @@ int run(int argc, char *argv[]) {
     return -1;
   }
   // create map
-  RCP<const tmap_t> map = rcp (new tmap_t (dim, 0, comm));
-  RCP<tcrsmatrix_t> K = rcp(new tcrsmatrix_t (map, rnnzmax));
+  RCP<const tmap_t> map = rcp (new tmap_t(dim, 0, comm));
+  RCP<tcrsmatrix_t> K = rcp(new tcrsmatrix_t(map, rnnzmax));
   if (MyPID == 0) {
+    // Copy ST values directly
     const ST *dptr = dvals;
     const int *rptr = rowind;
     for (int c = 0; c < dim; ++c) {
       for (int colnnz = 0; colnnz < colptr[c + 1] - colptr[c]; ++colnnz) {
-        ST value = dptr[0];
-        K->insertGlobalValues(*rptr++ - 1, tuple<GO>(c), tuple(value));
+        K->insertGlobalValues(*rptr++ - 1, tuple<GO>(c), tuple<ST>(*dptr));
         dptr++;
       }
     }
@@ -179,9 +179,7 @@ int run(int argc, char *argv[]) {
     free( colptr );
     free( rowind );
   }
-  std::cout << "Rank " << MyPID << " before fillComplete(): " << std::endl;
   K->fillComplete();
-  std::cout << "Rank " << MyPID << " after fillComplete(): " << std::endl;
 
   // Create initial vectors
   RCP<MV> ivec = rcp( new MV(map,blockSize) );
