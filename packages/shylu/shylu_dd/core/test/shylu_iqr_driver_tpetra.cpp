@@ -59,23 +59,30 @@
 
 */
 
-#include <Tpetra_Vector.h>
+// Standard
+#include <string>
 
-#include <MatrixMarket_Tpetra.hpp>  // MatrixMarket File I/O
+
 #include <Teuchos_CommandLineProcessor.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_ParameterList.hpp>
 #include <Teuchos_Time.hpp>
 #include <Teuchos_XMLParameterListHelpers.hpp>
+
+// Tpetra
 #include <Tpetra_ConfigDefs.hpp>
+#include <Tpetra_BlockCrsMatrix.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 #include <Tpetra_RowMatrix.hpp>
-#include <string>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_MultiVector.hpp>
+#include <MatrixMarket_Tpetra.hpp>  // MatrixMarket File I/O
 
 // #include <EpetraExt_CrsMatrixIn.h>
 // #include "EpetraExt_MultiVectorIn.h"
 // #include "EpetraExt_BlockMapIn.h"
 
+// Belos
 #include <BelosBlockGmresSolMgr.hpp>
 #include <BelosConfigDefs.hpp>
 #include <BelosLinearProblem.hpp>
@@ -176,34 +183,33 @@ int run(int argc, char **argv) {
   using Operator = typename Tpetra::Operator<ST, LO, GO, NT>;
 
   using RowMatrix = typename Tpetra::RowMatrix<ST, LO, GO, NT>;
-  using CrsMatrix = typename Tpetra::RowMatrix<ST, LO, GO, NT>;
+  using CrsMatrix = typename Tpetra::CrsMatrix<ST, LO, GO, NT>;
+  using BlockCrsMatrix = typename Tpetra::BlockCrsMatrix<ST, LO, GO, NT>;
   using Map = typename Tpetra::Map<LO, GO, NT>;
   using RowGraph = Tpetra::RowGraph<LO, GO, NT>;
 
   using Preconditioner = typename Ifpack2::Preconditioner<ST, LO, GO, NT>;
 
-  // Initialize MPI environment
-  Teuchos::GlobalMPISession mpiSession(&argc, &argv);
-  RCP<const comm<int> > comm = Tpetra::getDefaultComm();
-
   bool success = true;
-  std::string pass = "End Result: TEST PASSED";
-  std::string fail = "End Result: TEST FAILED";
 
-  const int myRank = comm->getRank();
-  const int numProcs = comm->getSize();
-
-  bool verbose = (myRank == 0);
-
-  if (verbose) {
-    std::cout << "--- Running ShyLU-IQR test with " << nProcs << " processes." << std::endl;
-  }
-
-  std::string parameterFileName = "";
-  bool useIqr = true;
-
-  // Accept an alternate XML parameter file name, read from the command line
+  try
   {
+    // Initialize MPI environment
+    Teuchos::GlobalMPISession mpiSession(&argc, &argv);
+    RCP<const comm<int> > comm = Tpetra::getDefaultComm();
+
+    const int myRank = comm->getRank();
+    const int numProcs = comm->getSize();
+    bool verbose = (myRank == 0);
+
+    if (verbose) {
+      std::cout << "--- Running ShyLU-IQR test with " << nProcs << " processes." << std::endl;
+    }
+
+    std::string parameterFileName = "";
+    bool useIqr = true;
+    
+    // Accept an alternate XML parameter file name, read from the command line
     Teuchos::CommandLineProcessor cmdp(false, false);
     cmdp.setDocString("");
     cmdp.setOption("parameter-file", &parameterFileName, "The name of the XML test parameter file");
@@ -220,9 +226,9 @@ int run(int argc, char **argv) {
       return -2;
     }
 
-    // set default parameter file
-    // TD: TODO: create parameter files containing parameters for
+    // set default parameter file for
     // the partitioner, the preconditioner, linear solver etc.
+    // TODO: set correct parameters in the xml files adapted to this tpetra test
     if (parameterFileName == "") {
       if (useIqr) {
         parameterFileName = "shylu_iqr_parameters_tpetra.xml";
@@ -230,351 +236,338 @@ int run(int argc, char **argv) {
         parameterFileName = "shylu_no_iqr_parameters_tpetra.xml";
       }
     }
-  }
-  if (verbose) {
-    std::cout << "--- Using parameter file: " << parameterFileName << std::endl;
-  }
 
-  // TD: Epetra: no RegisterPreconditioner alternative found
-  // Seems that "ShyLU" preconditioner was a copy of Schwartz preconditioner with the name "ShyLU"
-  // Create ShyLU preconditioner as an AdditiveSchwartz preconditioner
-  // TD: try the following. Should be inherit the Swhwarz preconditioner ?
-  // if (useIqr) {
-  //     // Epetra: previously done by buildShyLU method
-  //     // Epetra: Ifpack_DynamicFactory::RegisterPreconditioner("ShyLU", buildShyLU);
-  //     auto prec = Ifpack2::Factory::create<MAT>("SCHWARTZ", A);
-  //     params.set("schwarz: overlap level", overlap);
-  //     prec.setParameters(params);
-
-  //     // if (verbose) {
-  //     //     std::cout << "--- Ifpack_ShyLU was registered with"
-  //     //     <<" Ifpack_DynamicFactory" << std::endl;
-  //     // }
-  // }
-
-  // Read the XML parameter file. The resulting Teuchos parameter list
-  // contains sublists for the partitioner, the preconditioner, linear solver etc.
-  RCP<ParameterList> globalParams = rcp(new ParameterList());
-  globalParams = Teuchos::getParametersFromXmlFile(parameterFileName);
-
-  // Read the matrix
-  std::string matrixFileName = globalParams->get<std::string>("matrix file name", "wathenSmall.mtx");
-  std::string rhsFileName = globalParams->get<std::string>("rhs_file", "");
-  std::string mapFileName = globalParams->get<std::string>("map_file", "");
-  std::string precType = globalParams->get<std::string>("preconditioner type", "RILUK");
-  int maxFiles = globalParams->get<int>("Maximum number of files to read in", 1);
-  int startFile = globalParams->get<int>("Number of initial file", 1);
-  int file_number = startFile;
-
-  char filename[200];
-  if (mapFileName != "" && maxFiles > 1) {
-    mapFileName += "%d.mm";
-    sprintf(filename, mapFileName.c_str(), file_number);
-  } else {
-    strcpy(filename, mapFileName.c_str());
-  }
-  if (verbose) {
-    std::cout << "--- Using map file: " << filename << std::endl;
-  }
-
-  bool mapAvail = false;
-  RCP<const Map> vecMap = NULL;
-  if (mapFileName != "") {
-    mapAvail = true;
-    RCP<const MAP> blockRowMap = blockMatrix.getRowMap();
-    auto M = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(filename, comm);
-    vecMap = M->getRowMap();
-  }
-
-  if (maxFiles > 1) {
-    matrixFileName += "%d.mm";
-    sprintf(filename, matrixFileName.c_str(), file_number);
-  } else {
-    strcpy(filename, matrixFileName.c_str());
-  }
-
-  if (verbose) {
-    std::cout << "--- Using matrix file: " << filename << std::endl;
-  }
-
-  RCP<const CrsMatrix> A;
-  int err;
-  if (mapAvail) {
-    A = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(filename, vecMap, vecMap, vecMap, vecMap);
-  } else {
-    A = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(filename, comm);
-  }
-  if (err) {
     if (verbose) {
-      std::cout << "!!! Matrix file could not be read in, info = " << err << std::endl;
+      std::cout << "--- Using parameter file: " << parameterFileName << std::endl;
     }
-    std::cout << fail << std::endl;
-    return -3;
-  }
 
-  if (rhsFileName != "" && maxFiles > 1) {
-    rhsFileName += "%d.mm";
-    sprintf(filename, rhsFileName.c_str(), file_number);
-  } else {
-    strcpy(filename, rhsFileName.c_str());
-  }
-  if (verbose) {
-    std::cout << "--- Using rhs file: " << filename << std::endl;
-  }
+    // TD: Epetra: no RegisterPreconditioner alternative found
+    // Seems that "ShyLU" preconditioner was a copy of Schwartz preconditioner with the name "ShyLU"
+    // Create ShyLU preconditioner as an AdditiveSchwartz preconditioner
+    // TD: try the following. Should be inherit the Swhwarz preconditioner ?
+    // if (useIqr) {
+    //     // Epetra: previously done by buildShyLU method
+    //     // Epetra: Ifpack_DynamicFactory::RegisterPreconditioner("ShyLU", buildShyLU);
+    //     auto prec = Ifpack2::Factory::create<MAT>("SCHWARTZ", A);
+    //     params.set("schwarz: overlap level", overlap);
+    //     prec.setParameters(params);
 
-  // Partition the matrix (old Isoroppia version)
-  // ParameterList isorropiaParams = globalParams->sublist("Isorropia parameters");
-  // TD: TODO: no Tpetra partitionner found in  Isorropia
-  // RCP<Isorropia::Epetra::Partitioner> partitioner =
-  //      rcp(new Isorropia::Epetra::Partitioner(A, isorropiaParams, false), true);
-  // partitioner->partition();
-  // RCP<Isorropia::Epetra::Redistributor> rd = rcp(new Isorropia::Epetra::Redistributor(partitioner));
+    //     // if (verbose) {
+    //     //     std::cout << "--- Ifpack_ShyLU was registered with"
+    //     //     <<" Ifpack_DynamicFactory" << std::endl;
+    //     // }
+    // }
 
-  // TD: Consider now that if Zoltan2 enabled to use Zoltan2 preconditioner as 2 preconditioners might be available
-#if defined(HAVE_SHYLU_DDCORE_ZOLTAN2)
-  partitioner = rcp(new Ifpack2::Zoltan2Partitioner<RowGraph>(A_->getGraph()));
-#else
-  partitioner = rcp (new Ifpack2::LinearPartitioner<RowGraph>(A_->getGraph()));
-#end
-  partitioner->computePartitions(); // TD: not sure
+    // Read the XML parameter file. The resulting Teuchos parameter list
+    // contains sublists for the partitioner, the preconditioner, linear solver etc.
+    RCP<ParameterList> globalParams = rcp(new ParameterList());
+    globalParams = Teuchos::getParametersFromXmlFile(parameterFileName);
 
-  // TD: can't find Tpetra alternative
-  // const tpetra_import_type import(src_map, tgt_map);
-  // rd = Tpetra::Distributor &distributor = import.getDistributor();
+    // Load global parameters
+    std::string matrixFileName = globalParams->get<std::string>("matrix file name", "wathenSmall.mtx");
+    std::string rhsFileName = globalParams->get<std::string>("rhs_file", "");
+    std::string mapFileName = globalParams->get<std::string>("map_file", "");
+    std::string precType = globalParams->get<std::string>("preconditioner type", "RILUK");
+    int maxFiles = globalParams->get<int>("Maximum number of files to read in", 1);
+    int startFile = globalParams->get<int>("Number of initial file", 1);
+    int file_number = startFile;
 
-  int numRows = A->getGlobalNumRows();
-  RCP<Map> vectorMap = rcp(new Map(numRows, 0, comm));
-  MultiVector *RHS;
-  bool isRHS = false;
-  
-  if (rhsFileName != "") {
-    if (mapAvail) {
-      Tpetra::MatrixMarket::Reader<MV>::readVectorFile(rhsFileName, comm, vecMap);
+    char filename[200];
+    if (mapFileName != "" && maxFiles > 1) {
+      mapFileName += "%d.mm";
+      sprintf(filename, mapFileName.c_str(), file_number);
     } else {
-      Tpetra::MatrixMarket::Reader<MV>::readVectorFile(rhsFileName, comm, vectorMap);
+      strcpy(filename, mapFileName.c_str());
     }
-  } else {
-    // Generate a RHS and LHS
-    isRHS = true;
-    if (mapAvail) {
-      RHS = new MultiVector(vecMap, 1);
-    } else {
-      RHS = new MultiVector(vectorMap, 1);
-    }
-    RHS->randomize();
-  }
-
-  MultiVector *LHS;
-  if (mapAvail) {
-    LHS = new MultiVector(*vecMap, 1, true);
-  } else {
-    LHS = new MultiVector(*vectorMap, 1, true);
-  }
-  LHS->putScalar(0.0);
-
-  // Redistribute matrix and vectors
-  RCP<CrsMatrix> rcpA;
-  RCP<MultiVector> rcpRHS;
-  RCP<MultiVector> rcpLHS;
-  RCP<CrsMatrix> newA;
-  MultiVector *newLHS, *newRHS;
-
-  if (mapAvail) {
-    rcpA = rcp(A, true);
-    rcpRHS = rcp(RHS, true);
-    rcpLHS = rcp(LHS, true);
-  } else {
-    rd->redistribute(*A, newA);
-    delete A;
-    rcpA = rcp(newA, true);
-
-    rd->redistribute(*RHS, newRHS);
-    delete RHS;
-    rcpRHS = rcp(newRHS, true);
-
-    rd->redistribute(*LHS, newLHS);
-    delete LHS;
-    rcpLHS = rcp(newLHS, true);
-  }
-
-  /*if (!globalParams->isSublist("ML parameters")) {
     if (verbose) {
-      std::cout << "!!! ML parameter list not found. Exiting." << std::endl;
-    }
-    std::cout << fail << std::endl;
-    return -4;
-  }
-  ParameterList mlParameters = globalParams->sublist("ML parameters");*/
-  // TD: because ML Epetra preconditioner will be replaced by a RILUK preconditioner
-  // we need to replace ML parameters by the new preconditioner parameters
-  if (!globalParams->isSublist(sprintf("%s parameters", precType))) { // TD: we have to add it to parameter file
-    if (verbose) {
-      std::cout << "!!! " << precType << " parameter list not found. Exiting." << std::endl;
-    }
-    std::cout << fail << std::endl;
-    return -4;
-  }
-
-  if (!globalParams->isSublist("Belos parameters")) {
-    if (verbose) {
-      std::cout << "!!! Belos parameter list not found. Exiting." << std::endl;
-    }
-    std::cout << fail << std::endl;
-    return -5;
-  }
-  ParameterList belosParams = globalParams->sublist("Belos parameters");
-  int belosBlockSize = belosParams.get<int>("Block Size", 1);
-  int belosMaxRestarts = belosParams.get<int>("Maximum Restarts", 0);
-  int belosMaxIterations = belosParams.get<int>("Maximum Iterations", numRows);
-  double belosTolerance = belosParams.get<double>("Convergence Tolerance", 1e-10);
-  if (verbose) {
-    std::cout << std::endl;
-    std::cout << "--- Dimension of matrix: " << numRows << std::endl;
-    std::cout << "--- Block size used by solver: " << belosBlockSize << std::endl;
-    std::cout << "--- Number of restarts allowed: " << belosMaxRestarts << std::endl;
-    std::cout << "--- Max number of Gmres iterations per restart cycle: " << belosMaxIterations << std::endl;
-    std::cout << "--- Relative residual tolerance: " << belosTolerance << std::endl;
-  }
-
-  CrsMatrix *iterA = 0;
-  CrsMatrix *redistA = 0;
-  MultiVector *iterb1 = 0;
-  
-  // RCP<ML_Epetra::MultiLevelPreconditioner> MLprec;
-  RCP<Preconditioner> myPrec;
-
-  Teuchos::Time setupPrecTimer("preconditioner setup timer", false);
-  Teuchos::Time linearSolverTimer("linear solver timer");
-
-  RCP<Belos::SolverManager<ST, MV, OP> > solver;
-  while (file_number < maxFiles + startFile) {
-    /*if (file_number == startFile)
-    {*/
-    // Build ML preconditioner
-    //TD: use which one ("RILUK", ?) the set parameters
-    if (mapAvail) {
-      setupPrecTimer.start();
-      // Epetra: MLprec = rcp(new ML_Epetra::MultiLevelPreconditioner(*A, mlParameters, false), true);
-      // Epetra: MLprec->ComputePreconditioner();
-      myPrec = Ifpack2::Factory::create<MAT>(precType, A);
-      aPrec->compute();
-      setupPrecTimer.stop();
-    } else {
-      setupPrecTimer.start();
-      // Epetra: MLprec = rcp(new ML_Epetra::MultiLevelPreconditioner(*newA, mlParameters, false), true);
-      // Epetra: MLprec->ComputePreconditioner();
-      myPrec = Ifpack2::Factory::create<MAT>(precType, newA);
-      setupPrecTimer.stop();
-    }
-    /*}
-    else
-    {
-        setupPrecTimer.start();
-        MLprec->ReComputePreconditioner();
-        setupPrecTimer.stop();
-    }*/
-
-    // Build linear solver
-
-    // Epetra: RCP<Belos::EpetraPrecOp> belosPrec = rcp(new Belos::EpetraPrecOp(MLprec), false);
-
-    // Construct a preconditioned linear problem
-    RCP<Belos::LinearProblem<ST, MV, OP> > problem =
-        rcp(new Belos::LinearProblem<ST, MV, OP>(rcpA, rcpLHS, rcpRHS));
-    problem->setRightPrec(prec);
-
-    if (!problem->setProblem()) {
-      if (verbose) {
-        std::cout << "!!! Belos::LinearProblem failed to set up correctly."
-                  << " Exiting." << std::endl;
-      }
-      std::cout << fail << std::endl;
-      return -6;
+      std::cout << "--- Using map file: " << filename << std::endl;
     }
 
-    // Create an iterative solver manager
-    solver = rcp(new Belos::BlockGmresSolMgr<ST, MV, OP>(problem, rcp(&belosParams, false)));
-    // Solve linear system
-    linearSolverTimer.start();
-    Belos::ReturnType ret = solver->solve();
-    linearSolverTimer.stop();
-    if (ret == Belos::Unconverged) {
-      if (verbose) {
-        std::cout << "!!! Linear solver did not converge to prescribed"
-                  << " precision. Test failed." << std::endl;
-      }
-      std::cout << fail << std::endl;
-      return -7;
-    }
-    // Print time measurements
-    int numIters = solver->getNumIters();
-    double timeSetupPrec = setupPrecTimer.totalElapsedTime();
-    double timeLinearSolver = linearSolverTimer.totalElapsedTime();
-    if (verbose) {
-      std::cout << "--- Preconditioner setup time: " << timeSetupPrec << std::endl;
-      std::cout << "--- Number of iterations performed: " << numIters << std::endl;
-      std::cout << "--- Time to GMRES convergence: " << timeLinearSolver << std::endl;
-      std::cout << "--- Average time per GMRES iteration: " << timeLinearSolver / numIters << std::endl;
-      std::cout << "--- Total time to solution (prec + GMRES): " << timeSetupPrec + timeLinearSolver << std::endl;
+    bool mapAvail = false;
+    RCP<const Map> vecMap = NULL; 
+
+    if (mapFileName != "") {
+      mapAvail = true;
+      auto M = Tpetra::MatrixMarket::Reader<BlockCrsMatrix>::readSparseFile(filename, comm);
+      vecMap = M->getRowMap();
     }
 
-    file_number++;
-    if (file_number >= maxFiles + startFile) {
-      if (redistA != NULL) {
-        delete redistA;
-        redistA = NULL;
-      }
-      if (iterb1 != NULL) {
-        delete iterb1;
-        iterb1 = NULL;
-      }
-      break;
-    } else {
+    if (maxFiles > 1) {
+      matrixFileName += "%d.mm";
       sprintf(filename, matrixFileName.c_str(), file_number);
+    } else {
+      strcpy(filename, matrixFileName.c_str());
+    }
 
-      if (redistA != NULL) {
-        delete redistA;
-        redistA = NULL;
-      }
-      // Load the new matrix
+    if (verbose) {
+      std::cout << "--- Using matrix file: " << filename << std::endl;
+    }
+
+    RCP<const CrsMatrix> A;
+    if (mapAvail) {
+      A = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(filename, comm);
+      map = A->getRowMap();
+    } else {
+      A = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(filename, comm);
+    }
+    
+    // if (err) {
+    //   if (verbose) {
+    //     std::cout << "!!! Matrix file could not be read in, info = " << err << std::endl;
+    //   }
+    //   std::cout << fail << std::endl;
+    //   return -3;
+    // }
+
+    if (rhsFileName != "" && maxFiles > 1) {
+      rhsFileName += "%d.mm";
+      sprintf(filename, rhsFileName.c_str(), file_number);
+    } else {
+      strcpy(filename, rhsFileName.c_str());
+    }
+    if (verbose) {
+      std::cout << "--- Using rhs file: " << filename << std::endl;
+    }
+
+    // Partition the matrix (old Isoroppia version)
+    // ParameterList isorropiaParams = globalParams->sublist("Isorropia parameters");
+    // TD: TODO: no Tpetra partitionner found in  Isorropia
+    // RCP<Isorropia::Epetra::Partitioner> partitioner =
+    //      rcp(new Isorropia::Epetra::Partitioner(A, isorropiaParams, false), true);
+    // partitioner->partition();
+    // RCP<Isorropia::Epetra::Redistributor> rd = rcp(new Isorropia::Epetra::Redistributor(partitioner));
+
+    // TD: Consider now that if Zoltan2 enabled to use Zoltan2 preconditioner as 2 preconditioners might be available
+  #if defined(HAVE_SHYLU_DDCORE_ZOLTAN2)
+    partitioner = rcp(new Ifpack2::Zoltan2Partitioner<RowGraph>(A_->getGraph()));
+  #else
+    partitioner = rcp (new Ifpack2::LinearPartitioner<RowGraph>(A_->getGraph()));
+  #end
+    partitioner->computePartitions(); // TD: not sure
+
+
+
+
+    // TD: can't find Tpetra alternative
+    // const tpetra_import_type import(src_map, tgt_map);
+    // rd = Tpetra::Distributor &distributor = import.getDistributor();
+
+    int numRows = A->getGlobalNumRows();
+    RCP<Map> vectorMap = rcp(new Map(numRows, 0, comm));
+    MultiVector *RHS;
+    bool isRHS = false;
+    
+    if (rhsFileName != "") {
       if (mapAvail) {
-        err = EpetraExt::MatrixMarketFileToCrsMatrix(filename, *vecMap, redistA);
+        Tpetra::MatrixMarket::Reader<MultiVector>::readVectorFile(rhsFileName, comm, vecMap);
       } else {
-        err = EpetraExt::MatrixMarketFileToCrsMatrix(filename, comm, iterA);
+        Tpetra::MatrixMarket::Reader<MultiVector>::readVectorFile(rhsFileName, comm, vectorMap);
       }
-      if (err != 0) {
-        if (myPID == 0)
-          std::cout << "Could not open file: " << filename << std::endl;
-        success = false;
+    } else {
+      // Generate a RHS and LHS
+      isRHS = true;
+      if (mapAvail) {
+        RHS = new MultiVector(vecMap, 1);
       } else {
-        if (mapAvail) {
-          InitMatValues(*redistA, A);
-          if (redistA != NULL) {
-            delete redistA;
-            redistA = NULL;
-          }
-        } else {
-          rd->redistribute(*iterA, redistA);
-          if (iterA != NULL) {
-            delete iterA;
-            iterA = NULL;
-          }
-          InitMatValues(*redistA, newA);
+        RHS = new MultiVector(vectorMap, 1);
+      }
+      RHS->randomize();
+    }
+
+    MultiVector *LHS;
+    if (mapAvail) {
+      LHS = new MultiVector(vecMap, 1);
+    } else {
+      LHS = new MultiVector(*vectorMap, 1);
+    }
+    LHS->putScalar(0.0);
+    // In Belos:
+    // RCP<Vector> vecLHS = rcp(new V(map));
+    // RCP<Vector> vecRHS = rcp(new V(map));
+    // RCP<MultiVector> LHS, RHS;
+    // .. stuff
+    // LHS = Teuchos::rcp_implicit_cast<MV>(vecLHS);
+    // RHS = Teuchos::rcp_implicit_cast<MV>(vecRHS);
+
+    // Redistribute matrix and vectors
+    // // OLD
+    // RCP<CrsMatrix> rcpA;
+    // RCP<MultiVector> rcpRHS;
+    // RCP<MultiVector> rcpLHS;
+    // RCP<CrsMatrix> newA;
+    // MultiVector *newLHS, *newRHS;
+    RCP<CrsMatrix> rcpA;
+    RCP<MultiVector> vecRHS;
+    RCP<MultiVector> vecLHS;
+    RCP<CrsMatrix> newA;
+    MultiVector *LHS, *RHS;
+
+    if (mapAvail) {
+      vecRHS = rcp(RHS, true);
+      rcpLHS = rcp(LHS, true);
+    } else {
+      // rd->redistribute(*A, newA);
+      delete A;
+      rcpA = rcp(newA, true);
+
+      rd->redistribute(*RHS, newRHS);
+      delete RHS;
+      vecRHS = rcp(newRHS, true);
+
+      rd->redistribute(*LHS, newLHS);
+      delete LHS;
+      rcpLHS = rcp(newLHS, true);
+    }
+
+    /*if (!globalParams->isSublist("ML parameters")) {
+      if (verbose) {
+        std::cout << "!!! ML parameter list not found. Exiting." << std::endl;
+      }
+      std::cout << fail << std::endl;
+      return -4;
+    }
+    ParameterList mlParameters = globalParams->sublist("ML parameters");*/
+    // TD: because ML Epetra preconditioner will be replaced by a RILUK preconditioner
+    // we need to replace ML parameters by the new preconditioner parameters
+    if (!globalParams->isSublist(sprintf("%s parameters", precType))) { // TD: we have to add it to parameter file
+      if (verbose) {
+        std::cout << "!!! " << precType << " parameter list not found. Exiting." << std::endl;
+      }
+      std::cout << fail << std::endl;
+      return -4;
+    }
+
+    if (!globalParams->isSublist("Belos parameters")) {
+      if (verbose) {
+        std::cout << "!!! Belos parameter list not found. Exiting." << std::endl;
+      }
+      std::cout << fail << std::endl;
+      return -5;
+    }
+    ParameterList belosParams = globalParams->sublist("Belos parameters");
+    int belosBlockSize = belosParams.get<int>("Block Size", 1);
+    int belosMaxRestarts = belosParams.get<int>("Maximum Restarts", 0);
+    int belosMaxIterations = belosParams.get<int>("Maximum Iterations", numRows);
+    double belosTolerance = belosParams.get<double>("Convergence Tolerance", 1e-10);
+    if (verbose) {
+      std::cout << std::endl;
+      std::cout << "--- Dimension of matrix: " << numRows << std::endl;
+      std::cout << "--- Block size used by solver: " << belosBlockSize << std::endl;
+      std::cout << "--- Number of restarts allowed: " << belosMaxRestarts << std::endl;
+      std::cout << "--- Max number of Gmres iterations per restart cycle: " << belosMaxIterations << std::endl;
+      std::cout << "--- Relative residual tolerance: " << belosTolerance << std::endl;
+    }
+
+    RCP<const CrsMatrix> iterA;
+    RCP<const CrsMatrix> redistA;
+    RCP<const MultiVector> iterb1;
+    
+    // RCP<ML_Epetra::MultiLevelPreconditioner> MLprec;
+    RCP<Preconditioner> myPrec;
+
+    Teuchos::Time setupPrecTimer("preconditioner setup timer", false);
+    Teuchos::Time linearSolverTimer("linear solver timer");
+
+    RCP<Belos::SolverManager<ST, MV, OP> > solver;
+    while (file_number < maxFiles + startFile) {
+      /*if (file_number == startFile)
+      {*/
+      // Build preconditioner (Epetra version used ML)
+      if (mapAvail) {
+        setupPrecTimer.start();
+        // Epetra: MLprec = rcp(new ML_Epetra::MultiLevelPreconditioner(*A, mlParameters, false), true);
+        // Epetra: MLprec->ComputePreconditioner();
+        myPrec = Ifpack2::Factory::create<MAT>(precType, A);
+        aPrec->compute();
+        setupPrecTimer.stop();
+      } else {
+        setupPrecTimer.start();
+        // Epetra: MLprec = rcp(new ML_Epetra::MultiLevelPreconditioner(*newA, mlParameters, false), true);
+        // Epetra: MLprec->ComputePreconditioner();
+        myPrec = Ifpack2::Factory::create<MAT>(precType, newA);
+        setupPrecTimer.stop();
+      }
+      /*}
+      else
+      {
+          setupPrecTimer.start();
+          MLprec->ReComputePreconditioner();
+          setupPrecTimer.stop();
+      }*/
+
+      // Build linear solver
+
+      // Epetra: RCP<Belos::EpetraPrecOp> belosPrec = rcp(new Belos::EpetraPrecOp(MLprec), false);
+
+      // Construct a preconditioned linear problem
+      RCP<Belos::LinearProblem<ST, MV, OP> > problem =
+          rcp(new Belos::LinearProblem<ST, MV, OP>(rcpA, rcpLHS, rcpRHS));
+      problem->setRightPrec(prec);
+
+      if (!problem->setProblem()) {
+        if (verbose) {
+          std::cout << "!!! Belos::LinearProblem failed to set up correctly."
+                    << " Exiting." << std::endl;
         }
+        std::cout << fail << std::endl;
+        return -6;
       }
 
-      // Load the new rhs
-      if (!allOneRHS) {
-        sprintf(filename, rhsFileName.c_str(), file_number);
+      // Create an iterative solver manager
+      solver = rcp(new Belos::BlockGmresSolMgr<ST, MV, OP>(problem, rcp(&belosParams, false)));
+      // Solve linear system
+      linearSolverTimer.start();
+      Belos::ReturnType ret = solver->solve();
+      linearSolverTimer.stop();
+      if (ret == Belos::Unconverged) {
+        if (verbose) {
+          std::cout << "!!! Linear solver did not converge to prescribed"
+                    << " precision. Test failed." << std::endl;
+        }
+        std::cout << fail << std::endl;
+        return -7;
+      }
+      // Print time measurements
+      int numIters = solver->getNumIters();
+      double timeSetupPrec = setupPrecTimer.totalElapsedTime();
+      double timeLinearSolver = linearSolverTimer.totalElapsedTime();
+      if (verbose) {
+        std::cout << "--- Preconditioner setup time: " << timeSetupPrec << std::endl;
+        std::cout << "--- Number of iterations performed: " << numIters << std::endl;
+        std::cout << "--- Time to GMRES convergence: " << timeLinearSolver << std::endl;
+        std::cout << "--- Average time per GMRES iteration: " << timeLinearSolver / numIters << std::endl;
+        std::cout << "--- Total time to solution (prec + GMRES): " << timeSetupPrec + timeLinearSolver << std::endl;
+      }
 
+      file_number++;
+      if (file_number >= maxFiles + startFile) {
+        if (redistA != NULL) {
+          delete redistA;
+          redistA = NULL;
+        }
         if (iterb1 != NULL) {
           delete iterb1;
           iterb1 = NULL;
         }
+        break;
+      } else {
+        sprintf(filename, matrixFileName.c_str(), file_number);
+
+        if (redistA != NULL) {
+          delete redistA;
+          redistA = NULL;
+        }
+        // Load the new matrix
+        // if (mapAvail) {
+        //   err = EpetraExt::MatrixMarketFileToCrsMatrix(filename, *vecMap, redistA);
+        // } else {
+        //   err = EpetraExt::MatrixMarketFileToCrsMatrix(filename, comm, iterA);
+        // }
         if (mapAvail) {
-          err = EpetraExt::MatrixMarketFileToMultiVector(filename, *vecMap, iterb1);
+          redistA = Tpetra::MatrixMarket::Reader<MultiVector>::readSparseFile(rhsFileName, comm);
+          vecMap = redistA->getRowMap();
         } else {
-          err = EpetraExt::MatrixMarketFileToMultiVector(filename, *vectorMap, RHS);
+          iterA = Tpetra::MatrixMarket::Reader<CrsMatrix>::readSparseFile(filename, comm);
         }
         if (err != 0) {
           if (myPID == 0)
@@ -582,31 +575,69 @@ int run(int argc, char **argv) {
           success = false;
         } else {
           if (mapAvail) {
-            initMVValues(*iterb1, RHS);
-            if (iterb1 != NULL) {
-              delete iterb1;
-              iterb1 = NULL;
+            InitMatValues(*redistA, A);
+            if (redistA != NULL) {
+              delete redistA;
+              redistA = NULL;
             }
           } else {
-            rd->redistribute(*RHS, iterb1);
-            if (RHS != NULL) {
-              delete RHS;
-              RHS = NULL;
+            // Tpetra alternative ?
+            // rd->redistribute(*iterA, redistA);
+            if (iterA != NULL) {
+              delete iterA;
+              iterA = NULL;
             }
-            initMVValues(*iterb1, newRHS);
-            // Should we delete iterb1
+            initMatValues(*redistA, newA);
+          }
+        }
+
+        // Load the new rhs
+        if (!allOneRHS) {
+          sprintf(filename, rhsFileName.c_str(), file_number);
+
+          if (iterb1 != NULL) {
+            delete iterb1;
+            iterb1 = NULL;
+          }
+          if (mapAvail) {
+            err = EpetraExt::MatrixMarketFileToMultiVector(filename, *vecMap, iterb1);
+          } else {
+            err = EpetraExt::MatrixMarketFileToMultiVector(filename, *vectorMap, RHS);
+          }
+          if (err != 0) {
+            if (myPID == 0)
+              std::cout << "Could not open file: " << filename << std::endl;
+            success = false;
+          } else {
+            if (mapAvail) {
+              initMVValues(*iterb1, RHS);
+              if (iterb1 != NULL) {
+                delete iterb1;
+                iterb1 = NULL;
+              }
+            } else {
+              rd->redistribute(*RHS, iterb1);
+              if (RHS != NULL) {
+                delete RHS;
+                RHS = NULL;
+              }
+              initMVValues(*iterb1, newRHS);
+              // Should we delete iterb1
+            }
           }
         }
       }
     }
+
+    if (success)
+      std::cout << "End Result: TEST PASSED" << std::endl;
+    else
+      std::cout << "End Result: TEST FAILED" << std::endl;
+
+    myPrec.reset();
   }
+  TEUCHOS_STANDARD_CATCH_STATEMENTS(verbose, std::cerr, success);
 
-  if (success)
-    std::cout << pass << std::endl;
-  else
-    std::cout << fail << std::endl;
-
-  myPrec.reset();
   return 0;
 }
 
