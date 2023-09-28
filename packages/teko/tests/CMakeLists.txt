@@ -201,6 +201,16 @@ IF(TEKO_HAVE_EPETRA)
 ENDIF()
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  StridedTpetraOperator_test
+  SOURCES
+    unit_tests/tStridedTpetraOperator.cpp
+    ${UNIT_TEST_DRIVER}
+  COMM serial mpi
+  ARGS ${PARALLEL_ARGS_STRING}
+  NUM_MPI_PROCS ${CUSTOM_MPI_PROCS}
+  )
+
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
   RequestInterface_test
   SOURCES
     unit_tests/tRequestInterface.cpp
@@ -281,6 +291,16 @@ IF(TEKO_HAVE_EPETRA)
     NUM_MPI_PROCS 1
   )
 ENDIF()
+
+TRIBITS_ADD_EXECUTABLE_AND_TEST(
+  ProbingFactory_Tpetra
+  SOURCES
+  unit_tests/tProbingFactory_Tpetra.cpp
+  ${UNIT_TEST_DRIVER}
+  COMM serial mpi
+  ARGS ${SERIAL_ARGS_STRING}
+  NUM_MPI_PROCS 1
+)
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   ALOperator
