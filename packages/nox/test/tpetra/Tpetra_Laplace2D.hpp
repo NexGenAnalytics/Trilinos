@@ -1,0 +1,187 @@
+#include "NOX_TpetraTypedefs.hpp"
+
+// Interfaces
+namespace NOX::Tpetra::Interface {
+
+/*! \brief Used by NOX::Tpetra to provide a link to the
+  external code for Jacobian fills.
+
+  This is only required if the user wishes to supply their own Jacobian
+  operator.
+*/
+class Jacobian {
+public:
+  virtual ~Jacobian() = default;
+
+  /*! Compute Jacobian given the specified input vector x.  Returns
+    true if computation was successful.
+   */
+  virtual bool computeJacobian(const NOX::TVector &x, NOX::TOperator &Jac) = 0;
+};
+
+/*! \brief Used by NOX::Tpetra to provide a link to the
+  external code for Precondtioner fills.
+
+  This is only required if the user wishes to supply their own
+  preconditioner operator.
+*/
+class Preconditioner {
+public:
+  virtual ~Preconditioner() = default;
+
+  //! Computes a user defined preconditioner.
+  virtual bool
+  computePreconditioner(const NOX::TVector &x, NOX::TOperator &M,
+                        Teuchos::ParameterList *precParams = 0) = 0;
+};
+
+/*!
+  \brief Supplies NOX with the set nonlinear equations.
+
+  This is the minimum required information to solve a nonlinear
+  problem using the NOX::Tpetra objects for the linear algebra
+  implementation.  Used by NOX::Tpetra::Group to provide a link
+  to the external code for residual fills.
+*/
+class Required {
+
+public:
+  //! Type of fill that a computeF() method is used for.
+  /*! computeF() can be called for a variety of reasons:
+
+  - To evaluate the function residuals.
+  - To be used in an approximation to the Jacobian (finite difference or
+  directional derivative).
+  - To be used in an approximation to the preconditioner.
+
+  This flag tells computeF() what the evaluation is used for.  This allows the
+  user to change the fill process to eliminate costly terms.  For example,
+  sometimes, terms in the function are very expensive and can be ignored in a
+  Jacobian calculation.  The user can query this flag and determine not to
+  recompute such terms if the computeF() is used in a Jacobian calculation.
+   */
+  enum class FillType {
+    //! The exact residual (F) is being calculated.
+    Residual,
+    //! The Jacobian matrix is being estimated.
+    Jac,
+    //! The preconditioner matrix is being estimated.
+    Prec,
+    //! The fill context is from a FD approximation (includes FDC)
+    FD_Res,
+    //! The fill context is from a MF approximation
+    MF_Res,
+    //! The fill context is from a MF computeJacobian() approximation
+    MF_Jac,
+    //! A user defined estimation is being performed.
+    User
+  };
+
+  virtual ~Required() = default;
+
+  //! Compute the function, F, given the specified input vector x.  Returns true
+  //! if computation was successful.
+  virtual bool computeF(const TVector &x, TVector &F,
+                        const FillType fillFlag) = 0;
+};
+
+} // namespace NOX::Tpetra::Interface
+
+namespace Laplace2D {
+// this is required to know the number of lower, upper, left and right
+// node for each node of the Cartesian grid (composed by nx \timex ny
+// elements)
+
+void getMyNeighbours(const NOX::GlobalOrdinal i, const NOX::GlobalOrdinal nx,
+                     const NOX::GlobalOrdinal ny, NOX::GlobalOrdinal &left,
+                     NOX::GlobalOrdinal &right, NOX::GlobalOrdinal &lower,
+                     NOX::GlobalOrdinal &upper);
+
+// This function creates a CrsMatrix, whose elements corresponds
+// to the discretization of a Laplacian over a Cartesian grid,
+// with nx grid point along the x-axis and and ny grid points
+// along the y-axis. For the sake of simplicity, I suppose that
+// all the nodes in the matrix are internal nodes (Dirichlet
+// boundary nodes are supposed to have been already condensated)
+
+Teuchos::RCP<NOX::TCrsMatrix>
+createLaplacian(const int nx, const int ny,
+                const Teuchos::RCP<const Teuchos::Comm<int>> &comm);
+
+// ==========================================================================
+// This class contians the main definition of the nonlinear problem at
+// hand. A method is provided to compute F(x) for a given x, and another
+// method to update the entries of the Jacobian matrix, for a given x.
+// As the Jacobian matrix J can be written as
+//    J = L + diag(lambda*exp(x[i])),
+// where L corresponds to the discretization of a Laplacian, and diag
+// is a diagonal matrix with lambda*exp(x[i]). Basically, to update
+// the jacobian we simply update the diagonal entries. Similarly, to compute
+// F(x), we reset J to be equal to L, then we multiply it by the
+// (distributed) vector x, then we add the diagonal contribution
+// ==========================================================================
+
+} // namespace Laplace2D
+
+class PDEProblem {
+
+public:
+  // constructor. Requires the number of nodes along the x-axis
+  // and y-axis, the value of lambda, and the communicator
+  // (to define a Map, which is a linear map in this case)
+  PDEProblem(const int nx, const int ny, const double lambda,
+             const Teuchos::RCP<const Teuchos::Comm<int>> &comm);
+
+  // compute F(x)
+  void computeF(const NOX::TVector &x, NOX::TVector &f);
+
+  // update the Jacobian matrix for a given x
+  void updateJacobian(const NOX::TVector &x);
+
+  // returns a pointer to the internally stored matrix
+  Teuchos::RCP<NOX::TCrsMatrix> getMatrix() { return matrix_; }
+
+private:
+  int nx_, ny_;
+  double hx_, hy_;
+  Teuchos::RCP<NOX::TCrsMatrix> matrix_;
+  double lambda_;
+
+}; /* class PDEProblem */
+
+// ==========================================================================
+// This is the main NOX class for this example. Here we define
+// the interface between the nonlinear problem at hand, and NOX.
+// The constructor accepts a PDEProblem object. Using a pointer
+// to this object, we can update the Jacobian and compute F(x),
+// using the definition of our problem. This interface is bit
+// crude: For instance, no PrecMatrix nor Preconditioner is specified.
+// ==========================================================================
+
+class SimpleProblemInterface : public NOX::Tpetra::Interface::Required,
+                               public NOX::Tpetra::Interface::Jacobian,
+                               public NOX::Tpetra::Interface::Preconditioner {
+
+public:
+  SimpleProblemInterface(PDEProblem *problem) : problem_(problem){};
+
+  bool computeF(const NOX::TVector &x, NOX::TVector &f,
+                NOX::Tpetra::Interface::Required::FillType F) override {
+    problem_->computeF(x, f);
+    return true;
+  };
+
+  bool computeJacobian(const NOX::TVector &x, NOX::TOperator &Jac) override {
+    problem_->updateJacobian(x);
+    return true;
+  }
+
+  bool computePreconditioner(const NOX::TVector &x, NOX::TOperator &M,
+                             Teuchos::ParameterList *precParams = 0) override {
+    problem_->updateJacobian(x);
+    return true;
+  }
+
+private:
+  PDEProblem *problem_;
+}; /* class SimpleProblemInterface */
