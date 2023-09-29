@@ -9,18 +9,18 @@ APPEND_SET(HEADERS
   FiniteElementProblem.hpp
 #  Problem_Interface.hpp
 #  Tcubed_FiniteElementProblem.hpp
-#  Pitchfork_FiniteElementProblem.hpp
+  Pitchfork_FiniteElementProblem.hpp # --> WIP, TESTING
 #  NormConstraint.hpp
-#  LOCALinearConstraint.hpp
+#  LOCALinearConstraint.hpp --> WIP
 )
 
 APPEND_SET(SOURCES
   Basis.cpp
 #  Problem_Interface.cpp
 #  Tcubed_FiniteElementProblem.cpp
-#  Pitchfork_FiniteElementProblem.cpp
+  Pitchfork_FiniteElementProblem.cpp # --> WIP, TESTING
 #  NormConstraint.cpp
-#  LOCALinearConstraint.cpp
+#  LOCALinearConstraint.cpp --> WIP
 )
 
 # Add this below:
