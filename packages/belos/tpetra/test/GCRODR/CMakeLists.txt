@@ -12,7 +12,7 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   )
 
 TRIBITS_COPY_FILES_TO_BINARY_DIR(Tpetra_CopyTestGCRODRFiles
-    SOURCE_DIR ${Belos_SOURCE_DIR}/epetra/example/GCRODR
+    SOURCE_DIR ${Belos_SOURCE_DIR}/tpetra/testmatrices
     SOURCE_FILES sherman5.hb
     EXEDEPS Tpetra_gcrodr_hb_test
     )

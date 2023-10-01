@@ -47,27 +47,29 @@
 //
 // NOTE: No preconditioner is used in this example.
 
-// Tpetra
-#include <Tpetra_Map.hpp>
-#include <Tpetra_Core.hpp>
-#include <Tpetra_Vector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-
 // Teuchos
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
-#include "Teuchos_ParameterList.hpp"
-#include "Teuchos_StandardCatchMacros.hpp"
-#include "Teuchos_CommandLineProcessor.hpp"
+#include <Teuchos_ParameterList.hpp>
+#include <Teuchos_StandardCatchMacros.hpp>
+#include <Teuchos_CommandLineProcessor.hpp>
+
+// Tpetra
+#include <Tpetra_Map.hpp>
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_CrsMatrix.hpp>
+// I/O for Harwell-Boeing files
+#define HIDE_TPETRA_INOUT_IMPLEMENTATIONS
+#include <Tpetra_MatrixIO.hpp>
 
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosGCRODRSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
-#include "BelosTpetraTestFramework.hpp"
-
+#include "BelosTpetraAdapter.hpp"
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
@@ -116,7 +118,7 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
     cmdp.setOption("debug","nodebug",&debug,"Print debugging information from the solver.");
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
-    cmdp.setOption("filename",&filename,"Filename for test matrix.  Acceptable file extensions: *.hb,*.mtx,*.triU,*.triS");
+    cmdp.setOption("filename",&filename,"Filename for Harwell-Boeing test matrix.");
     cmdp.setOption("tol",&tol,"Relative residual tolerance used by GMRES solver.");
     cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
     cmdp.setOption("max-iters",&maxiters,"Maximum number of iterations per linear system (-1 = adapted to problem/block size).");
@@ -137,8 +139,8 @@ int run(int argc, char *argv[]) {
     }
 
     // Get the problem
-    Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( Comm );
-    RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
+    RCP<tcrsmatrix_t> A;
+    Tpetra::Utils::readHBMatrix(filename, Comm, A);
     RCP<const tmap_t> Map = A->getDomainMap();
 
     // Create initial vectors

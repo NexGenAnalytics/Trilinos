@@ -53,22 +53,24 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+// I/O for Harwell-Boeing files
+#define HIDE_TPETRA_INOUT_IMPLEMENTATIONS
+#include <Tpetra_MatrixIO.hpp>
 
 // Teuchos
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_CommHelpers.hpp>
 #include <Teuchos_DefaultComm.hpp>
-#include "Teuchos_ParameterList.hpp"
-#include "Teuchos_StandardCatchMacros.hpp"
-#include "Teuchos_CommandLineProcessor.hpp"
+#include <Teuchos_ParameterList.hpp>
+#include <Teuchos_StandardCatchMacros.hpp>
+#include <Teuchos_CommandLineProcessor.hpp>
 
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosBlockGmresSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
-#include "BelosTpetraTestFramework.hpp"
-
+#include "BelosTpetraAdapter.hpp"
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
@@ -117,7 +119,7 @@ int run(int argc, char *argv[]) {
     cmdp.setOption("verbose","quiet",&verbose,"Print messages and results.");
     cmdp.setOption("debug","nondebug",&debug,"Print debugging information from solver.");
     cmdp.setOption("frequency",&frequency,"Solvers frequency for printing residuals (#iters).");
-    cmdp.setOption("filename",&filename,"Filename for test matrix.  Acceptable file extensions: *.hb,*.mtx,*.triU,*.triS");
+    cmdp.setOption("filename",&filename,"Filename for Harwell-Boeing test matrix.");
     cmdp.setOption("tol",&tol,"Relative residual tolerance used by GMRES solver.");
     cmdp.setOption("num-rhs",&numrhs,"Number of right-hand sides to be solved for.");
     cmdp.setOption("block-size",&blockSize,"Block size used by GMRES.");
@@ -138,8 +140,8 @@ int run(int argc, char *argv[]) {
     }
 
     // Get the problem
-    Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
-    RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
+    RCP<tcrsmatrix_t> A;
+    Tpetra::Utils::readHBMatrix(filename, comm, A);
     RCP<const tmap_t> Map = A->getDomainMap();
 
     // Create initial vectors

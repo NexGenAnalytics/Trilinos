@@ -124,15 +124,15 @@ int run(int argc, char *argv[])
     // Get the problem
     RCP<tcrsmatrix_t> A;
     Tpetra::Utils::readHBMatrix(filename, comm, A);
-    RCP<const tmap_t> rowMap = A->getDomainMap();
+    RCP<const tmap_t> map = A->getDomainMap();
 
     proc_verbose = ( verbose && (MyPID==0) );
 
     // Construct initial guess and right-hand sides
     RCP<tmultivector_t> B, X;
-    X = rcp(new MV(rowMap, numrhs));
+    X = rcp(new MV(map, numrhs));
     MVT::MvRandom(*X);
-    B = rcp(new MV( rowMap, numrhs));
+    B = rcp(new MV( map, numrhs));
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
     
@@ -188,7 +188,7 @@ int run(int argc, char *argv[])
     bool badRes = false;
     std::vector<ST> actual_resids( numrhs );
     std::vector<ST> rhs_norm( numrhs );
-    MV resid(rowMap, numrhs);
+    MV resid(map, numrhs);
     OPT::Apply( *A, *X, resid );
     MVT::MvAddMv( -1.0, resid, 1.0, *B, resid );
     MVT::MvNorm( resid, actual_resids );

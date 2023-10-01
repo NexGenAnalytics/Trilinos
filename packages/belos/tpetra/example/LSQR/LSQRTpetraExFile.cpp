@@ -57,13 +57,15 @@
 #include <MatrixMarket_Tpetra.hpp>
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+// I/O for Harwell-Boeing files
+#define HIDE_TPETRA_INOUT_IMPLEMENTATIONS
+#include <Tpetra_MatrixIO.hpp>
 
 // Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosLSQRSolMgr.hpp"
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
-#include "BelosTpetraTestFramework.hpp"
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {
@@ -149,8 +151,8 @@ int run(int argc, char *argv[]) {
       frequency = -1;  // reset frequency if test is not verbose
 
     // Get the problem
-    Belos::Tpetra::HarwellBoeingReader<MAT> reader(comm);
-    RCP<MAT> A = reader.readFromFile(filename);
+    RCP<MAT> A;
+    Tpetra::Utils::readHBMatrix(filename, comm, A);
     RCP<const MAP> map = A->getDomainMap();
 
     // Initialize vectors

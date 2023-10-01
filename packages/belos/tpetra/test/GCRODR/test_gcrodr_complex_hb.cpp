@@ -50,10 +50,12 @@
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
 #include "BelosGCRODRSolMgr.hpp"
-#include "BelosTpetraTestFramework.hpp"
 
 #include <Tpetra_Core.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+// I/O for Harwell-Boeing files
+#define HIDE_TPETRA_INOUT_IMPLEMENTATIONS
+#include <Tpetra_MatrixIO.hpp>
 
 #include <Teuchos_CommandLineProcessor.hpp>
 #include <Teuchos_ParameterList.hpp>
@@ -117,9 +119,9 @@ int run(int argc, char *argv[])
     std::cout << Belos::Belos_Version() << std::endl << std::endl;
   }
 
-  Belos::Tpetra::HarwellBoeingReader<tcrsmatrix_t> reader( comm );
-  RCP<tcrsmatrix_t> A = reader.readFromFile( filename );
-  RCP<const Tpetra::Map<> > map = A->getDomainMap();
+  RCP<tcrsmatrix_t> A;
+  Tpetra::Utils::readHBMatrix(filename, comm, A);
+  RCP<const Tpetra::Map<>> map = A->getDomainMap();
 
   // Create initial vectors
   RCP<MV> B, X;

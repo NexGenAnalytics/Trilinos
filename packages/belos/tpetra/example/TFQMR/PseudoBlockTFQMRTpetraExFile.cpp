@@ -70,7 +70,6 @@
 #include "BelosLinearProblem.hpp"
 #include "BelosPseudoBlockTFQMRSolMgr.hpp"
 #include "BelosTpetraAdapter.hpp"
-#include "BelosTpetraTestFramework.hpp"
 
 template <typename ScalarType>
 int run(int argc, char *argv[]) {

@@ -43,18 +43,25 @@
 // matrix.  The right-hand side is generated using a random solution vector that has
 // the matrix applied to it.  The initial guesses are all set to zero.  
 //
+
+// Teuchos
+#include <Teuchos_CommandLineProcessor.hpp>
+#include <Teuchos_ParameterList.hpp>
+#include <Teuchos_GlobalMPISession.hpp>
+#include <Teuchos_StandardCatchMacros.hpp>
+
+// Tpetra
+#include <Tpetra_Core.hpp>
+#include <Tpetra_CrsMatrix.hpp>
+// I/O for Harwell-Boeing files
+#define HIDE_TPETRA_INOUT_IMPLEMENTATIONS
+#include <Tpetra_MatrixIO.hpp>
+
+// Belos
 #include "BelosConfigDefs.hpp"
 #include "BelosLinearProblem.hpp"
 #include "BelosTpetraAdapter.hpp"
 #include "BelosBiCGStabSolMgr.hpp"
-#include "BelosTpetraTestFramework.hpp"
-
-#include <Teuchos_CommandLineProcessor.hpp>
-#include <Teuchos_ParameterList.hpp>
-#include <Teuchos_GlobalMPISession.hpp>
-#include "Teuchos_StandardCatchMacros.hpp"
-#include <Tpetra_Core.hpp>
-#include <Tpetra_CrsMatrix.hpp>
 
 int main (int argc, char *argv[])
 {
@@ -112,11 +119,9 @@ int main (int argc, char *argv[])
 
     proc_verbose = ( verbose && (MyPID==0) );
 
-    //
-    // *************Get the problem*********************
-    //
-    Belos::Tpetra::HarwellBoeingReader<Tpetra::CrsMatrix<ST> > reader( comm );
-    RCP<Tpetra::CrsMatrix<ST> > A = reader.readFromFile( filename );
+    // Get the problem
+    RCP<Tpetra::CrsMatrix<ST>> A;
+    Tpetra::Utils::readHBMatrix(filename, comm, A);
     RCP<const Tpetra::Map<> > map = A->getDomainMap();
 
     // Create initial vectors
@@ -127,9 +132,7 @@ int main (int argc, char *argv[])
     OPT::Apply( *A, *X, *B );
     MVT::MvInit( *X, 0.0 );
 
-    //
     // Create parameter list for the Belos solver
-    //
     const int NumGlobalElements = B->getGlobalLength ();
     if (maxiters == -1) {
       maxiters = NumGlobalElements - 1; // maximum number of iterations to run
@@ -148,9 +151,8 @@ int main (int argc, char *argv[])
       belosList->set ("Verbosity", Belos::Errors + Belos::Warnings +
                       Belos::FinalSummary);
     }
-    //
+
     // Construct a preconditioned linear problem
-    //
     RCP<Belos::LinearProblem<ST,MV,OP> > problem
       = rcp (new Belos::LinearProblem<ST,MV,OP> (A, X, B));
     bool set = problem->setProblem ();
@@ -177,9 +179,7 @@ int main (int argc, char *argv[])
     // Ask Belos to solve the linear system.
     Belos::ReturnType ret = solver->solve();
 
-    //
     // Compute actual residuals.
-    //
     bool badRes = false;
     std::vector<MT> actual_resids( numrhs );
     std::vector<MT> rhs_norm( numrhs );
@@ -205,9 +205,8 @@ int main (int argc, char *argv[])
       }
       return -1;
     }
-    //
+
     // Default return value
-    //
     if (proc_verbose) {
       std::cout << "\nEnd Result: TEST PASSED" << std::endl;
     }

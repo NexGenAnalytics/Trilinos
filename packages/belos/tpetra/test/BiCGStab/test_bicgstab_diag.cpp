@@ -44,12 +44,9 @@
 // NOTE: No preconditioner is used in this case.
 //
 
-// Belos
-#include <BelosConfigDefs.hpp>
-#include <BelosLinearProblem.hpp>
-#include <BelosTpetraAdapter.hpp>
-#include <BelosTpetraOperator.hpp>
-#include <BelosBiCGStabSolMgr.hpp>
+// Teuchos
+#include <Teuchos_Time.hpp>
+#include <Teuchos_StandardCatchMacros.hpp>
 
 // Tpetra
 #include <Tpetra_Core.hpp>
@@ -58,10 +55,12 @@
 #include <Tpetra_CrsMatrix_fwd.hpp>
 #include <Tpetra_MultiVector_fwd.hpp>
 
-// Teuchos
-#include <Teuchos_Time.hpp>
-#include "Teuchos_StandardCatchMacros.hpp"
-
+// Belos
+#include "BelosConfigDefs.hpp"
+#include "BelosLinearProblem.hpp"
+#include "BelosTpetraAdapter.hpp"
+#include "BelosTpetraOperator.hpp"
+#include "BelosBiCGStabSolMgr.hpp"
 
 using std::vector;
 using Teuchos::RCP;

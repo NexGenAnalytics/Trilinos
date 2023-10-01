@@ -46,17 +46,19 @@
 // systems.
 //
 
-#include "BelosConfigDefs.hpp"
-#include "BelosTpetraAdapter.hpp"
-#include "BelosTpetraTestFramework.hpp"
-#include "BelosBlockGCRODRSolMgr.hpp"
-
-#include <Tpetra_Core.hpp>
-
+// Teucho
 #include <Teuchos_CommandLineProcessor.hpp>
 #include <Teuchos_FancyOStream.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_oblackholestream.hpp>
+
+// Tpetra
+#include <Tpetra_Core.hpp>
+
+// Belos
+#include "BelosConfigDefs.hpp"
+#include "BelosTpetraAdapter.hpp"
+#include "BelosBlockGCRODRSolMgr.hpp"
 
 template <typename ScalarType>
 int run (int argc, char *argv[])
