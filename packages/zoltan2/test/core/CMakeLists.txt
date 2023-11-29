@@ -1,6 +1,7 @@
 ADD_SUBDIRECTORIES(
 unit
 partition
+parser
 order
 TpetraCrsColorer
 color
