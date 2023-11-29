@@ -49,6 +49,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D yaml-cpp_LIBRARY_DIRS="${YAMLCPP_ROOT}/lib" \
     -D yaml-cpp_INCLUDE_DIRS="${YAMLCPP_ROOT}/include" \
     \
+    -D Trilinos_MUST_FIND_ALL_TPL_LIBS=OFF \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \
     -D TPL_ENABLE_Pthread=OFF \

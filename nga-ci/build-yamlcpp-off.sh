@@ -43,6 +43,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     \
     -D TPL_ENABLE_CUDA=OFF \
     \
+    -D Trilinos_MUST_FIND_ALL_TPL_LIBS=OFF \
     -D TPL_ENABLE_yaml-cpp=OFF \
     -D TPL_ENABLE_Matio=OFF \
     -D TPL_ENABLE_X11=OFF \

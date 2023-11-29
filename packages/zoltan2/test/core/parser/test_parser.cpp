@@ -5,6 +5,7 @@
 
 #if HAVE_YAML
 #include "yaml-cpp/yaml.h"
+#endif // HAVE_YAML
 
 
 void parse_mini_em_sample(std::string filename) {
@@ -98,10 +99,11 @@ int main(int argc, char* argv[]) {
     // std::string filename = "config.yaml" // doesn't work
     std::cout << "Parsing " << filename << "\n" << std::endl;
 
+#if HAVE_YAML
     parse_mini_em_sample(filename);
     parse_wishlist(filename);
+#endif
 
     return 0;
 }
 
-#endif // HAVE_YAML
