@@ -69,6 +69,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D MPI_EXEC_MAX_NUMPROCS=4 \
     \
     -D Trilinos_ENABLE_Rythmos=OFF \
+    -D Trilinois_ENABLE_STK=OFF \
     -D Trilinos_ENABLE_Pike=OFF \
     -D Trilinos_ENABLE_Komplex=OFF \
     -D Trilinos_ENABLE_TriKota=OFF \
