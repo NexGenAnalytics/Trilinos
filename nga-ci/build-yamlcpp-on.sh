@@ -36,6 +36,7 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D Trilinos_ENABLE_ALL_FORWARD_DEP_PACKAGES=ON \
     -D Trilinos_VERBOSE_CONFIGURE=OFF \
     -D BUILD_SHARED_LIBS:BOOL=ON \
+    -D Tpetra_ENABLE_DEPRECATED_CODE=ON \
     \
     -D Trilinos_ENABLE_Panzer=ON \
     -D Trilinos_ENABLE_PanzerMiniEM=ON \
@@ -89,14 +90,5 @@ cmake -G "${CMAKE_GENERATOR:-Ninja}" \
     -D MPI_EXEC_MAX_NUMPROCS=4 \
     \
     \
-    -D Trilinos_ENABLE_Rythmos=OFF \
-    -D Trilinos_ENABLE_STK=OFF \
-    -D Trilinos_ENABLE_Pike=OFF \
-    -D Trilinos_ENABLE_Komplex=OFF \
-    -D Trilinos_ENABLE_TriKota=OFF \
-    -D Trilinos_ENABLE_Moertel=OFF \
-    -D Trilinos_ENABLE_Domi=OFF \
-    -D Trilinos_ENABLE_FEI=OFF \
-    -D Trilinos_ENABLE_PyTrilinos=OFF \
     -S /opt/src/Trilinos -B /opt/build/Trilinos
 ninja -j 12

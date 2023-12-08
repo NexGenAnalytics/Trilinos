@@ -108,15 +108,17 @@ Teuchos::Array<T> getYamlArray(const ::YAML::Node& node)
   return arr;
 }
 
-void checkYamlTwoDArray(const ::YAML::Node& node, const std::string& key)
+bool checkYamlTwoDArrayIsRagged(const ::YAML::Node& node)
 {
+  bool ragged = false;
   for (::YAML::const_iterator it = node.begin(); it != node.end(); ++it)
   {
     if (it->size() != node.begin()->size())
     {
-      throw YamlSequenceError(std::string("TwoDArray \"") + key + "\" has irregular sizes");
+      ragged=true;
     }
   }
+  return ragged;
 }
 
 template<typename T> Teuchos::TwoDArray<T> getYamlTwoDArray(const ::YAML::Node& node)
@@ -137,6 +139,71 @@ template<typename T> Teuchos::TwoDArray<T> getYamlTwoDArray(const ::YAML::Node& 
    ++i;
   }
   return arr;
+}
+
+int getYamlArrayDim(const ::YAML::Node& node)
+{
+  int ndim = 0;
+
+  if (node.Type() == ::YAML::NodeType::Sequence)
+  {
+    ++ndim;
+
+    if (node.begin()->Type() == ::YAML::NodeType::Sequence)
+    {
+      ++ndim;
+
+      if (node.begin()->begin()->Type() == ::YAML::NodeType::Sequence)
+      {
+        ++ndim;
+      }
+    }
+  }
+
+  return ndim;
+}
+
+
+
+template <typename tarray_t, typename T>
+tarray_t getYaml2DRaggedArray(::YAML::Node node, int ndim, std::string key)
+{
+  tarray_t base_arr;
+  if (ndim == 2) {
+    Teuchos::Array<T> sub_arr;
+    for (::YAML::const_iterator it1 = node.begin(); it1 != node.end(); ++it1) {
+      for (::YAML::const_iterator it2 = it1->begin(); it2 != it1->end(); ++it2) {
+          sub_arr.push_back(quoted_as<T>(*it2));
+      } base_arr.push_back(sub_arr);
+    }
+  }
+  else
+  {
+    throw YamlSequenceError(std::string("MDArray \"" + key + "\" must have dim 2."));
+  }
+  return base_arr;
+}
+
+template <typename tarray_t, typename T>
+tarray_t getYaml3DArray(::YAML::Node node, int ndim, std::string key)
+{
+  tarray_t base_arr;
+  if (ndim == 3) {
+    Teuchos::Array<Teuchos::Array<T>> sub_arr;
+    Teuchos::Array<T> sub_sub_arr;
+    for (::YAML::const_iterator it1 = node.begin(); it1 != node.end(); ++it1) {
+      for (::YAML::const_iterator it2 = it1->begin(); it2 != it1->end(); ++it2) {
+        for (::YAML::const_iterator it3 = it2->begin(); it3 != it2->end(); ++it3) {
+            sub_sub_arr.push_back(quoted_as<T>(*it3));
+        } sub_arr.push_back(sub_sub_arr);
+      } base_arr.push_back(sub_arr);
+    }
+  }
+  else
+  {
+    throw YamlSequenceError(std::string("MDArray \"" + key + "\" must have dim 3."));
+  }
+  return base_arr;
 }
 
 #endif
@@ -1298,35 +1365,9 @@ void processKeyValueNode(const std::string& key, const ::YAML::Node& node, Teuch
   }
   else if(node.Type() == ::YAML::NodeType::Sequence)
   {
-    if (node.begin()->Type() == ::YAML::NodeType::Sequence) {
-      checkYamlTwoDArray(node, key);
-      ::YAML::Node const& first_value = *(node.begin()->begin());
-      try
-      {
-        quoted_as<int>(first_value);
-        parent.set(key, getYamlTwoDArray<int>(node));
-      }
-      catch(...)
-      {
-        try
-        {
-          quoted_as<double>(first_value);
-          parent.set(key, getYamlTwoDArray<double>(node));
-        }
-        catch(...)
-        {
-          try
-          {
-            quoted_as<std::string>(first_value);
-            parent.set(key, getYamlTwoDArray<std::string>(node));
-          }
-          catch(...)
-          {
-            throw YamlSequenceError(std::string("TwoDArray \"") + key + "\" must contain int, double, bool or string");
-          }
-        }
-      }
-    } else {
+    int ndim = getYamlArrayDim(node);
+    if (ndim == 1)
+    {
       ::YAML::Node const& first_value = *(node.begin());
       try
       {
@@ -1350,6 +1391,85 @@ void processKeyValueNode(const std::string& key, const ::YAML::Node& node, Teuch
           catch(...)
           {
             throw YamlSequenceError(std::string("Array \"") + key + "\" must contain int, double, bool or string");
+          }
+        }
+      }
+    }
+    else if (ndim == 2)
+    {
+      bool is_ragged = checkYamlTwoDArrayIsRagged(node);
+      ::YAML::Node const& first_value = *(node.begin()->begin());
+      try
+      {
+        quoted_as<int>(first_value);
+        using arr_t = Teuchos::Array<Teuchos::Array<int>>;
+        if (is_ragged) {
+          parent.set(key, getYaml2DRaggedArray<arr_t, int>(node, ndim, key));
+        } else {
+          parent.set(key, getYamlTwoDArray<int>(node));
+        }
+      }
+      catch(...)
+      {
+        try
+        {
+          quoted_as<double>(first_value);
+          using arr_t = Teuchos::Array<Teuchos::Array<double>>;
+          if (is_ragged) {
+            parent.set(key, getYaml2DRaggedArray<arr_t, double>(node, ndim, key));
+          } else {
+            parent.set(key, getYamlTwoDArray<double>(node));
+          }
+        }
+        catch(...)
+        {
+          try
+          {
+            quoted_as<std::string>(first_value);
+            using arr_t = Teuchos::Array<Teuchos::Array<std::string>>;
+            if (is_ragged) {
+              parent.set(key, getYaml2DRaggedArray<arr_t, std::string>(node, ndim, key));
+            } else {
+              parent.set(key, getYamlTwoDArray<std::string>(node));
+            }
+          }
+          catch(...)
+          {
+            throw YamlSequenceError(std::string("TwoDArray \"") + key + "\" must contain int, double, bool or string");
+          }
+        }
+      }
+    }
+    else if (ndim == 3)
+    {
+      ::YAML::Node const& first_value = *(node.begin()->begin()->begin());
+      try
+      {
+        quoted_as<int>(first_value);
+        using arr_t = Teuchos::Array<Teuchos::Array<Teuchos::Array<int>>>;
+        parent.set(key, getYaml3DArray<arr_t, int>(node, ndim, key));
+      }
+      catch(...)
+      {
+        try
+        {
+          quoted_as<double>(first_value);
+          using arr_t = Teuchos::Array<Teuchos::Array<Teuchos::Array<double>>>;
+          parent.set(key, getYaml3DArray<arr_t, double>(node, ndim, key));
+
+        }
+        catch(...)
+        {
+          try
+          {
+            quoted_as<std::string>(first_value);
+            using arr_t = Teuchos::Array<Teuchos::Array<Teuchos::Array<std::string>>>;
+            parent.set(key, getYaml3DArray<arr_t, std::string>(node, ndim, key));
+
+          }
+          catch(...)
+          {
+            throw YamlSequenceError(std::string("3DArray \"") + key + "\" must contain int, double, bool or string");
           }
         }
       }
