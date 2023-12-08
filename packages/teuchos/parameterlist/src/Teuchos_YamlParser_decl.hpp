@@ -151,6 +151,7 @@ and looks better in YAML itself.
 namespace Teuchos
 {
 
+#ifdef HAVE_TEUCHOSCORE_YAMLCPP
 #define MAKE_EXCEPTION_TYPE(Name) \
 class Name : public Teuchos::ExceptionBase \
 { \
@@ -165,6 +166,7 @@ MAKE_EXCEPTION_TYPE(YamlStructureError)
 MAKE_EXCEPTION_TYPE(YamlUndefinedNodeError)
 
 #undef MAKE_EXCEPTION_TYPE
+#endif // HAVE_TEUCHOSCORE_YAMLCPP
 
 std::string convertXmlToYaml(const std::string& xmlFileName); //returns filename of produced YAML file
 void convertXmlToYaml(const std::string& xmlFileName, const std::string& yamlFileName); //writes to given filename
@@ -179,9 +181,13 @@ namespace YAMLParameterList
   Teuchos::RCP<Teuchos::ParameterList> parseYamlStream(std::istream& yaml);
   void writeYamlStream(std::ostream& yamlFile, const Teuchos::ParameterList& pl);
   void writeYamlFile(const std::string& yamlFile, const Teuchos::ParameterList& pl);
+
+  #ifdef HAVE_TEUCHOSCORE_YAMLCPP
   Teuchos::RCP<Teuchos::ParameterList> readParams(std::vector<::YAML::Node>& lists);
   void processMapNode(const ::YAML::Node& node, Teuchos::ParameterList& parent, bool topLevel = false);
   void processKeyValueNode(const std::string& key, const ::YAML::Node& node, Teuchos::ParameterList& parent, bool topLevel = false);
+  #endif // HAVE_TEUCHOSCORE_YAMLCPP
+
   void writeParameterList(const Teuchos::ParameterList& pl, std::ostream& yaml, int indentLevel);
   void writeParameter(const std::string& paramName, const Teuchos::ParameterEntry& entry, std::ostream& yaml, int indentLevel);    //throws if the entry's type is not supported
   void generalWriteString(const std::string& str, std::ostream& yaml);
