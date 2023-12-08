@@ -1,0 +1,95 @@
+%YAML 1.2
+---
+User_App Parameters:
+  Mesh:
+    Source: Inline Mesh
+    Exodus File:
+      dt: 6.0e-12
+      Exodus Parameters:
+        File Name: blob/blob.g
+    Pamgen Mesh:
+      dt: 6.0e-12
+      Pamgen Parameters:
+        File Name: pamgen.gen
+    Inline Mesh:
+      Mesh Dimension: 3
+      Mesh Type: quad
+      CFL: 4.0
+      Mesh Factory Parameter List:
+        X Blocks: 1
+        Y Blocks: 1
+        Z Blocks: 1
+        X Elements: 15
+        Y Elements: 15
+        Z Elements: 15
+  Block ID to Physics ID Mapping:
+    eblock-0_0_0: Maxwell Physics
+  Block ID to Auxiliary Physics ID Mapping:
+    eblock-0_0_0: Auxiliary Physics Block
+  Assembly:
+    Field Order: "blocked: B_face E_edge"
+    Workset Size: 2000
+  Physics Blocks:
+    Maxwell Physics:
+      Maxwell Physics:
+        Type: Maxwell
+        Model ID: electromagnetics
+        Permittivity: epsilon
+        Conductivity: sigma
+        Permeability: mu
+        Current: J
+  Closure Models:
+    electromagnetics:
+      J:
+        Type: RANDOM
+        seed: 0
+        range min: 0.0
+        range max: 1.0
+        DoF Name: E_edge
+      epsilon:
+        Value: 8.854187817e-12
+      sigma:
+        Type: TENSOR CONDUCTIVITY
+        sigma: 0.0
+        betax: 0.0
+        betay: 0.0
+        betaz: 0.0
+        DoF Name: E_edge
+      mu:
+        Value: 1.2566370614e-6
+      EM_ENERGY:
+        Type: ELECTROMAGNETIC ENERGY
+  Responses:
+    Electromagnetic Energy:
+      Type: Functional
+      Field Name: EM_ENERGY
+      Element Blocks: eblock-0_0_0
+      Evaluation Types: Residual
+      Requires Cell Integral: true
+    Electromagnetic Energy/dt^2:
+      Type: Functional
+      Field Name: EM_ENERGY/dt^2
+      Element Blocks: eblock-0_0_0
+      Evaluation Types: Residual
+      Requires Cell Integral: true
+  Wishlist:
+    Indentation:
+      - a
+      - b
+      - c
+    Wrong indentation:
+        - d
+        - e
+        - f
+    List of lists:
+      - [1, 2, 3, 4]
+      - [1, 2, 3, 4]
+    List of lists of lists:
+      - [[1,2,3], [4,5,6], [7,8,9]]
+      - [[9,7,8], [6,5,4], [3,2,1]]
+    Line continuation:
+      - [1, 2, 3, 4, 5, 6,
+        7, 8, 9, 10]
+
+# allow unicode characters in comments: ±
+...

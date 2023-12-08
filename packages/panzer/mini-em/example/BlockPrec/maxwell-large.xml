@@ -93,7 +93,7 @@
     <ParameterList name="electromagnetics">
       <ParameterList name="J">
         <Parameter name="Type" type="string" value="RANDOM"/>
-        <Parameter name="seed" type="unsigned int" value="0"/>
+        <Parameter name="seed" type="int" value="0"/>
         <Parameter name="range min" type="double" value="0"/>
         <Parameter name="range max" type="double" value="1"/>
         <Parameter name="DoF Name" type="string" value="E_edge"/>

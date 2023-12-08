@@ -14,6 +14,7 @@ TRIBITS_ADD_EXECUTABLE(
 TRIBITS_COPY_FILES_TO_BINARY_DIR(CopyBlockPrecFiles
   SOURCE_FILES
   maxwell.xml maxwell2D.xml
+  maxwell-pthOrder-oldyaml.yaml maxwell-pthOrder-newyaml.yaml
   maxwell-1stOrder.xml maxwell-pthOrder.xml
   maxwell-blob-R0.xml maxwell-blob-R1.xml maxwell-blob-R2.xml maxwell-blob-R3.xml maxwell-blob-R4.xml
   maxwell-bdot-small.xml maxwell-bdot-medium.xml maxwell-bdot-large.xml
@@ -87,12 +88,14 @@ TRIBITS_ADD_TEST(
    POSTFIX_AND_ARGS_0 "order1"              --solver=MueLu --numTimeSteps=1 --linAlgebra=Tpetra
    POSTFIX_AND_ARGS_1 "order1_reuse"        --solver=MueLu --numTimeSteps=3 --linAlgebra=Tpetra --resetSolver
    # POSTFIX_AND_ARGS_ "order2"              --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder.xml --basis-order=2 --pCoarsenSchedule="1""
-   POSTFIX_AND_ARGS_2 "order3"              --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder.xml --basis-order=3 --pCoarsenSchedule="1"
+   POSTFIX_AND_ARGS_2 "order3_xml"          --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder.xml --basis-order=3 --pCoarsenSchedule="1"
    # POSTFIX_AND_ARGS_ "order3,2"            --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder.xml --basis-order=3 --pCoarsenSchedule="2,1""
    # POSTFIX_AND_ARGS_ "order2_matrixFree"   --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder.xml --basis-order=2  --pCoarsenSchedule="1" --matrixFree
    POSTFIX_AND_ARGS_3 "order3_matrixFree"   --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder.xml --basis-order=3  --pCoarsenSchedule="1" --matrixFree
    # POSTFIX_AND_ARGS_ "order3,2_matrixFree" --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder.xml --basis-order=3 --pCoarsenSchedule="2,1" --matrixFree
    POSTFIX_AND_ARGS_4 "2D"                  --solver=MueLu --numTimeSteps=1 --linAlgebra=Tpetra --inputFile=maxwell2D.xml
+   POSTFIX_AND_ARGS_5 "order1_oldyaml"      --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder-oldyaml.yaml --basis-order=1 --pCoarsenSchedule="1"
+   POSTFIX_AND_ARGS_6 "order1_newyaml"      --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder-newyaml.yaml --basis-order=1 --pCoarsenSchedule="1"
    NUM_MPI_PROCS 4
    )
 

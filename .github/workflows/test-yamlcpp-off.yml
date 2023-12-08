@@ -1,4 +1,4 @@
-name: yamlcpp-off
+name: Build/test Mini-EM (yaml-cpp off)
 
 # Trigger the workflow on push or pull request
 on:

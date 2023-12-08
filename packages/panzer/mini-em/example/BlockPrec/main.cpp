@@ -6,6 +6,7 @@
 #include "Teuchos_CommandLineProcessor.hpp"
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
+#include "Teuchos_YamlParameterListHelpers.hpp"
 #include "Teuchos_FancyOStream.hpp"
 #include "Teuchos_oblackholestream.hpp"
 #include "Teuchos_Assert.hpp"
@@ -202,7 +203,11 @@ int main_(Teuchos::CommandLineProcessor &clp, int argc,char * argv[])
 
     // Parse the input file and broadcast to other processes
     Teuchos::RCP<Teuchos::ParameterList> input_params = Teuchos::rcp(new Teuchos::ParameterList("User_App Parameters"));
-    Teuchos::updateParametersFromXmlFileAndBroadcast(input_file, input_params.ptr(), *comm);
+    if (input_file.substr(input_file.size()-4) == std::string(".xml")) {
+      Teuchos::updateParametersFromXmlFileAndBroadcast(input_file, input_params.ptr(), *comm);
+    } else {
+      Teuchos::updateParametersFromYamlFileAndBroadcast(input_file, input_params.ptr(), *comm);
+    }
     Teuchos::ParameterList & mesh_pl                 = input_params->sublist("Mesh");
     // RCP<Teuchos::ParameterList> physicsBlock_pl      = rcp(new Teuchos::ParameterList(input_params->sublist("Physics Blocks")));
     Teuchos::ParameterList &physicsBlock_pl          = input_params->sublist("Physics Blocks");
