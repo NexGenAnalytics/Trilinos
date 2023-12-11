@@ -144,26 +144,20 @@ template<typename T> Teuchos::TwoDArray<T> getYamlTwoDArray(const ::YAML::Node& 
 int getYamlArrayDim(const ::YAML::Node& node)
 {
   int ndim = 0;
-
   if (node.Type() == ::YAML::NodeType::Sequence)
   {
     ++ndim;
-
     if (node.begin()->Type() == ::YAML::NodeType::Sequence)
     {
       ++ndim;
-
       if (node.begin()->begin()->Type() == ::YAML::NodeType::Sequence)
       {
         ++ndim;
       }
     }
   }
-
   return ndim;
 }
-
-
 
 template <typename tarray_t, typename T>
 tarray_t getYaml2DRaggedArray(::YAML::Node node, int ndim, std::string key)
@@ -206,7 +200,7 @@ tarray_t getYaml3DArray(::YAML::Node node, int ndim, std::string key)
   return base_arr;
 }
 
-#endif
+#endif // HAVE_TEUCHOSCORE_YAMLCPP
 
 std::string remove_trailing_whitespace(std::string const& in) {
   std::size_t new_end = 0;
@@ -1266,16 +1260,15 @@ Teuchos::RCP<Teuchos::ParameterList> parseYamlStream(std::istream& yaml)
 }
 
 // The following three functions (readParams, processMapNode, and processKeyValueNode)
-//were previously removed from Trilinos in commit ____ (PR ).
+// were previously removed from Trilinos in PR 1779 (Teuchos: use Parser, not yaml-cpp, to read YAML PL).
 
 #ifdef HAVE_TEUCHOSCORE_YAMLCPP
 
 Teuchos::RCP<Teuchos::ParameterList> readParams(std::vector<::YAML::Node>& lists)
 {
-  // std::cout << "TESTING POINT 1" << std::endl;
   Teuchos::RCP<Teuchos::ParameterList> pl = rcp(new Teuchos::ParameterList); //pl is the root ParameterList to be returned
-  //If there is exactly one element in "lists", assume it is the anonymous top-level parameter list
-  //If there are more than one, place them all in the anonymous top-level list
+  // If there is exactly one element in "lists", assume it is the anonymous top-level parameter list
+  // If there are more than one, place them all in the anonymous top-level list
   for(size_t i = 0; i < lists.size(); i++)
   {
     processMapNode(lists[i], *pl, true);
@@ -1298,12 +1291,12 @@ void processMapNode(const ::YAML::Node& node, Teuchos::ParameterList& parent, bo
   {
     for (::YAML::const_iterator i = node.begin(); i != node.end(); i++)
     {
-      //make sure the key type is a string
+      // make sure the key type is a string
       if(i->first.Type() != ::YAML::NodeType::Scalar)
       {
         throw YamlKeyError("Keys must be plain strings");
       }
-      //if this conversion fails and throws for any reason (shouldn't), let the caller handle it
+      // if this conversion fails and throws for any reason (shouldn't), let the caller handle it
       const std::string key = quoted_as<std::string>(i->first);
       processKeyValueNode(key, i->second, parent, topLevel);
     }
@@ -1312,8 +1305,8 @@ void processMapNode(const ::YAML::Node& node, Teuchos::ParameterList& parent, bo
 
 void processKeyValueNode(const std::string& key, const ::YAML::Node& node, Teuchos::ParameterList& parent, bool topLevel)
 {
-  //node (value) type can be a map (for nested param lists),
-  //a scalar (int, double, string), or a sequence of doubles (vector<double>)
+  // node (value) type can be a map (for nested param lists),
+  // a scalar (int, double, string), or a sequence of doubles (vector<double>)
   if(node.Type() == ::YAML::NodeType::Scalar)
   {
     try
@@ -1477,12 +1470,12 @@ void processKeyValueNode(const std::string& key, const ::YAML::Node& node, Teuch
   }
   else if(node.Type() == ::YAML::NodeType::Null)
   {
-    //treat NULL as empty string (not an error)
+    // treat NULL as empty string (not an error)
     parent.set(key, std::string());
   }
   else
   {
-    //Undefined
+    // Undefined
     throw YamlUndefinedNodeError("Value type in a key-value pair must be one of: int, double, string, array, sublist.");
   }
 }
@@ -1491,9 +1484,9 @@ void processKeyValueNode(const std::string& key, const ::YAML::Node& node, Teuch
 
 void writeYamlStream(std::ostream& yaml, const Teuchos::ParameterList& pl)
 {
-  //warn the user if floats/doubles with integer values will be printed incorrectly
+  // warn the user if floats/doubles with integer values will be printed incorrectly
   std::ios_base::fmtflags flags = yaml.flags();
-  //make temporary stringstream to test flags
+  // make temporary stringstream to test flags
   std::ostringstream testStream;
   testStream.flags(flags);
   double testVal = 1;
@@ -1501,10 +1494,10 @@ void writeYamlStream(std::ostream& yaml, const Teuchos::ParameterList& pl)
   bool popFlags = false;
   if(testStream.str() == "1")
   {
-    //must add showpoint to flags while writing yaml
-    //this will always disambiguate (double) n and n, even if stream precision is 0
-    //prints as "n.0000" where the number of trailing zeros is the stream precision
-    //note: in YAML, "5." is a double but not an int
+    // must add showpoint to flags while writing yaml
+    // this will always disambiguate (double) n and n, even if stream precision is 0
+    // prints as "n.0000" where the number of trailing zeros is the stream precision
+    // note: in YAML, "5." is a double but not an int
     std::cout << "Warning: yaml stream format flags would confuse double with integer value with int.\n";
     std::cout << "Setting std::ios::showpoint on the stream to fix this (will restore flags when done)\n";
     std::ios_base::fmtflags flagsCopy = flags;
@@ -1522,7 +1515,7 @@ void writeYamlStream(std::ostream& yaml, const Teuchos::ParameterList& pl)
     writeParameterList(pl, yaml, 2);
   }
   yaml << "...\n";
-  //restore flags
+  // restore flags
   if(popFlags)
   {
     yaml.flags(flags);
