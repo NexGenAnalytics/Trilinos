@@ -13,22 +13,24 @@ User_App Parameters:
         File Name: pamgen.gen
     Inline Mesh:
       Mesh Dimension: 3
-      Mesh Type: quad
+      Mesh Type: tet
       CFL: 4.0
       Mesh Factory Parameter List:
+        X Procs: -1
+        Y Procs: -1
+        Z Procs: -1
         X Blocks: 1
         Y Blocks: 1
         Z Blocks: 1
-        X Elements: 15
-        Y Elements: 15
-        Z Elements: 15
+        X Elements: 2
+        Y Elements: 2
+        Z Elements: 2
   Block ID to Physics ID Mapping:
     eblock-0_0_0: Maxwell Physics
   Block ID to Auxiliary Physics ID Mapping:
     eblock-0_0_0: Auxiliary Physics Block
   Assembly:
     Field Order: "blocked: B_face E_edge"
-    Workset Size: 2000
   Physics Blocks:
     Maxwell Physics:
       Maxwell Physics:

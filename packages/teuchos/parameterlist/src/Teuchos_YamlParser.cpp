@@ -178,6 +178,9 @@ tarray_t getYaml2DRaggedArray(::YAML::Node node, int ndim, std::string key)
   return base_arr;
 }
 
+// This handles the requested use case of a list of 2D arrays; further nesting would require a getYaml4DArray() function,
+// which could be straightforwardly implemented along the lines of the below function.
+
 template <typename tarray_t, typename T>
 tarray_t getYaml3DArray(::YAML::Node node, int ndim, std::string key)
 {

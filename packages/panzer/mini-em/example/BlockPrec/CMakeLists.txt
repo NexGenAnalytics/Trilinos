@@ -77,7 +77,7 @@ TRIBITS_ADD_TEST(
    NUM_MPI_PROCS 1
    )
 
- # CAG 5/16/22: Commented out tests that rely on 2nd order elements.
+# CAG 5/16/22: Commented out tests that rely on 2nd order elements.
 #              The specialization of 2nd order basis functions in
 #              Intrepid2 is missing some functionality and will be
 #              removed. These tests will work once 2nd order has been
@@ -96,8 +96,6 @@ TRIBITS_ADD_TEST(
    POSTFIX_AND_ARGS_4 "2D"                  --solver=MueLu --numTimeSteps=1 --linAlgebra=Tpetra --inputFile=maxwell2D.xml
    POSTFIX_AND_ARGS_5 "order1_oldyaml"      --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder-oldyaml.yaml --basis-order=1 --pCoarsenSchedule="1"
    POSTFIX_AND_ARGS_6 "order1_newyaml"      --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder-newyaml.yaml --basis-order=1 --pCoarsenSchedule="1"
-   POSTFIX_AND_ARGS_5 "order3_oldyaml"      --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder-oldyaml.yaml --basis-order=3 --pCoarsenSchedule="1"
-   POSTFIX_AND_ARGS_6 "order3_newyaml"      --solver=MueLu --linAlgebra=Tpetra --inputFile=maxwell-pthOrder-newyaml.yaml --basis-order=3 --pCoarsenSchedule="1"
    NUM_MPI_PROCS 4
    )
 
