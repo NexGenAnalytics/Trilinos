@@ -104,7 +104,7 @@ buildClosureModels(const std::string& model_id,
         found = true;
       }
       if(type=="RANDOM") {
-        unsigned int seed = plist.get<unsigned int>("seed");
+        unsigned int seed = static_cast<unsigned int>(plist.get<int>("seed"));
         double min = plist.get<double>("range min");
         double max = plist.get<double>("range max");
         std::string basisName = plist.get<std::string>("DoF Name");
